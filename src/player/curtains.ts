@@ -245,6 +245,33 @@ export class CurtainPlayer {
     for (const state of this.states) this.reset(state);
   }
 }
+function fillCurtainBody(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  hardEdge: boolean,
+): void {
+  if (hardEdge) {
+    const t = ctx.getTransform();
+    if (t.b === 0 && t.c === 0) {
+      // Snap both ends to the same device-pixel grid. Separate antialiased
+      // half-pixel edges leave a light seam even when their geometry meets.
+      // Shared rounding also avoids double opacity from overlapping curtains.
+      const left = Math.round(t.a * x + t.e),
+        top = Math.round(t.d * y + t.f),
+        right = Math.round(t.a * (x + width) + t.e),
+        bottom = Math.round(t.d * (y + height) + t.f);
+      ctx.save();
+      ctx.resetTransform();
+      ctx.fillRect(left, top, right - left, bottom - top);
+      ctx.restore();
+      return;
+    }
+  }
+  ctx.fillRect(x, y, width, height);
+}
 export function drawCurtains(ctx: CanvasRenderingContext2D, states: CurtainState[]): void {
   for (const state of states) {
     if (!state.active || state.alpha <= 0) continue;
@@ -265,7 +292,7 @@ export function drawCurtains(ctx: CanvasRenderingContext2D, states: CurtainState
       solid = Math.max(0, length - pad);
     if (horizontal) {
       const left = c.side === 'right' ? -solid : 0;
-      ctx.fillRect(left, -c.height / 2, solid, c.height);
+      fillCurtainBody(ctx, left, -c.height / 2, solid, c.height, !state.gradient);
       if (state.gradient) {
         const x = c.side === 'right' ? -length : length - 20,
           g = ctx.createLinearGradient(x, 0, x + 20, 0);
@@ -276,7 +303,7 @@ export function drawCurtains(ctx: CanvasRenderingContext2D, states: CurtainState
       }
     } else {
       const top = c.side === 'top' ? 0 : -solid;
-      ctx.fillRect(-c.width / 2, top, c.width, solid);
+      fillCurtainBody(ctx, -c.width / 2, top, c.width, solid, !state.gradient);
       if (state.gradient) {
         const y = c.side === 'top' ? (c.padding ? length - 20 : Math.max(0, length - 20)) : -length,
           g = ctx.createLinearGradient(0, y, 0, y + 20);
