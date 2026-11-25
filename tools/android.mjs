@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -31,6 +32,34 @@ for (const [target, triple] of [
 }
 const args = process.argv.slice(2);
 const action = args.shift() ?? 'build';
+const iconOutput = fs.mkdtempSync(path.join(os.tmpdir(), 'arkreader-icons-'));
+try {
+  const icons = spawnSync(
+    process.execPath,
+    [
+      'node_modules/@tauri-apps/cli/tauri.js',
+      'icon',
+      'src-tauri/icons/icon.json',
+      '--output',
+      iconOutput,
+    ],
+    { env, stdio: 'inherit' },
+  );
+  if (icons.status !== 0) throw new Error('Failed to generate Android launcher icons.');
+  const resources = 'src-tauri/gen/android/app/src/main/res';
+  for (const directory of fs.readdirSync(path.join(iconOutput, 'android'))) {
+    if (directory === 'mipmap-anydpi-v26') continue;
+    fs.cpSync(path.join(iconOutput, 'android', directory), path.join(resources, directory), {
+      recursive: true,
+    });
+  }
+  fs.copyFileSync(
+    path.join(resources, 'mipmap-anydpi-v26/ic_launcher.xml'),
+    path.join(resources, 'mipmap-anydpi-v26/ic_launcher_round.xml'),
+  );
+} finally {
+  fs.rmSync(iconOutput, { recursive: true, force: true });
+}
 const assets = 'src-tauri/gen/android/app/src/main/assets/licenses';
 fs.mkdirSync(assets, { recursive: true });
 fs.cpSync('licenses', assets, { recursive: true });
