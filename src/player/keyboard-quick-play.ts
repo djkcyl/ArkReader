@@ -32,7 +32,8 @@ export class KeyboardQuickPlay {
         event.metaKey ||
         !this.eligible() ||
         (event.target instanceof HTMLElement &&
-          (event.target.isContentEditable || !!event.target.closest('input,textarea,select')));
+          (event.target.isContentEditable ||
+            !!event.target.closest('input,textarea,select,#script-panel')));
     }
     this.keys.add(event.code);
   }

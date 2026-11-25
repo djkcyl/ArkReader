@@ -551,6 +551,27 @@ impl Engine {
         }))
     }
 
+    pub async fn story_script(&self, id: &str) -> Result<Value> {
+        let version = self.current().await?;
+        ensure!(
+            version
+                .base
+                .catalog
+                .stories
+                .iter()
+                .any(|story| story.id == id),
+            "当前剧情目录中没有这段剧情。"
+        );
+        let stories = Stories {
+            data: self.data.clone(),
+            index: version.index.clone(),
+            source: version.source.clone(),
+        };
+        Ok(
+            json!({ "id": id, "script": stories.text(id, false).await?, "variables": version.index.variables }),
+        )
+    }
+
     pub async fn start_story(self: &Arc<Self>, id: String) -> Result<Arc<Progress>> {
         let version = self.current().await?;
         ensure!(

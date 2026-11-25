@@ -52,6 +52,7 @@ pub fn router(engine: Arc<Engine>) -> Router {
         .route("/api/home-music/operations/{id}/cancel", post(cancel))
         .route("/api/prepare", post(prepare))
         .route("/api/story/{*story}", get(story))
+        .route("/api/story-script/{*story}", get(story_script))
         .route("/api/operations/{id}", get(operation))
         .route("/api/operations/{id}/cancel", post(cancel))
         .route("/api/story-cache", get(cache_status).post(cache_stories))
@@ -130,6 +131,9 @@ async fn story(State(engine): Shared, Path(id): Path<String>) -> Result<Json<Val
             .to_owned()),
         StatusCode::CONFLICT,
     ))
+}
+async fn story_script(State(engine): Shared, Path(id): Path<String>) -> Result<Json<Value>> {
+    Ok(Json(engine.story_script(&id).await?))
 }
 async fn operation(State(engine): Shared, Path(id): Path<String>) -> Result<Json<Value>> {
     let job = engine.jobs.get(&id).ok_or_else(|| {

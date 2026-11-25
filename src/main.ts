@@ -1,4 +1,5 @@
 import { HistoryView } from './player/history-view';
+import { ScriptView } from './player/script-view';
 import { SkipView } from './player/skip-view';
 import { StoryVideo } from './player/video';
 import './style.css';
@@ -95,6 +96,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /* HTML */ ` <header
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h13" /></svg
             >返回剧情目录</button
           ><span class="playback-location">剧情档案 <span aria-hidden="true">/</span> 正在播放</span
+          ><button id="script-toggle" type="button">剧情脚本</button
           ><span class="playback-clock"
             ><span class="playback-clock-label">播放时间</span
             ><span id="position" aria-label="播放时间"></span
@@ -189,6 +191,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /* HTML */ ` <header
   <footer>ARKREADER <span>原版资源 · 本地播放</span></footer>`;
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+const scriptView = new ScriptView($('playback-surface'), $<HTMLButtonElement>('script-toggle'));
 void prtsCursor()
   .load()
   .catch((error) => console.warn(String(error)));
@@ -439,6 +442,7 @@ const keyboardQuick = new KeyboardQuickPlay(
     !loading &&
     !hiddenUI &&
     !document.hidden &&
+    !document.activeElement?.closest('#script-panel') &&
     !document.querySelector('dialog[open]'),
   cancelGesture,
 );
@@ -446,6 +450,7 @@ let pressPointer: number | null = null,
   suppressPointerClickUntil = 0;
 
 function releasePlayback(): Promise<void> {
+  scriptView.clear();
   saveReadingProgress();
   readingShelf.flush();
   hostBoundary.close();
@@ -525,6 +530,9 @@ document.addEventListener('catalog-selection', (event) => {
     cancelPlaybackPrompt();
 });
 document.addEventListener('library-tab-changed', cancelPlaybackPrompt);
+document.addEventListener('arkreader-reading-preview', (event) => {
+  if (pendingPlayback?.story === (event as CustomEvent).detail.id) resumePrompt.refreshPreview();
+});
 document.addEventListener('arkreader-before-close', cancelPlaybackPrompt);
 document.addEventListener(
   'click',
@@ -595,6 +603,7 @@ async function start(target?: PlaybackTarget): Promise<void> {
     }
     const pack = await prepareStory(story, signal);
     signal.throwIfAborted();
+    readingShelf.scriptSource(story, pack);
     const compatibility = inspectScript(pack.script, pack.variables);
     if (compatibility.status === 'unsupported')
       throw new ScriptCompatibilityError({
@@ -824,6 +833,7 @@ function saveReadingProgress(): void {
 }
 function sync(): void {
   if (!player) return;
+  scriptView.update(player);
   saveReadingProgress();
   if (!scrubbing) {
     $<HTMLInputElement>('playback-seek').value = String(player.playbackPercent);
@@ -956,6 +966,7 @@ playbackSeek.addEventListener('pointercancel', () => {
   scrubbing = false;
 });
 function returnToLibrary(): void {
+  scriptView.close();
   cancelPlaybackPrompt();
   const locationUrl = new URL(location.href);
   locationUrl.searchParams.delete('story');
@@ -1247,7 +1258,7 @@ document.addEventListener('keydown', (e) => {
   if (
     e.target instanceof HTMLElement &&
     (e.target.isContentEditable ||
-      e.target.closest('input,textarea,select,button,a,[role="scrollbar"]'))
+      e.target.closest('input,textarea,select,button,a,[role="scrollbar"],#script-panel'))
   )
     return;
   if (['Space', 'Enter', 'ArrowRight'].includes(e.code)) {
@@ -1319,6 +1330,15 @@ const readingShelf = new ReadingShelf(
   },
   (ledger) => catalogView.setReadingProgress(ledger),
   !packagedChapters,
+  packagedChapters
+    ? async (id) => {
+        const chapter = packagedChapters?.find((row) => row.id === id);
+        if (!chapter) throw Error('剧情文本暂不可用');
+        const response = await fetch(chapter.url, { signal: AbortSignal.timeout(10000) });
+        if (!response.ok) throw Error('剧情文本暂不可用');
+        return response.json();
+      }
+    : undefined,
 );
 const storyCache = packagedChapters
   ? undefined

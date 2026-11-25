@@ -134,7 +134,7 @@ export function recordProgress(
     !changedPosition
   )
     return false;
-  const checkpoint = advances ? position : best;
+  const checkpoint = advances ? (parsePosition(position) ?? best) : best;
   data.progress[id] = {
     percent,
     complete,

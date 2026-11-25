@@ -360,6 +360,7 @@ export class StoryPlayer {
   readonly viewingProgress: ViewingProgressTracker;
   readonly scriptIdentity: string;
   playbackStep = 0;
+  readonly executedCommands = new Map<number, number>();
   private playbackActions: PlaybackAction[] = [];
   private savedPosition?: PlaybackPosition;
   private reviewPoints = new WeakMap<object, { step: number; index: number }>();
@@ -371,7 +372,6 @@ export class StoryPlayer {
       script: this.scriptIdentity,
       ...point,
       percent: Math.min(99, Math.floor((point.index / this.scheduler.commands.length) * 100)),
-      label: cell.text.slice(0, 180),
       actions: this.playbackActions
         .filter((action) => action.step < point.step)
         .map((a) => ({ ...a })),
@@ -407,21 +407,12 @@ export class StoryPlayer {
       (this.savedPosition?.step !== this.playbackStep ||
         this.savedPosition.actions.length !== this.playbackActions.length)
     ) {
-      const command = this.scheduler.current!;
-      const label = this.choices.length
-        ? '待选择：' + this.choices.map((c) => c.text).join(' / ')
-        : command.name === 'subtitle'
-          ? this.subtitle.text
-          : command.name === 'endtip'
-            ? '本段剧情末尾'
-            : (this.history.at(-1)?.text ?? '');
       this.savedPosition = {
         schema: 1,
         script: this.scriptIdentity,
         index: this.scheduler.index,
         step: this.playbackStep,
         percent: this.playbackPercent,
-        label: label.slice(0, 180),
         actions: this.playbackActions.map((a) => ({ ...a })),
         seen: this.viewingProgress.snapshot,
       };
@@ -731,6 +722,11 @@ export class StoryPlayer {
         execute: (command, done) => {
           this.line = command.line;
           this.playbackStep++;
+          const commandIndex = this.scheduler.index;
+          this.executedCommands.set(
+            commandIndex,
+            (this.executedCommands.get(commandIndex) ?? 0) + 1,
+          );
           const historyCount = this.history.length;
           this.emit('command', { name: command.name, params: command.params });
           const line = command.line,

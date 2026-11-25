@@ -8,7 +8,6 @@ export interface PlaybackPosition {
   index: number;
   step: number;
   percent: number;
-  label: string;
   actions: PlaybackAction[];
   seen: [number, number][];
 }
@@ -40,8 +39,6 @@ export function parsePosition(value: unknown): PlaybackPosition | undefined {
     !Number.isFinite(p.percent) ||
     p.percent < 0 ||
     p.percent > 100 ||
-    typeof p.label !== 'string' ||
-    p.label.length > 180 ||
     !Array.isArray(p.actions) ||
     p.actions.length > 10000 ||
     !Array.isArray(p.seen) ||
@@ -69,5 +66,13 @@ export function parsePosition(value: unknown): PlaybackPosition | undefined {
     )
   )
     return;
-  return p;
+  return {
+    schema: 1,
+    script: p.script,
+    index: p.index,
+    step: p.step,
+    percent: p.percent,
+    actions: p.actions,
+    seen: p.seen,
+  };
 }

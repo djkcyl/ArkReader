@@ -126,7 +126,7 @@ function targetFor(target: EventTarget | null): Target | undefined {
       element: target.closest<HTMLButtonElement>('button') ?? skip,
       role: target.closest('#confirm-skip') ? 'normal.skip-confirm' : 'normal.skip-cancel',
     };
-  let element = target.closest<HTMLElement>('button,input,[role="tab"]');
+  let element = target.closest<HTMLElement>('button,input,[role="tab"],#script-panel summary');
   const label = target.closest('label');
   if (label?.control instanceof HTMLInputElement) element = label.control;
   if (!element) {
@@ -157,6 +157,8 @@ function targetFor(target: EventTarget | null): Target | undefined {
   else if (['high-res-rt', 'quick-skip-decisions'].includes(id)) role = 'settings.toggle';
   else if (['pause', 'window-full', 'full'].includes(id)) role = 'settings.action';
   else if (id === 'resume') role = 'prompt.ok';
+  else if (id === 'script-close') role = 'shell.cancel';
+  else if (id === 'script-toggle' || element.closest('#script-panel')) role = 'shell.tab';
   else if (['restart', 'error-retry', 'host-continue', 'resume-continue'].includes(id))
     role = 'prompt.confirm';
   else if (['library', 'error-library', 'host-leave', 'resume-restart'].includes(id))

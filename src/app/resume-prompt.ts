@@ -2,6 +2,7 @@ import { loadWidgetProfile, NativePrompt } from '../player/native-widgets';
 import type { PlaybackTarget } from '../player/restore-position';
 import type { ResumeChoice } from './resume-choice';
 import './resume-prompt.css';
+import { previewText } from './reading-preview';
 
 export class ResumePrompt {
   readonly dialog = document.createElement('dialog');
@@ -90,11 +91,7 @@ export class ResumePrompt {
     this.choice = choice;
     this.title.textContent = story;
     this.progress.textContent = `最高进度 ${choice.percent}%`;
-    this.excerpt.textContent = choice.approximate
-      ? '将快进至这一进度附近，遇到选项时暂停。'
-      : choice.label;
-    this.excerpt.title = this.excerpt.textContent;
-    this.excerpt.hidden = !this.excerpt.textContent;
+    this.refreshPreview();
     const abort = () => this.finish(null);
     signal.addEventListener('abort', abort, { once: true });
     try {
@@ -106,6 +103,14 @@ export class ResumePrompt {
     } finally {
       signal.removeEventListener('abort', abort);
     }
+  }
+  refreshPreview(): void {
+    if (!this.choice) return;
+    this.excerpt.textContent = this.choice.approximate
+      ? '将快进至这一进度附近，遇到选项时暂停。'
+      : previewText(this.choice.preview);
+    this.excerpt.title = this.excerpt.textContent;
+    this.excerpt.hidden = !this.excerpt.textContent;
   }
   private finish(target: PlaybackTarget | null) {
     const resolve = this.resolve;

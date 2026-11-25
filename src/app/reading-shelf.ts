@@ -12,6 +12,8 @@ import type { PlaybackPosition } from '../core/playback-position';
 import type { PlaybackTarget } from '../player/restore-position';
 import { resumeChoice } from './resume-choice';
 import { libraryHeading } from './library-heading';
+import { ReadingPreviews, previewText } from './reading-preview';
+import type { ScriptSource } from '../core/script-preview';
 export { parseShelf, rememberStory } from './reading-state';
 
 type LibraryTab = 'catalog' | 'recent' | 'favorites' | 'cache';
@@ -29,11 +31,28 @@ export class ReadingShelf {
   private tablist = document.createElement('div');
   private favorite = document.createElement('button');
   private selected = '';
+  private previews: ReadingPreviews;
   constructor(
     private open: (id: string, target?: PlaybackTarget) => void,
     private changed: (ledger: ProgressLedger) => void,
     withCache = false,
+    loadScript: (id: string) => Promise<ScriptSource> = async (id) => {
+      const response = await fetch(
+        '/api/story-script/' + id.split('/').map(encodeURIComponent).join('/'),
+        { signal: AbortSignal.timeout(10000) },
+      );
+      if (!response.ok) throw Error('剧情文本暂不可用');
+      return response.json();
+    },
   ) {
+    this.previews = new ReadingPreviews(
+      loadScript,
+      () => (document.getElementById('nickname') as HTMLInputElement | null)?.value || '博士',
+      (id) => {
+        this.render();
+        document.dispatchEvent(new CustomEvent('arkreader-reading-preview', { detail: { id } }));
+      },
+    );
     const availableTabs = withCache ? tabs : tabs.filter((tab) => tab !== 'cache');
     try {
       this.data = parseShelf(localStorage.getItem('arkreader.shelf'));
@@ -176,7 +195,13 @@ export class ReadingShelf {
     this.changed(this.data.progress);
   }
   resume(id: string) {
-    return resumeChoice(this.data.progress[id]);
+    const choice = resumeChoice(this.data.progress[id]);
+    if (choice?.target.position && !choice.approximate)
+      choice.preview = this.previews.get(id, choice.target.position);
+    return choice;
+  }
+  scriptSource(id: string, source: ScriptSource) {
+    this.previews.source(id, source);
   }
   update(id: string, progress: ViewingProgress, position?: PlaybackPosition) {
     if (!recordProgress(this.data, id, progress, position)) return;
@@ -210,6 +235,7 @@ export class ReadingShelf {
       localStorage.setItem('arkreader.libraryTab', tab);
     } catch {}
     document.dispatchEvent(new CustomEvent('library-tab-changed', { detail: { tab } }));
+    this.render();
   }
   private syncFavorite() {
     this.favorite.hidden = !this.selected;
@@ -302,7 +328,9 @@ export class ReadingShelf {
         excerpt.className = 'shelf-excerpt';
         excerpt.textContent = approximate
           ? '遇到未记录的选项时，需要重新选择'
-          : (resume?.label ?? position?.label ?? '');
+          : position && this.mode === tab
+            ? previewText(this.previews.get(id, position))
+            : '';
         excerpt.title = excerpt.textContent;
         text.append(group, title, excerpt);
         button.append(number, text, storyProgressView(id, progress), meta, actions);
