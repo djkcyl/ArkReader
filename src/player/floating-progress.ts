@@ -89,7 +89,10 @@ export class FloatingProgress {
     this.sync();
   }
   private nearBottom(y: number) {
-    const rect = this.surface.getBoundingClientRect();
+    const area = this.surface.classList.contains('script-open')
+      ? (this.surface.querySelector<HTMLElement>('.playback-frame') ?? this.surface)
+      : this.surface;
+    const rect = area.getBoundingClientRect();
     return y >= rect.bottom - 56 && y <= rect.bottom;
   }
   private sync() {

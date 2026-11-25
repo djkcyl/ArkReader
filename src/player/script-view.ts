@@ -39,17 +39,19 @@ export class ScriptView {
     close.onclick = () => this.setOpen(false);
     this.readableButton.textContent = '可读';
     this.sourceButton.textContent = '原文';
+    this.readableButton.className = this.sourceButton.className = 'script-mode';
     this.readableButton.onclick = () => this.setSource(false);
     this.sourceButton.onclick = () => this.setSource(true);
     this.follow.textContent = '跟随';
+    this.follow.className = 'script-follow';
     this.follow.setAttribute('aria-label', '跟随播放');
     this.follow.onclick = () => {
       this.following = !this.following;
       this.follow.setAttribute('aria-pressed', String(this.following));
       if (this.following) this.scrollCurrent();
     };
-    header.append(heading, this.readableButton, this.sourceButton, this.follow, close);
     this.status.className = 'script-status';
+    header.append(heading, this.readableButton, this.sourceButton, this.status, this.follow, close);
     this.list.className = 'script-list';
     this.list.tabIndex = 0;
     this.list.setAttribute('role', 'list');
@@ -78,8 +80,11 @@ export class ScriptView {
         event.stopPropagation();
       }
     });
-    this.panel.append(header, this.status, this.list);
+    this.panel.append(header, this.list);
     surface.append(this.panel);
+    new ResizeObserver(() => {
+      if (this.opened && this.following) this.scrollCurrent();
+    }).observe(this.list);
     toggle.setAttribute('aria-controls', this.panel.id);
     toggle.setAttribute('aria-expanded', 'false');
     toggle.title = '显示剧情脚本（F9）';
@@ -119,6 +124,7 @@ export class ScriptView {
     this.toggle.setAttribute('aria-expanded', String(open));
     this.surface.classList.toggle('script-open', open);
     this.surface.closest('#player-panel')?.classList.toggle('script-visible', open);
+    this.surface.dispatchEvent(new Event('playback-screen-mode'));
     if (open) {
       this.following = true;
       this.render();
@@ -291,6 +297,7 @@ export class ScriptView {
     }
     const command = player.scheduler.current;
     this.status.textContent = `${state}${command ? ` · ${command.line ? `第 ${command.line} 行` : '结束标记'}` : ''} · ${player.scheduler.commands.length} 条指令`;
+    this.status.title = this.status.textContent;
     if (this.following && (moved || force)) this.scrollCurrent();
   }
   private scrollCurrent(): void {
