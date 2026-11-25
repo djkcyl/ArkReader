@@ -72,16 +72,6 @@ fn stamp(root: &Path, path: &Path) -> Result<FileStamp> {
         modified,
     })
 }
-fn identity(version: &Version) -> Result<String> {
-    crate::artifacts::fingerprint(&(
-        crate::DECODER_REVISION,
-        &version.index.source.version,
-        &version.index.source.platform,
-        &version.index.routing.sha256,
-        &version.client.identity,
-    ))
-}
-
 impl Store {
     pub fn load(root: &Path) -> Self {
         let mut store = fs::read(root.join("story-cache.json"))
@@ -112,7 +102,7 @@ impl Store {
         version: &Version,
         job: Option<&Arc<Progress>>,
     ) -> Result<Value> {
-        let identity = identity(version)?;
+        let identity = version.content_key.as_str();
         let mut cached = Vec::new();
         let mut stale = Vec::new();
         let mut memo = BTreeMap::new();
@@ -218,7 +208,7 @@ impl Engine {
             .collect();
         let mut store = self.cache_store.lock().unwrap();
         store.queue = Some(Queue {
-            identity: identity(&version)?,
+            identity: version.content_key.clone(),
             id: job.id.clone(),
             state: "running".into(),
             items,
@@ -357,7 +347,7 @@ impl Engine {
             client: client.clone(),
             store: self.store.clone(),
         };
-        let cache_identity = identity(&version)?;
+        let cache_identity = version.content_key.clone();
         for (id, plan, own) in plans {
             crate::error::checkpoint(&job.cancel)?;
             self.cache_item(&job, &id, "downloading", None)?;

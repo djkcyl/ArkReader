@@ -47,7 +47,7 @@ impl Platform {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Entry {
     pub name: String,
@@ -291,11 +291,7 @@ impl Source {
         Ok(checkpoint(&self.cancelled)?)
     }
     pub fn cached_path(&self, name: &str) -> Result<PathBuf> {
-        self.cache.path(
-            self.manifest.platform.cache_name(),
-            &self.manifest.version,
-            name,
-        )
+        self.cache.path(self.manifest.platform.cache_name(), name)
     }
 
     pub async fn bundle(
@@ -351,7 +347,6 @@ impl Source {
         let (guard, cached) = tokio::task::spawn_blocking(move || {
             let result = source.cache.find(
                 source.manifest.platform.cache_name(),
-                &source.manifest.version,
                 &entry_copy,
                 &source.cancelled,
             );
@@ -480,6 +475,55 @@ impl Source {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn unchanged_manifest_files_are_reused_without_version_directories() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let cancel = CancellationToken::new();
+        let entry = Entry {
+            name: "avg/a.ab".into(),
+            md5: "900150983cd24fb0d6963f7d28e17f72".into(),
+            ab_size: 3,
+            total_size: 3,
+            extra: BTreeMap::new(),
+        };
+        let manifest = Manifest {
+            platform: Platform::Windows,
+            version: "one".into(),
+            client_version: "1".into(),
+            base_url: String::new(),
+            entries: BTreeMap::from([(entry.name.clone(), entry.clone())]),
+        };
+        let first = Source::new(temp.path().to_owned(), manifest.clone(), cancel.clone())?;
+        let original = first.cached_path(&entry.name)?;
+        write_atomic(&original, b"abc")?;
+        let stamp = std::fs::metadata(&original)?.modified()?;
+        let mut latest = manifest.clone();
+        latest.version = "two".into();
+        let second = Source::new(temp.path().to_owned(), latest.clone(), cancel.clone())?;
+        let reused = second
+            .bundle(&entry.name, |p| {
+                assert!(p.cached);
+                assert_eq!(p.downloaded, 0);
+            })
+            .await?;
+        assert_eq!(original, reused);
+        assert_eq!(std::fs::metadata(&reused)?.modified()?, stamp);
+        assert!(!temp.path().join("Windows/one").exists());
+        assert!(!temp.path().join("Windows/two").exists());
+        latest.entries.get_mut(&entry.name).unwrap().md5 =
+            "d16fb36f0911f878998c136191af705e".into();
+        let changed = Source::new(temp.path().to_owned(), latest, cancel)?;
+        assert!(matches!(
+            changed
+                .bundle(&entry.name, |_| {})
+                .await
+                .unwrap_err()
+                .downcast_ref::<Error>(),
+            Some(Error::NotCached(_))
+        ));
+        assert_eq!(std::fs::read(original)?, b"abc");
+        Ok(())
+    }
     #[tokio::test]
     async fn cancellation_interrupts_a_pending_resource_lock() -> Result<()> {
         let temp = tempfile::tempdir()?;

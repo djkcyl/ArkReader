@@ -4,6 +4,21 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{collections::BTreeMap, sync::LazyLock};
 
+pub fn prune(data: &std::path::Path, cancel: &tokio_util::sync::CancellationToken) -> Result<()> {
+    let cache = crate::cache::Cache::new(data.join("cache/historical-movies"))?;
+    let mut allowed: BTreeMap<&str, std::collections::BTreeSet<String>> = BTreeMap::new();
+    for record in MOVIES.values() {
+        allowed
+            .entry(record.platform.cache_name())
+            .or_default()
+            .insert(record.entry.name.clone());
+    }
+    for (platform, names) in allowed {
+        cache.prune(platform, &names, cancel)?;
+    }
+    Ok(())
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Record {

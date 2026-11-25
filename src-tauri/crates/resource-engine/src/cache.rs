@@ -4,10 +4,10 @@ use crate::{
 };
 use anyhow::{ensure, Context, Result};
 use md5::Md5;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::HashMap,
+    collections::{BTreeSet, HashMap},
     fs::{self, File},
     io::{Read, Write},
     path::{Component, Path, PathBuf},
@@ -102,6 +102,12 @@ struct Verified {
     expected_sha256: Option<String>,
 }
 
+#[derive(Serialize, Deserialize)]
+struct DownloadReceipt {
+    entry: Entry,
+    sha256: String,
+}
+
 pub struct Cache {
     pub root: PathBuf,
     verified: Mutex<HashMap<PathBuf, Verified>>,
@@ -114,11 +120,12 @@ impl Cache {
             verified: Mutex::new(HashMap::new()),
         })
     }
-    pub fn path(&self, platform: &str, version: &str, name: &str) -> Result<PathBuf> {
-        safe_path(
-            &safe_path(&safe_path(&self.root, platform)?, version)?,
-            name,
-        )
+    pub fn path(&self, platform: &str, name: &str) -> Result<PathBuf> {
+        ensure!(
+            resource_path(platform)?.components().count() == 1,
+            "Invalid cache platform"
+        );
+        safe_path(&safe_path(&self.root, platform)?, name)
     }
     pub fn verify(
         &self,
@@ -192,73 +199,137 @@ impl Cache {
     pub fn find(
         &self,
         platform: &str,
-        version: &str,
         entry: &Entry,
         cancel: &CancellationToken,
     ) -> Result<Option<PathBuf>> {
-        let destination = self.path(platform, version, &entry.name)?;
-        if destination.is_file() {
-            if let Ok(receipt) = fs::read_to_string(receipt_path(&destination)) {
-                let receipt = receipt.trim();
-                if receipt.len() == 64
-                    && receipt.bytes().all(|b| b.is_ascii_hexdigit())
-                    && self
-                        .verify(&destination, entry, cancel, Some(receipt))
-                        .is_ok()
-                {
-                    return Ok(Some(destination));
-                }
-            }
-        }
         checkpoint(cancel)?;
-        if entry.full_md5().is_none() {
+        let destination = self.path(platform, &entry.name)?;
+        if !destination.is_file() {
             return Ok(None);
+        }
+        // A full publisher checksum is sufficient even if a crash interrupted
+        // writing the sidecar. Short publisher tags need their download receipt.
+        let receipt = if entry.full_md5().is_none() {
+            fs::read(receipt_path(&destination))
+                .ok()
+                .and_then(|raw| serde_json::from_slice::<DownloadReceipt>(&raw).ok())
+                .filter(|receipt| {
+                    receipt.entry == *entry
+                        && receipt.sha256.len() == 64
+                        && receipt.sha256.bytes().all(|c| c.is_ascii_hexdigit())
+                })
+        } else {
+            None
+        };
+        if entry.full_md5().is_none() && receipt.is_none() {
+            return Ok(None);
+        }
+        let valid = self
+            .verify(
+                &destination,
+                entry,
+                cancel,
+                receipt.as_ref().map(|r| r.sha256.as_str()),
+            )
+            .is_ok();
+        checkpoint(cancel)?;
+        Ok(valid.then_some(destination))
+    }
+
+    pub fn receipt(&self, path: &Path, entry: &Entry, hash: &str) -> Result<()> {
+        write_json(
+            &receipt_path(path),
+            &DownloadReceipt {
+                entry: entry.clone(),
+                sha256: hash.into(),
+            },
+        )
+    }
+
+    /// Called only with a successfully loaded manifest, before playback starts.
+    /// Walk owned files individually; never follow links or recursively delete
+    /// an unchecked directory. Validation completes before any file is removed.
+    pub fn prune(
+        &self,
+        platform: &str,
+        names: &BTreeSet<String>,
+        cancel: &CancellationToken,
+    ) -> Result<usize> {
+        checkpoint(cancel)?;
+        ensure!(
+            !names.is_empty(),
+            "Refusing to clean with an empty resource manifest"
+        );
+        let mut keep = BTreeSet::new();
+        for name in names {
+            let path = self.path(platform, name)?;
+            keep.insert(receipt_path(&path));
+            keep.insert(path);
         }
         let root = safe_path(&self.root, platform)?;
         if !root.is_dir() {
-            return Ok(None);
+            return Ok(0);
         }
-        let mut versions = fs::read_dir(&root)?.collect::<std::io::Result<Vec<_>>>()?;
-        versions.sort_by_key(|item| std::cmp::Reverse(item.file_name()));
-        for directory in versions {
-            checkpoint(cancel)?;
-            if !directory.file_type()?.is_dir() || directory.file_name() == version {
-                continue;
-            }
-            let Some(folder) = directory.file_name().to_str().map(str::to_owned) else {
-                continue;
-            };
-            let previous = safe_path(&safe_path(&root, &folder)?, &entry.name)?;
-            if !previous.is_file() || self.verify(&previous, entry, cancel, None).is_err() {
-                continue;
-            }
-            let parent = destination
-                .parent()
-                .context("Invalid resource cache location")?;
-            fs::create_dir_all(parent)?;
-            let mut staged = tempfile::NamedTempFile::new_in(parent)?;
-            let mut input = File::open(previous)?;
-            let mut buffer = [0u8; 65536];
-            loop {
+        fn walk(
+            root: &Path,
+            folder: &Path,
+            files: &mut Vec<PathBuf>,
+            directories: &mut Vec<PathBuf>,
+            cancel: &CancellationToken,
+        ) -> Result<()> {
+            for entry in fs::read_dir(folder)? {
                 checkpoint(cancel)?;
-                let n = input.read(&mut buffer)?;
-                if n == 0 {
-                    break;
+                let entry = entry?;
+                let relative = entry
+                    .path()
+                    .strip_prefix(root)?
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                let path = safe_path(root, &relative)?;
+                if entry.file_type()?.is_dir() {
+                    walk(root, &path, files, directories, cancel)?;
+                    directories.push(path);
+                } else {
+                    ensure!(entry.file_type()?.is_file(), "Unexpected cache entry");
+                    files.push(path);
                 }
-                staged.write_all(&buffer[..n])?;
             }
-            staged.as_file().sync_all()?;
-            let hash = self.verify(staged.path(), entry, cancel, None)?;
-            checkpoint(cancel)?;
-            staged.persist(&destination).map_err(|error| error.error)?;
-            self.receipt(&destination, &hash)?;
-            return Ok(Some(destination));
+            Ok(())
         }
-        Ok(None)
-    }
-
-    pub fn receipt(&self, path: &Path, hash: &str) -> Result<()> {
-        write_atomic(&receipt_path(path), hash.as_bytes())
+        let mut files = Vec::new();
+        let mut directories = Vec::new();
+        walk(&root, &root, &mut files, &mut directories, cancel)?;
+        let mut removed = 0;
+        for file in files.into_iter().filter(|p| !keep.contains(p)) {
+            checkpoint(cancel)?;
+            let relative = file
+                .strip_prefix(&root)?
+                .to_string_lossy()
+                .replace('\\', "/");
+            let target = safe_path(&root, &relative)?.canonicalize()?;
+            ensure!(
+                target.starts_with(&root) && target != root,
+                "Resource cleanup escaped its directory"
+            );
+            fs::remove_file(target)?;
+            removed += 1;
+        }
+        for directory in directories {
+            checkpoint(cancel)?;
+            let relative = directory
+                .strip_prefix(&root)?
+                .to_string_lossy()
+                .replace('\\', "/");
+            let target = safe_path(&root, &relative)?;
+            if fs::read_dir(&target)?.next().is_none() {
+                fs::remove_dir(target)?;
+            }
+        }
+        self.verified
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Resource verification cache unavailable"))?
+            .retain(|p, _| p.is_file());
+        Ok(removed)
     }
 
     pub fn unpack(
@@ -314,13 +385,13 @@ impl Cache {
         let hash = self.verify(output.path(), entry, cancel, None)?;
         checkpoint(cancel)?;
         output.persist(destination).map_err(|error| error.error)?;
-        self.receipt(destination, &hash)
+        self.receipt(destination, entry, &hash)
     }
 }
 
 fn receipt_path(path: &Path) -> PathBuf {
     let mut receipt = path.as_os_str().to_os_string();
-    receipt.push(".sha256");
+    receipt.push(".verified.json");
     receipt.into()
 }
 
@@ -369,32 +440,123 @@ mod tests {
         let cache = Cache::new(temp.path().to_owned())?;
         let cancel = CancellationToken::new();
         let value = entry(b"abc", "eb8a");
-        let path = cache.path("Windows", "one", &value.name)?;
+        let path = cache.path("Windows", &value.name)?;
         write_atomic(&path, b"abc")?;
-        assert!(cache.find("Windows", "one", &value, &cancel)?.is_none());
+        assert!(cache.find("Windows", &value, &cancel)?.is_none());
         let digest = cache.verify(&path, &value, &cancel, None)?;
-        cache.receipt(&path, &digest)?;
-        assert!(cache.find("Windows", "one", &value, &cancel)?.is_some());
+        cache.receipt(&path, &value, &digest)?;
+        assert!(cache.find("Windows", &value, &cancel)?.is_some());
+        let mut changed = value.clone();
+        changed.md5 = "beef".into();
+        assert!(cache.find("Windows", &changed, &cancel)?.is_none());
+        changed = value.clone();
+        changed
+            .extra
+            .insert("hash".into(), "changed publisher identity".into());
+        assert!(cache.find("Windows", &changed, &cancel)?.is_none());
         write_atomic(&path, b"xyz")?;
-        assert!(cache.find("Windows", "one", &value, &cancel)?.is_none());
-        assert!(cache.find("Windows", "two", &value, &cancel)?.is_none());
+        assert!(cache.find("Windows", &value, &cancel)?.is_none());
         Ok(())
     }
 
     #[test]
-    fn reuse_requires_the_new_manifest_checksum() -> Result<()> {
+    fn reuse_and_replacement_use_the_same_path() -> Result<()> {
         let temp = tempfile::tempdir()?;
         let cache = Cache::new(temp.path().to_owned())?;
         let cancel = CancellationToken::new();
         let value = entry(b"abc", "900150983cd24fb0d6963f7d28e17f72");
-        let old = cache.path("Android", "one", &value.name)?;
+        let old = cache.path("Android", &value.name)?;
         write_atomic(&old, b"abc")?;
         let new = cache
-            .find("Android", "two", &value, &cancel)?
+            .find("Android", &value, &cancel)?
             .context("Verified original was not reused")?;
-        assert_eq!(fs::read(new)?, b"abc");
+        assert_eq!(new, old);
+        assert_eq!(fs::read(&new)?, b"abc");
         let changed = entry(b"xyz", "d16fb36f0911f878998c136191af705e");
-        assert!(cache.find("Android", "three", &changed, &cancel)?.is_none());
+        assert!(cache.find("Android", &changed, &cancel)?.is_none());
+        assert_eq!(fs::read(&old)?, b"abc");
+        let archive = temp.path().join("download.zip");
+        let make_archive = |bytes: &[u8]| -> Result<()> {
+            let mut zip = zip::ZipWriter::new(File::create(&archive)?);
+            zip.start_file(&changed.name, zip::write::SimpleFileOptions::default())?;
+            zip.write_all(bytes)?;
+            zip.finish()?;
+            Ok(())
+        };
+        make_archive(b"bad")?;
+        assert!(cache.unpack(&archive, &old, &changed, &cancel).is_err());
+        assert_eq!(fs::read(&old)?, b"abc");
+        make_archive(b"xyz")?;
+        let cancelled = CancellationToken::new();
+        cancelled.cancel();
+        assert!(cache.unpack(&archive, &old, &changed, &cancelled).is_err());
+        assert_eq!(fs::read(&old)?, b"abc");
+        cache.unpack(&archive, &old, &changed, &cancel)?;
+        assert_eq!(cache.find("Android", &changed, &cancel)?, Some(old.clone()));
+        assert_eq!(fs::read(&old)?, b"xyz");
+        assert!(cache.find("Android", &value, &cancel)?.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn cleanup_only_removes_unlisted_owned_files() -> Result<()> {
+        let data = tempfile::tempdir()?;
+        let cache = Cache::new(data.path().join("cache"))?;
+        let cancel = CancellationToken::new();
+        let keep = cache.path("Windows", "avg/keep.ab")?;
+        write_atomic(&keep, b"keep")?;
+        write_atomic(&receipt_path(&keep), b"receipt")?;
+        let removed = cache.path("Windows", "avg/removed.ab")?;
+        write_atomic(&removed, b"obsolete")?;
+        write_atomic(&receipt_path(&removed), b"receipt")?;
+        let previous = cache.path("Windows", "old-version/avg/file.ab")?;
+        write_atomic(&previous, b"obsolete directory")?;
+        let other = cache.path("Android", "avg/other.ab")?;
+        write_atomic(&other, b"other platform")?;
+        write_atomic(&data.path().join("settings.json"), b"user settings")?;
+        assert!(cache.prune("Windows", &BTreeSet::new(), &cancel).is_err());
+        assert!(cache
+            .prune(
+                "Windows",
+                &BTreeSet::from(["avg/keep.ab".into(), "../outside".into()]),
+                &cancel
+            )
+            .is_err());
+        assert!(removed.is_file());
+        let names = BTreeSet::from(["avg/keep.ab".into()]);
+        let cancelled = CancellationToken::new();
+        cancelled.cancel();
+        assert!(cache.prune("Windows", &names, &cancelled).is_err());
+        assert!(removed.is_file());
+        assert_eq!(cache.prune("Windows", &names, &cancel)?, 3);
+        assert!(keep.is_file() && receipt_path(&keep).is_file());
+        assert!(!removed.exists() && !previous.exists());
+        assert!(!cache.root.join("Windows/old-version").exists());
+        assert_eq!(fs::read(other)?, b"other platform");
+        assert_eq!(
+            fs::read(data.path().join("settings.json"))?,
+            b"user settings"
+        );
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cleanup_does_not_follow_links() -> Result<()> {
+        let data = tempfile::tempdir()?;
+        let outside = tempfile::tempdir()?;
+        let cache = Cache::new(data.path().to_owned())?;
+        fs::create_dir_all(cache.root.join("Windows"))?;
+        write_atomic(&outside.path().join("important"), b"keep")?;
+        std::os::unix::fs::symlink(outside.path(), cache.root.join("Windows/link"))?;
+        assert!(cache
+            .prune(
+                "Windows",
+                &BTreeSet::from(["avg/keep.ab".into()]),
+                &CancellationToken::new()
+            )
+            .is_err());
+        assert_eq!(fs::read(outside.path().join("important"))?, b"keep");
         Ok(())
     }
 

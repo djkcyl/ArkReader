@@ -247,7 +247,7 @@ impl ClientAssets {
             "Invalid official client version"
         );
         let cache = Arc::new(Cache::new(data.join("client"))?);
-        let directory = cache.path("Windows", version, "source.json")?;
+        let directory = cache.path("Windows", "source.json")?;
         let lock = source::path_lock(&directory)?;
         let _guard = tokio::select! {biased;_=cancel.cancelled()=>return Err(Error::Cancelled.into()),guard=lock.lock()=>guard};
         let client = source::client()?;
@@ -276,7 +276,7 @@ impl ClientAssets {
             record
         };
         let base = base(&record, version)?;
-        let manifest = cache.path("Windows", version, "game_files")?;
+        let manifest = cache.path("Windows", "game_files")?;
         let raw = tokio::fs::read(&manifest).await.unwrap_or_default();
         let parsed = parse_manifest(&raw, &record.pkg.game_files_md5);
         let entries = if let Ok(entries) = parsed {
@@ -306,8 +306,7 @@ impl ClientAssets {
     }
 
     pub fn cached_path(&self, name: &str) -> Result<PathBuf> {
-        self.cache
-            .path("Windows", &self.identity.client_version, name)
+        self.cache.path("Windows", name)
     }
 
     pub async fn file(&self, name: &str) -> Result<PathBuf> {
@@ -344,12 +343,7 @@ impl ClientAssets {
         let this = self.clone();
         let item = entry.clone();
         let (guard, cached) = tokio::task::spawn_blocking(move || {
-            let result = this.cache.find(
-                "Windows",
-                &this.identity.client_version,
-                &item,
-                &this.cancel,
-            );
+            let result = this.cache.find("Windows", &item, &this.cancel);
             (guard, result)
         })
         .await?;
@@ -397,7 +391,7 @@ impl ClientAssets {
             let hash = this.cache.verify(&payload, &entry, &this.cancel, None)?;
             checkpoint(&this.cancel)?;
             fs::rename(payload, &target)?;
-            this.cache.receipt(&target, &hash)?;
+            this.cache.receipt(&target, &entry, &hash)?;
             drop(staging);
             Ok::<_, anyhow::Error>(())
         })

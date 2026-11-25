@@ -48,6 +48,7 @@ pub struct Base {
     pub files: BTreeSet<String>,
 }
 pub struct Version {
+    pub content_key: String,
     pub index: Arc<Index>,
     pub source: Source,
     pub client: ClientAssets,
@@ -174,6 +175,15 @@ impl Engine {
         Some(record.index)
     }
 
+    fn cached_manifest(&self) -> Option<Manifest> {
+        let raw = fs::read(self.data.join("resource-manifest.json")).ok()?;
+        let (digest, manifest): (String, Manifest) = serde_json::from_slice(&raw).ok()?;
+        if artifacts::fingerprint(&manifest).ok()? != digest {
+            return None;
+        }
+        Some(manifest)
+    }
+
     async fn initialize(&self, job: Arc<Progress>) -> Result<Value> {
         self.ready.store(false, Ordering::Release);
         job.phase(Phase::Cache, "读取资源缓存…", 0, 1, "");
@@ -191,39 +201,27 @@ impl Engine {
             Ok(manifest) => {
                 update.official_version = Some(manifest.version.clone());
                 update.official_client_version = Some(manifest.client_version.clone());
+                // Persist the target before replacing files. A partially updated
+                // shared directory must resume this manifest, not an old index.
+                write_json(
+                    &self.data.join("resource-manifest.json"),
+                    &(artifacts::fingerprint(&manifest)?, &manifest),
+                )?;
                 (manifest, true)
             }
             Err(error) => {
-                let Some(previous) = cached.as_ref() else {
+                let Some(previous) = self.cached_manifest() else {
                     return Err(error.context("无法连接官方资源服务器。请检查网络后重试。"));
                 };
                 update.state = "offline".into();
                 update.message = "本次未能检查最新资源，正在使用已缓存的版本。".into();
                 update.error = Some(format!("{error:#}"));
-                (previous.source.clone(), false)
+                (previous, false)
             }
         };
-        let candidate = self
+        let version = self
             .build_version(manifest, cached.as_ref(), online, &job)
-            .await;
-        let version = match candidate {
-            Ok(version) => version,
-            Err(error) => {
-                crate::error::checkpoint(&job.cancel)?;
-                let previous = cached
-                    .as_ref()
-                    .filter(|previous| {
-                        Some(&previous.source.version) != update.official_version.as_ref()
-                    })
-                    .context(error.to_string())?;
-                update.state = "cached".into();
-                update.message = "这次资源更新没有完成，正在使用已缓存的版本。".into();
-                update.error = Some(error.to_string());
-                job.phase(Phase::BaseVerify, "恢复已缓存资源…", 0, 1, "");
-                self.build_version(previous.source.clone(), Some(previous), false, &job)
-                    .await?
-            }
-        };
+            .await?;
         crate::error::checkpoint(&job.cancel)?;
         update.current_version = Some(version.index.source.version.clone());
         update.client_version = Some(version.index.source.client_version.clone());
@@ -256,6 +254,24 @@ impl Engine {
                 index: version.index.as_ref().clone(),
             },
         )?;
+        if online {
+            job.phase(Phase::BaseVerify, "清理过期资源…", 0, 1, "");
+            let cache = version.source.cache.clone();
+            let platform = version.index.source.platform.cache_name();
+            let names = version.index.source.entries.keys().cloned().collect();
+            let client = version.client.clone();
+            let data = self.data.clone();
+            let cancel = job.cancel.clone();
+            tokio::task::spawn_blocking(move || {
+                cache.prune(platform, &names, &cancel)?;
+                let mut names: BTreeSet<_> = client.entries.keys().cloned().collect();
+                names.extend(["source.json", "game_files", "objects.json"].map(String::from));
+                client.cache.prune("Windows", &names, &cancel)?;
+                crate::historical::prune(&data, &cancel)?;
+                Ok::<_, anyhow::Error>(())
+            })
+            .await??;
+        }
         *self.version.write().await = Some(Arc::new(version));
         *self.update.lock().unwrap() = update;
         self.ready.store(true, Ordering::Release);
@@ -278,8 +294,8 @@ impl Engine {
             .with_progress(job.clone());
         let same = cached.is_some_and(|index| {
             index.generator == crate::DECODER_REVISION
-                && artifacts::fingerprint(&index.source).ok()
-                    == artifacts::fingerprint(&manifest).ok()
+                && index.source.platform == manifest.platform
+                && index.source.entries == manifest.entries
         });
         job.phase(Phase::Index, "读取剧情索引…", 0, 1, "");
         let mut index = if same {
@@ -304,9 +320,9 @@ impl Engine {
         let key = artifacts::fingerprint(&(
             crate::DECODER_REVISION,
             &index.source.platform,
-            &index.source.version,
+            &index.source.entries,
             &index.routing.sha256,
-            &client.identity,
+            &client.identity.manifest_md5,
         ))?;
         let artifacts = self.artifacts.clone();
         let runtime = self.runtime.clone();
@@ -333,6 +349,7 @@ impl Engine {
             let runtime = self.runtime.clone();
             let cancel = job.cancel.clone();
             let metadata = serde_json::to_value(&base)?;
+            let key = key.clone();
             tokio::task::spawn_blocking(move || {
                 artifacts.store("base", &key, &runtime, &files, metadata, &cancel)
             })
@@ -340,6 +357,7 @@ impl Engine {
             base
         };
         Ok(Version {
+            content_key: key,
             index,
             source: source.detached(self.cancel.clone()),
             client: client.detached(self.cancel.clone()),
@@ -867,10 +885,19 @@ impl Engine {
                 .insert(key.clone());
             keys.insert(part, key);
         }
+        let own = wanted.keys().cloned().collect::<BTreeSet<_>>();
+        let deps = planning::dependencies(&version.index, &own);
+        let names = own.into_iter().chain(deps).collect::<Vec<_>>();
+        let inputs = names
+            .iter()
+            .map(|name| &version.source.manifest.entries[name])
+            .collect::<Vec<_>>();
         let signature = artifacts::fingerprint(&(
             crate::DECODER_REVISION,
-            &version.index.source.version,
+            version.index.source.platform,
+            &version.client.identity.manifest_md5,
             track,
+            inputs,
         ))?;
         let artifacts = self.artifacts.clone();
         let root = self.runtime.clone();
@@ -887,9 +914,6 @@ impl Engine {
         }
         let source = version.source.with_progress(job.clone());
         let client = version.client.with_progress(job.clone());
-        let own = wanted.keys().cloned().collect::<BTreeSet<_>>();
-        let deps = planning::dependencies(&version.index, &own);
-        let names = own.into_iter().chain(deps).collect::<Vec<_>>();
         job.phase(
             Phase::Download,
             "下载主页音乐…",
