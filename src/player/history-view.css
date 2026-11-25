@@ -98,4 +98,29 @@ dialog.native-history::backdrop {
 .review-jump {
   cursor: pointer;
   outline: none;
+  isolation: isolate;
+}
+.review-jump > * {
+  pointer-events: none;
+}
+.review-jump::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: white;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+.review-jump:is([data-native-state='highlighted'], :focus-visible)::before {
+  opacity: 0.14;
+}
+.review-jump[data-native-state='pressed']::before {
+  opacity: 0.24;
+}
+.review-jump canvas {
+  filter: brightness(1);
+}
+.review-jump[data-native-state='pressed'] canvas {
+  filter: brightness(0.784313738);
 }

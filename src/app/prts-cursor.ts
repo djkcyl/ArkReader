@@ -59,7 +59,6 @@ export class PRTSCursor {
   private visible = false;
   private pressed = false;
   private pointer: number | null = null;
-  private pointerType = 'mouse';
   private x = 0;
   private y = 0;
   private frame = 0;
@@ -82,28 +81,23 @@ export class PRTSCursor {
     document.addEventListener(
       'pointerover',
       (e) => {
-        if (e.pointerType === 'mouse') {
-          this.pointerType = 'mouse';
-          this.move(e.clientX, e.clientY);
-        }
+        if (this.mouseInput(e)) this.move(e.clientX, e.clientY);
       },
       { capture: true, passive: true },
     );
     document.addEventListener(
       'pointermove',
       (e) => {
-        if (e.pointerType !== 'mouse' && e.pointerId !== this.pointer) return;
-        this.pointerType = e.pointerType;
+        if (!this.mouseInput(e)) return;
         this.move(e.clientX, e.clientY);
-        if (e.pointerType === 'mouse' && this.pressed && !(e.buttons & 1)) this.release();
+        if (this.pressed && !(e.buttons & 1)) this.release();
       },
       { capture: true, passive: true },
     );
     document.addEventListener(
       'pointerdown',
       (e) => {
-        if (!e.isPrimary || e.button !== 0) return;
-        this.pointerType = e.pointerType;
+        if (!this.mouseInput(e) || !e.isPrimary || e.button !== 0) return;
         this.pointer = e.pointerId;
         this.move(e.clientX, e.clientY);
         this.pressed = true;
@@ -163,6 +157,14 @@ export class PRTSCursor {
         this.lift();
       }
     }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] });
+  }
+  private mouseInput(event: PointerEvent): boolean {
+    const capabilities = (
+      event as PointerEvent & { sourceCapabilities?: { firesTouchEvents: boolean } }
+    ).sourceCapabilities;
+    if (event.pointerType === 'mouse' && !capabilities?.firesTouchEvents) return true;
+    this.hide();
+    return false;
   }
   async load(): Promise<void> {
     if (this.profile) return;
@@ -317,10 +319,7 @@ export class PRTSCursor {
     else {
       this.frame = 0;
       this.clip = undefined;
-      if (!this.pressed) {
-        this.overlay.dataset.state = 'idle';
-        if (this.pointerType !== 'mouse') this.hide();
-      }
+      if (!this.pressed) this.overlay.dataset.state = 'idle';
     }
   }
   private release() {
@@ -328,7 +327,6 @@ export class PRTSCursor {
     this.pressed = false;
     this.pointer = null;
     if (this.profile) this.play(this.profile.up);
-    else if (this.pointerType !== 'mouse') this.hide();
   }
   private hide() {
     this.visible = false;

@@ -61,7 +61,10 @@ export class ReaderView {
       () => !element.hidden,
       (el) =>
         el.classList.contains('review-jump')
-          ? [...el.querySelectorAll('canvas')].map((element) => ({ element }))
+          ? [
+              { element: el, pseudo: '::before' },
+              ...[...el.querySelectorAll('canvas')].map((element) => ({ element })),
+            ]
           : [{ element: this.scrollbar.thumb }],
     );
     this.content.className = 'reader-content';

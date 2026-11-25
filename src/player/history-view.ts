@@ -99,7 +99,10 @@ export class HistoryView {
       () => dialog.open,
       (el) =>
         el.classList.contains('review-jump')
-          ? [...el.querySelectorAll('canvas')].map((element) => ({ element }))
+          ? [
+              { element: el, pseudo: '::before' },
+              ...[...el.querySelectorAll('canvas')].map((element) => ({ element })),
+            ]
           : [{ element: el === back ? icon : this.thumb }],
     );
     back.onclick = () => this.dismiss();

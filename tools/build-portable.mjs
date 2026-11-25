@@ -82,6 +82,11 @@ if (process.platform === 'darwin') {
     const resolved = await fs.realpath(destination);
     if (!resolved.startsWith((await fs.realpath(output)) + path.sep))
       throw new Error('Portable path escaped the build directory');
+    const executable = path.join(resolved, 'ArkReader.exe');
+    const unlocked = await fs.open(executable, 'r+').catch(() => {
+      throw new Error(`Close ArkReader before replacing the portable folder: ${resolved}`);
+    });
+    await unlocked.close();
     await fs.rm(resolved, { recursive: true });
   }
   await fs.rename(folder, destination);

@@ -8,7 +8,7 @@
     "desktop:dev": "npm run native:prepare && tauri dev",
     "desktop:build": "node tools/build-desktop.mjs",
     "desktop:build:windows": "node tools/build-desktop.mjs",
-    "desktop:portable": "node tools/build-portable.mjs",
+    "desktop:portable": "node tools/build-desktop.mjs --portable-only",
     "desktop:build:macos": "node tools/build-desktop.mjs",
     "desktop:build:linux": "node tools/build-desktop.mjs",
     "dev": "vite --host 127.0.0.1",
