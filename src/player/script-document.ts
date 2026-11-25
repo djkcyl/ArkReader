@@ -5,6 +5,7 @@ import { translateText } from '../core/text-variables';
 import { readingMarkup } from '../core/sticker-color';
 import { decisionButtons } from '../core/decision';
 import { commandBehavior, commandDefaults, parameterApplies } from './script-semantics';
+import { sourceTokens, type ScriptToken } from './script-tokens';
 
 const commandNames: Record<string, string> = {
   header: '剧情设置',
@@ -256,6 +257,60 @@ export interface ScriptRow {
   detail: string;
   raw: string;
   parameters?: ScriptParameter[];
+  kind?: 'speaker' | 'text' | 'scene' | 'audio' | 'control' | 'effect';
+  tokens?: ScriptToken[];
+}
+function commandKind(command: Command): ScriptRow['kind'] {
+  const name = command.name;
+  if (['dialog', 'multiline', 'aside'].includes(name))
+    return command.params.name ? 'speaker' : 'text';
+  if (['subtitle', 'sticker', 'animtext', 'spellsticker', 'timersticker'].includes(name))
+    return 'text';
+  if (
+    [
+      'playmusic',
+      'playsound',
+      'stopmusic',
+      'stopsound',
+      'musicvolume',
+      'soundvolume',
+      'video',
+    ].includes(name)
+  )
+    return 'audio';
+  if (
+    [
+      'header',
+      'delay',
+      'decision',
+      'predicate',
+      'label',
+      'warp',
+      'endtip',
+      'theater',
+      'skipnode',
+      'skiptothis',
+      'startbattle',
+      'gotopage',
+      'tutorial',
+      'usewhiteloadingmaskonfinish',
+    ].includes(name)
+  )
+    return 'control';
+  if (
+    [
+      'effect',
+      'bgeffect',
+      'imgeffect',
+      'cameraeffect',
+      'camerashake',
+      'glitchtween',
+      'focusout',
+      'focusparam',
+    ].includes(name)
+  )
+    return 'effect';
+  return 'scene';
 }
 export interface ScriptParameter {
   key: string;
@@ -394,6 +449,7 @@ export function scriptRows(
       line: command.line,
       endLine,
       commandIndex,
+      kind: commandKind(command),
       ...description,
       raw: command.line ? physical.slice(command.line - 1, endLine).join('\n') : '',
     };
@@ -407,6 +463,13 @@ export function scriptRows(
   }));
   for (const row of readable)
     for (let line = row.line; line > 0 && line <= row.endLine; line++)
-      source[line - 1].commandIndex = row.commandIndex;
+      Object.assign(source[line - 1], { commandIndex: row.commandIndex, kind: row.kind });
+  const tokens = sourceTokens(
+    physical,
+    new Set(source.filter((row) => row.commandIndex === undefined).map((row) => row.line)),
+  );
+  source.forEach((row, index) => {
+    row.tokens = tokens[index];
+  });
   return { readable, source };
 }

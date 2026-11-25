@@ -2,6 +2,7 @@ import type { StoryPlayer } from './runtime';
 import { scriptRows, type ScriptRow } from './script-document';
 import './script-view.css';
 import { quickSpeeds } from '../core/quick-play';
+import { readableTokens, type ScriptToken } from './script-tokens';
 
 export class ScriptView {
   private panel = document.createElement('aside');
@@ -20,7 +21,6 @@ export class ScriptView {
   private step = -1;
   private index = -1;
   private state = '';
-  private expanded?: HTMLElement;
   constructor(
     private surface: HTMLElement,
     private toggle: HTMLButtonElement,
@@ -61,7 +61,19 @@ export class ScriptView {
     this.list.addEventListener('wheel', stopFollow, { passive: true });
     this.list.addEventListener('pointerdown', stopFollow, { passive: true });
     this.list.addEventListener('keydown', (event) => {
-      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) {
+      if (
+        [
+          'ArrowUp',
+          'ArrowDown',
+          'ArrowLeft',
+          'ArrowRight',
+          'PageUp',
+          'PageDown',
+          'Home',
+          'End',
+          ' ',
+        ].includes(event.key)
+      ) {
         stopFollow();
         event.stopPropagation();
       }
@@ -93,7 +105,6 @@ export class ScriptView {
     this.document = undefined;
     this.nodes.clear();
     this.counts.clear();
-    this.expanded = undefined;
     this.list.replaceChildren();
     this.status.textContent = '';
     this.toggle.disabled = true;
@@ -141,7 +152,6 @@ export class ScriptView {
       player.pack.variables,
       player.nickname,
     );
-    this.expanded = undefined;
     this.nodes.clear();
     this.counts.clear();
     const fragment = document.createDocumentFragment();
@@ -160,93 +170,81 @@ export class ScriptView {
     this.sourceButton.setAttribute('aria-pressed', String(this.source));
     this.follow.setAttribute('aria-pressed', String(this.following));
   }
+  private tokens(parent: HTMLElement, tokens: readonly ScriptToken[]): void {
+    for (const token of tokens) {
+      const span = document.createElement('span');
+      span.className = 'script-syntax-' + token.kind;
+      span.textContent = token.text;
+      parent.append(span);
+    }
+  }
   private row(row: ScriptRow): HTMLElement {
     const node = document.createElement('div');
     node.className = 'script-row';
     node.setAttribute('role', 'listitem');
     node.dataset.line = String(row.line);
+    node.dataset.kind = row.kind ?? 'text';
     if (row.commandIndex !== undefined) node.dataset.commandIndex = String(row.commandIndex);
-    const toggle = document.createElement('button');
-    toggle.className = 'script-row-toggle';
-    toggle.type = 'button';
-    toggle.setAttribute('aria-expanded', 'false');
-    toggle.title = `${row.title}\n${this.source ? row.raw : row.detail}`;
     const number = document.createElement('span');
     number.className = 'script-line-number';
     number.textContent = row.line
       ? row.endLine > row.line
-        ? `${row.line}–${row.endLine}`
+        ? row.line + '–' + row.endLine
         : String(row.line)
       : '—';
-    const content = document.createElement('span');
+    const content = document.createElement('div');
     content.className = 'script-line-content';
     if (this.source) {
       const code = document.createElement('code');
-      code.textContent = row.raw || ' ';
+      this.tokens(code, row.tokens ?? [{ kind: 'text', text: row.raw }]);
       content.append(code);
     } else {
       const title = document.createElement('strong'),
         detail = document.createElement('span');
+      title.className = 'script-kind';
       title.textContent = row.title;
       detail.className = 'script-preview';
-      detail.textContent = row.detail.replace(/\s+/g, ' ');
+      const text = row.detail.replace(/\s+/g, ' ');
+      this.tokens(
+        detail,
+        row.kind === 'speaker' || row.kind === 'text'
+          ? [{ kind: 'text', text }]
+          : readableTokens(text),
+      );
       content.append(title, detail);
+      for (const origin of ['脚本', '默认', '原版忽略', '此模式不使用'] as const) {
+        const parameters = row.parameters?.filter((p) => p.origin === origin);
+        if (!parameters?.length) continue;
+        const group = document.createElement('span');
+        group.className = 'script-inline-parameters';
+        if (origin === '原版忽略' || origin === '此模式不使用')
+          group.classList.add('script-parameter-unused');
+        const prefix = document.createElement('span');
+        prefix.className = 'script-parameter-origin';
+        prefix.textContent = '  [' + (origin === '脚本' ? '参数' : origin) + ': ';
+        group.append(prefix);
+        parameters.forEach((parameter, index) => {
+          if (index) group.append(document.createTextNode('  '));
+          const key = document.createElement('span');
+          key.className = 'script-syntax-parameter';
+          key.textContent = parameter.label;
+          key.title = parameter.key;
+          group.append(key, document.createTextNode('='));
+          const kind = /^(是|否|true|false)$/.test(parameter.value)
+            ? 'boolean'
+            : /^-?\d+(?:\.\d+)?$/.test(parameter.value)
+              ? 'number'
+              : 'string';
+          this.tokens(group, [{ kind, text: parameter.value }]);
+        });
+        group.append(document.createTextNode(']'));
+        content.append(group);
+      }
     }
     const state = document.createElement('span');
     state.className = 'script-row-state';
-    toggle.append(number, content, state);
-    node.append(toggle);
-    toggle.onclick = () => {
-      this.following = false;
-      this.follow.setAttribute('aria-pressed', 'false');
-      if (toggle.getAttribute('aria-expanded') === 'true') {
-        this.collapse(node);
-        return;
-      }
-      if (this.expanded) this.collapse(this.expanded);
-      let detail = node.querySelector<HTMLElement>('.script-row-expanded');
-      if (!detail) {
-        detail = this.expand(row);
-        node.append(detail);
-      }
-      detail.hidden = false;
-      toggle.setAttribute('aria-expanded', 'true');
-      this.expanded = node;
-    };
+    node.append(number, state, content);
     return node;
-  }
-  private collapse(node: HTMLElement): void {
-    node.querySelector('.script-row-toggle')?.setAttribute('aria-expanded', 'false');
-    const detail = node.querySelector<HTMLElement>('.script-row-expanded');
-    if (detail) detail.hidden = true;
-    if (this.expanded === node) this.expanded = undefined;
-  }
-  private expand(row: ScriptRow): HTMLElement {
-    const content = document.createElement('div');
-    content.className = 'script-row-expanded';
-    const text = document.createElement(this.source ? 'pre' : 'p');
-    text.textContent = this.source ? row.raw : row.detail;
-    content.append(text);
-    if (!this.source && row.parameters?.length) {
-      const table = document.createElement('dl');
-      table.className = 'script-parameters';
-      for (const parameter of row.parameters) {
-        const name = document.createElement('dt'),
-          value = document.createElement('dd'),
-          origin = document.createElement('span');
-        name.textContent = parameter.label;
-        name.title = parameter.key;
-        value.textContent = parameter.value;
-        origin.textContent = parameter.origin;
-        origin.className = 'script-parameter-origin';
-        if (parameter.origin === '原版忽略' || parameter.origin === '此模式不使用')
-          value.classList.add('script-parameter-unused');
-        value.append(origin);
-        table.append(name, value);
-      }
-      content.append(table);
-    }
-    return content;
   }
   private refresh(force = false): void {
     const player = this.player;
@@ -298,6 +296,7 @@ export class ScriptView {
   private scrollCurrent(): void {
     const row = this.nodes.get(this.index)?.[0];
     if (!row) return;
+    this.list.scrollLeft = 0;
     this.list.scrollTop = Math.max(0, row.offsetTop - this.list.clientHeight * 0.35);
   }
 }
