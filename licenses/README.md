@@ -8,4 +8,4 @@ Desktop packages include only the native FFmpeg executable from [imageio-ffmpeg]
 
 Spine 3.8 runtime code in `src/vendor/spine38/` retains the [Spine Runtimes License Agreement](Spine-Runtimes.txt), including its editor-license conditions.
 
-Game resources belong to their respective rights holders and are not included in distributions. No original project open-source license is granted by this private release.
+Game resources belong to their respective rights holders and are not included in distributions. No original project open-source license is granted by this release.
