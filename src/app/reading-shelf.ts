@@ -217,6 +217,7 @@ export class ReadingShelf {
     }
   }
   private show(tab: LibraryTab) {
+    const previous = this.mode;
     this.mode = tab;
     for (const button of this.tablist.querySelectorAll<HTMLButtonElement>('[role=tab]')) {
       const active = button.dataset.shelf === tab;
@@ -230,6 +231,8 @@ export class ReadingShelf {
     } catch {}
     document.dispatchEvent(new CustomEvent('library-tab-changed', { detail: { tab } }));
     this.render();
+    if (previous !== tab && document.body.classList.contains('mobile-app'))
+      document.getElementById('intro')!.scrollTop = 0;
   }
   private syncFavorite() {
     this.favorite.hidden = !this.selected;
@@ -278,7 +281,11 @@ export class ReadingShelf {
       const panel = this.root.querySelector(`#library-${tab}`)!;
       panel.querySelector('.reading-count')!.textContent = `${rows.length} 段剧情`;
       const list = panel.querySelector('.shelf-items')!,
-        scroll = list.scrollTop;
+        scroller =
+          document.body.classList.contains('mobile-app') && this.mode === tab
+            ? document.getElementById('intro')!
+            : list,
+        scroll = scroller.scrollTop;
       list.replaceChildren();
       const chapters = new Map<string, HTMLElement>();
       for (const [index, id] of rows.entries()) {
@@ -419,7 +426,7 @@ export class ReadingShelf {
         empty.append(title, hint, browse);
         list.append(empty);
       }
-      list.scrollTop = scroll;
+      scroller.scrollTop = scroll;
     }
   }
 }

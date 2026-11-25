@@ -141,7 +141,7 @@ export class CatalogView {
       const group = this.opened?.id;
       this.opened = undefined;
       this.render();
-      this.content.scrollTop = this.directoryScroll;
+      this.scrollPane.scrollTop = this.directoryScroll;
       const card = [...this.content.querySelectorAll<HTMLButtonElement>('[data-group]')].find(
         (node) => node.dataset.group === group,
       );
@@ -182,6 +182,11 @@ export class CatalogView {
   }
   get selectedId(): string {
     return this.selected;
+  }
+  private get scrollPane(): HTMLElement {
+    return document.body.classList.contains('mobile-app')
+      ? (this.root.closest<HTMLElement>('#intro') ?? this.content)
+      : this.content;
   }
   get cacheScope() {
     return { category: this.category, group: this.opened?.id ?? '' };
@@ -387,7 +392,7 @@ export class CatalogView {
         : (categories.find((c) => c.id === this.category)?.name ?? '剧情回顾'));
     this.heading.title = this.heading.textContent;
     this.content.replaceChildren();
-    this.content.scrollTop = 0;
+    this.scrollPane.scrollTop = 0;
     if (this.opened) this.renderChapter(this.opened);
     else {
       const groups = this.groups.filter(
@@ -508,7 +513,7 @@ export class CatalogView {
           ),
         );
         button.onclick = () => {
-          this.directoryScroll = this.content.scrollTop;
+          this.directoryScroll = this.scrollPane.scrollTop;
           this.opened = group;
           const rows = this.matching(group);
           if (!rows.some((s) => s.id === this.selected)) this.selected = rows[0]?.id ?? '';

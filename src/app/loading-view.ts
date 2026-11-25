@@ -18,30 +18,36 @@ export class LoadingView {
     this.root.hidden = true;
     this.root.setAttribute('aria-label', '准备剧情');
     this.root.innerHTML = /* HTML */ `<div class="loading-card">
-      <span class="loading-kicker">PREPARING STORY</span>
-      <h2 id="load-story-title"></h2>
-      <ol class="load-steps">
-        <li>播放界面</li>
-        <li>剧情资源</li>
-        <li>画面与声音</li>
-        <li>开始阅读</li>
-      </ol>
-      <div class="load-status-row">
-        <p id="load-message" role="status">正在准备…</p>
-        <span id="load-elapsed"></span>
+      <div class="loading-content">
+        <div class="loading-heading">
+          <span class="loading-kicker">PREPARING STORY</span>
+          <h2 id="load-story-title"></h2>
+          <ol class="load-steps">
+            <li>播放界面</li>
+            <li>剧情资源</li>
+            <li>画面与声音</li>
+            <li>开始阅读</li>
+          </ol>
+        </div>
+        <div class="loading-status">
+          <div class="load-status-row">
+            <p id="load-message" role="status">正在准备…</p>
+            <span id="load-elapsed"></span>
+          </div>
+          <div class="load-total-heading">
+            <span>总准备进度</span><strong id="load-percent">0%</strong>
+          </div>
+          <progress id="load-progress" max="1" value="0" aria-label="总准备进度"></progress>
+          <p id="load-detail"></p>
+          <p id="load-transfer-summary"></p>
+          <div id="load-transfers" aria-label="当前并发下载" hidden></div>
+          <p id="load-hint" hidden></p>
+          <details id="load-error-details" hidden>
+            <summary>查看错误详情</summary>
+            <pre id="load-error"></pre>
+          </details>
+        </div>
       </div>
-      <div class="load-total-heading">
-        <span>总准备进度</span><strong id="load-percent">0%</strong>
-      </div>
-      <progress id="load-progress" max="1" value="0" aria-label="总准备进度"></progress>
-      <p id="load-detail"></p>
-      <p id="load-transfer-summary"></p>
-      <div id="load-transfers" aria-label="当前并发下载" hidden></div>
-      <p id="load-hint" hidden></p>
-      <details id="load-error-details" hidden>
-        <summary>查看错误详情</summary>
-        <pre id="load-error"></pre>
-      </details>
       <div class="load-actions">
         <button id="load-retry" hidden>重新尝试</button><button id="load-cancel">取消加载</button>
       </div>
@@ -92,6 +98,7 @@ export class LoadingView {
     this.el('load-hint').textContent = '';
     (this.el('load-error-details') as HTMLDetailsElement).open = false;
     this.update({ phase: 'queue', message: '正在准备播放…', done: 0, total: 0 });
+    this.root.querySelector('.loading-content')!.scrollTop = 0;
     clearInterval(this.timer);
     this.timer = setInterval(() => {
       this.el('load-elapsed').textContent =
