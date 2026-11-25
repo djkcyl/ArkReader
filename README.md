@@ -45,14 +45,14 @@ ArkReader 是一款独立运行的非官方剧情播放器。无需安装游戏�
 
 ## 下载
 
-当前版本：**1.1.0**。所有发行文件均附有 [SHA-256 校验值](https://github.com/djkcyl/ArkReader/releases/download/v1.1.0/SHA256SUMS.txt)。
+当前版本：**1.1.1**。所有发行文件均附有 [SHA-256 校验值](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/SHA256SUMS.txt)。
 
 | 平台             | 架构          | 安装包                                                                                                           | 免安装包                                                                                                          |
 | ---------------- | ------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Windows 10 / 11  | x64           | [EXE 安装器](https://github.com/djkcyl/ArkReader/releases/download/v1.1.0/ArkReader-1.1.0-windows-x64-setup.exe) | [便携 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.1.0/ArkReader-1.1.0-windows-x64-portable.zip) |
-| macOS 12 及以上  | Apple Silicon | [DMG](https://github.com/djkcyl/ArkReader/releases/download/v1.1.0/ArkReader-1.1.0-macos-arm64.dmg)              | [应用 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.1.0/ArkReader-1.1.0-macos-arm64-app.zip)      |
-| Linux            | x64           | [DEB](https://github.com/djkcyl/ArkReader/releases/download/v1.1.0/ArkReader-1.1.0-linux-x64.deb)                | [AppImage](https://github.com/djkcyl/ArkReader/releases/download/v1.1.0/ArkReader-1.1.0-linux-x64.AppImage)       |
-| Android 7 及以上 | ARM64         | [APK](https://github.com/djkcyl/ArkReader/releases/download/v1.1.0/ArkReader-1.1.0-android-arm64.apk)            | —                                                                                                                 |
+| Windows 10 / 11  | x64           | [EXE 安装器](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-windows-x64-setup.exe) | [便携 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-windows-x64-portable.zip) |
+| macOS 12 及以上  | Apple Silicon | [DMG](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-macos-arm64.dmg)              | [应用 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-macos-arm64-app.zip)      |
+| Linux            | x64           | [DEB](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-linux-x64.deb)                | [AppImage](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-linux-x64.AppImage)       |
+| Android 7 及以上 | ARM64         | [APK](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-android-arm64.apk)            | —                                                                                                                 |
 
 暂不提供 Intel Mac 和 iOS 版本。macOS 应用尚未公证，首次打开可能需要在系统设置中允许运行。
 
