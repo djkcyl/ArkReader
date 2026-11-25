@@ -1,0 +1,126 @@
+name: Android build
+on:
+  workflow_dispatch:
+    inputs:
+      apk_run:
+        description: Existing build run to verify without rebuilding (optional)
+        type: string
+        default: ''
+      debug_only:
+        description: Build and verify the emulator package only
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: android-${{ github.ref }}-${{ inputs.apk_run || (inputs.debug_only && 'debug') || 'build' }}
+  cancel-in-progress: true
+jobs:
+  android:
+    if: ${{ !inputs.apk_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CARGO_PROFILE_DEV_DEBUG: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Reserve build space
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          workspaces: src-tauri
+          cache-on-failure: true
+      - run: rustup update stable --no-self-update && rustup target add aarch64-linux-android x86_64-linux-android
+      - run: npm ci
+      - uses: android-actions/setup-android@035682743ab223ec9c6169af09811dff8247e520
+      - name: Android build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libclang-dev
+          sdkmanager 'platforms;android-37.0' 'build-tools;37.0.0' 'ndk;30.0.16248370'
+          echo "NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> "$GITHUB_ENV"
+      - name: Build native movie component
+        run: bash tools/build-android-media.sh arm64-v8a x86_64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: android-native-media
+          path: src-tauri/gen/android/app/src/main/jniLibs/**/libarkreader_ffmpeg.so
+          retention-days: 2
+      - name: Android ARM64 package
+        if: ${{ !inputs.debug_only }}
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          ARKREADER_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/android-release.jks"
+          export ARKREADER_KEYSTORE="$RUNNER_TEMP/android-release.jks"
+          node tools/android.mjs build --apk --target aarch64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: ${{ !inputs.debug_only }}
+        with:
+          name: android-arm64
+          path: src-tauri/gen/android/app/build/outputs/apk/**/release/*.apk
+          retention-days: 3
+      - name: Emulator package
+        run: node tools/android.mjs build --debug --apk --target x86_64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: android-debug
+          path: src-tauri/gen/android/app/build/outputs/apk/**/debug/*.apk
+          retention-days: 2
+  verify:
+    needs: android
+    if: ${{ !cancelled() && (needs.android.result == 'success' || inputs.apk_run != '') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@035682743ab223ec9c6169af09811dff8247e520
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: android-debug
+          path: src-tauri/gen/android/app/build/outputs/apk/debug
+          run-id: ${{ inputs.apk_run || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - run: npm install --no-save --package-lock=false @playwright/test
+      - name: Isolated Android playback check
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        env:
+          ARKREADER_BUILD_RUN: ${{ inputs.apk_run || github.run_id }}
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          avd-name: ArkReaderVerification
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save
+          script: node tools/verify-android.mjs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: android-verification
+          path: artifacts/android-verification/
+          retention-days: 2

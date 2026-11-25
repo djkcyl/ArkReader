@@ -1,0 +1,520 @@
+pub use crate::cache::{resource_path, safe_path, write_atomic, write_json};
+use crate::progress::{Observer, Progress, TransferState};
+use crate::{
+    cache::Cache,
+    error::{checkpoint, Error},
+};
+use anyhow::{ensure, Context, Result};
+use futures_util::{stream, StreamExt};
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex, OnceLock, Weak},
+    time::Duration,
+};
+use tokio::{
+    io::AsyncWriteExt,
+    sync::{Mutex as AsyncMutex, Semaphore},
+};
+use tokio_util::sync::CancellationToken;
+
+const NETWORK_URL: &str = "https://ak-conf.hypergryph.com/config/prod/official/network_config";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Platform {
+    Windows,
+    Android,
+    #[serde(rename = "iOS")]
+    Ios,
+}
+impl Platform {
+    pub fn cache_name(self) -> &'static str {
+        match self {
+            Self::Windows => "Windows",
+            Self::Android => "Android",
+            Self::Ios => "iOS",
+        }
+    }
+    pub fn server_name(self) -> &'static str {
+        if self == Self::Ios {
+            "IOS"
+        } else {
+            self.cache_name()
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Entry {
+    pub name: String,
+    pub md5: String,
+    pub ab_size: u64,
+    pub total_size: u64,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
+impl Entry {
+    pub fn full_md5(&self) -> Option<&str> {
+        (self.md5.len() == 32 && self.md5.bytes().all(|b| b.is_ascii_hexdigit()))
+            .then_some(self.md5.as_str())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Manifest {
+    pub platform: Platform,
+    pub version: String,
+    pub client_version: String,
+    pub base_url: String,
+    pub entries: BTreeMap<String, Entry>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DownloadProgress<'a> {
+    pub name: &'a str,
+    pub downloaded: u64,
+    pub total: u64,
+    pub cached: bool,
+}
+
+#[derive(Clone)]
+pub struct Source {
+    pub cache: Arc<Cache>,
+    pub manifest: Arc<Manifest>,
+    client: Client,
+    cancelled: CancellationToken,
+    slots: Arc<Semaphore>,
+    observer: Option<Arc<dyn Observer>>,
+}
+
+pub(crate) fn path_lock(path: &Path) -> Result<Arc<AsyncMutex<()>>> {
+    static LOCKS: OnceLock<Mutex<HashMap<PathBuf, Weak<AsyncMutex<()>>>>> = OnceLock::new();
+    let mut locks = LOCKS
+        .get_or_init(Mutex::default)
+        .lock()
+        .map_err(|_| anyhow::anyhow!("Resource lock registry unavailable"))?;
+    locks.retain(|_, lock| lock.strong_count() > 0);
+    if let Some(lock) = locks.get(path).and_then(Weak::upgrade) {
+        return Ok(lock);
+    }
+    let lock = Arc::new(AsyncMutex::new(()));
+    locks.insert(path.to_owned(), Arc::downgrade(&lock));
+    Ok(lock)
+}
+
+pub fn https(url: &str) -> Result<reqwest::Url> {
+    let parsed = reqwest::Url::parse(url)?;
+    ensure!(
+        parsed.scheme() == "https"
+            && parsed.host_str().is_some()
+            && parsed.username().is_empty()
+            && parsed.password().is_none(),
+        "Invalid official resource URL"
+    );
+    Ok(parsed)
+}
+
+pub(crate) fn client() -> Result<Client> {
+    Ok(Client::builder()
+        .user_agent(concat!("ArkReader/", env!("CARGO_PKG_VERSION")))
+        .connect_timeout(Duration::from_secs(15))
+        .timeout(Duration::from_secs(90))
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if attempt.previous().len() < 6 && attempt.url().scheme() == "https" {
+                attempt.follow()
+            } else {
+                attempt.error("Unsafe resource redirect")
+            }
+        }))
+        .build()?)
+}
+
+pub(crate) async fn json(
+    client: &Client,
+    url: reqwest::Url,
+    timeout: Duration,
+    cancel: &CancellationToken,
+) -> Result<Value> {
+    tokio::select! {biased;
+        _=cancel.cancelled()=>Err(Error::Cancelled.into()),
+        result=async {Ok(client.get(url).timeout(timeout).send().await?.error_for_status()?.json().await?)}=>result,
+    }
+}
+
+pub async fn official(
+    platform: Platform,
+    timeout: Duration,
+    cancel: &CancellationToken,
+) -> Result<Manifest> {
+    let client = client()?;
+    let response = json(&client, https(NETWORK_URL)?, timeout, cancel).await?;
+    let config: Value = serde_json::from_str(
+        response["content"]
+            .as_str()
+            .context("Missing official network configuration")?,
+    )?;
+    let network = &config["configs"][config["funcVer"]
+        .as_str()
+        .context("Missing official network version")?]["network"];
+    let version_url = network["hv"]
+        .as_str()
+        .context("Missing official version endpoint")?
+        .replace("{}", platform.server_name())
+        .replace("{0}", platform.server_name());
+    let version = json(&client, https(&version_url)?, timeout, cancel).await?;
+    let resource = version["resVersion"]
+        .as_str()
+        .context("Missing official resource version")?;
+    ensure!(
+        resource_path(resource)?.components().count() == 1,
+        "Invalid official resource version"
+    );
+    let base = format!(
+        "{}/{}/assets/{resource}/",
+        network["hu"]
+            .as_str()
+            .context("Missing official resource endpoint")?
+            .trim_end_matches('/'),
+        platform.server_name()
+    );
+    let raw = json(
+        &client,
+        https(&base)?.join("hot_update_list.json")?,
+        timeout,
+        cancel,
+    )
+    .await?;
+    ensure!(
+        raw["versionId"].as_str() == Some(resource),
+        "Official manifest and version disagree"
+    );
+    let mut entries = BTreeMap::new();
+    for value in raw["abInfos"]
+        .as_array()
+        .context("Missing official file list")?
+    {
+        let entry: Entry = serde_json::from_value(value.clone())?;
+        resource_path(&entry.name)?;
+        ensure!(
+            entries.insert(entry.name.clone(), entry).is_none(),
+            "Duplicate official resource entry"
+        );
+    }
+    ensure!(!entries.is_empty(), "Empty official resource list");
+    Ok(Manifest {
+        platform,
+        version: resource.into(),
+        client_version: version["clientVersion"]
+            .as_str()
+            .context("Missing official client version")?
+            .into(),
+        base_url: base,
+        entries,
+    })
+}
+
+impl Source {
+    pub fn new(cache: PathBuf, manifest: Manifest, cancelled: CancellationToken) -> Result<Self> {
+        ensure!(
+            resource_path(&manifest.version)?.components().count() == 1,
+            "Invalid resource version"
+        );
+        if !manifest.base_url.is_empty() {
+            https(&manifest.base_url)?;
+        }
+        Ok(Self {
+            cache: Arc::new(Cache::new(cache)?),
+            manifest: Arc::new(manifest),
+            client: client()?,
+            cancelled,
+            slots: Arc::new(Semaphore::new(4)),
+            observer: None,
+        })
+    }
+    pub fn cancellation(&self) -> CancellationToken {
+        self.cancelled.clone()
+    }
+
+    pub fn with_cancellation(&self, cancelled: CancellationToken) -> Self {
+        Self {
+            cancelled,
+            ..self.clone()
+        }
+    }
+
+    pub fn with_progress(&self, progress: Arc<Progress>) -> Self {
+        Self {
+            cancelled: progress.cancel.clone(),
+            observer: Some(progress),
+            ..self.clone()
+        }
+    }
+    pub fn detached(&self, cancelled: CancellationToken) -> Self {
+        Self {
+            cancelled,
+            observer: None,
+            ..self.clone()
+        }
+    }
+    pub fn transfer_key(&self, name: &str) -> String {
+        format!(
+            "bundle:{}:{}:{name}",
+            self.manifest.platform.cache_name(),
+            self.manifest.version
+        )
+    }
+    fn trace(
+        &self,
+        name: &str,
+        state: TransferState,
+        downloaded: Option<u64>,
+        cached: Option<bool>,
+    ) {
+        if let (Some(observer), Some(entry)) = (&self.observer, self.manifest.entries.get(name)) {
+            observer.transfer(
+                &self.transfer_key(name),
+                name,
+                entry.total_size,
+                state,
+                downloaded,
+                cached,
+            );
+        }
+    }
+    pub fn checkpoint(&self) -> Result<()> {
+        Ok(checkpoint(&self.cancelled)?)
+    }
+    pub fn cached_path(&self, name: &str) -> Result<PathBuf> {
+        self.cache.path(
+            self.manifest.platform.cache_name(),
+            &self.manifest.version,
+            name,
+        )
+    }
+
+    pub async fn bundle(
+        &self,
+        name: &str,
+        progress: impl Fn(DownloadProgress<'_>) + Send + Sync,
+    ) -> Result<PathBuf> {
+        self.trace(name, TransferState::Checking, None, None);
+        let result = self
+            .bundle_inner(name, |value| {
+                self.trace(
+                    name,
+                    if value.cached {
+                        TransferState::Ready
+                    } else {
+                        TransferState::Downloading
+                    },
+                    Some(value.downloaded),
+                    Some(value.cached),
+                );
+                progress(value);
+            })
+            .await;
+        self.trace(
+            name,
+            if result.is_ok() {
+                TransferState::Ready
+            } else {
+                TransferState::Failed
+            },
+            None,
+            None,
+        );
+        result
+    }
+
+    async fn bundle_inner(
+        &self,
+        name: &str,
+        progress: impl Fn(DownloadProgress<'_>) + Send + Sync,
+    ) -> Result<PathBuf> {
+        self.checkpoint()?;
+        let entry = self
+            .manifest
+            .entries
+            .get(name)
+            .ok_or_else(|| Error::ResourceNotFound(name.into()))?;
+        let destination = self.cached_path(name)?;
+        let lock = path_lock(&destination)?;
+        let guard = tokio::select! {biased;_=self.cancelled.cancelled()=>return Err(Error::Cancelled.into()),guard=lock.lock_owned()=>guard};
+        let source = self.clone();
+        let entry_copy = entry.clone();
+        let (guard, cached) = tokio::task::spawn_blocking(move || {
+            let result = source.cache.find(
+                source.manifest.platform.cache_name(),
+                &source.manifest.version,
+                &entry_copy,
+                &source.cancelled,
+            );
+            (guard, result)
+        })
+        .await?;
+        if let Some(path) = cached? {
+            progress(DownloadProgress {
+                name,
+                downloaded: 0,
+                total: entry.total_size,
+                cached: true,
+            });
+            return Ok(path);
+        }
+        self.checkpoint()?;
+        if self.manifest.base_url.is_empty() {
+            return Err(Error::NotCached(name.into()).into());
+        }
+        let _permit = tokio::select! {biased;_=self.cancelled.cancelled()=>return Err(Error::Cancelled.into()),permit=self.slots.acquire()=>permit?};
+        let parent = destination
+            .parent()
+            .context("Invalid resource cache location")?;
+        tokio::fs::create_dir_all(parent).await?;
+        let staging = tempfile::Builder::new()
+            .prefix(".fetch-")
+            .tempdir_in(parent)?;
+        let archive_path = staging.path().join("download.zip");
+        let server_name = name.replace('/', "_").replace('#', "__");
+        let server_name = format!(
+            "{}.dat",
+            server_name
+                .rsplit_once('.')
+                .map_or(server_name.as_str(), |(stem, _)| stem)
+        );
+        let url = https(&self.manifest.base_url)?.join(&server_name)?;
+        self.trace(name, TransferState::Downloading, Some(0), Some(false));
+        let response = tokio::select! {biased;_=self.cancelled.cancelled()=>return Err(Error::Cancelled.into()),response=self.client.get(url).send()=>response?.error_for_status()?};
+        let mut stream = response.bytes_stream();
+        let mut archive = tokio::fs::File::create(&archive_path).await?;
+        let mut downloaded = 0u64;
+        while let Some(chunk) = tokio::select! {biased;_=self.cancelled.cancelled()=>return Err(Error::Cancelled.into()),chunk=stream.next()=>chunk}
+        {
+            let chunk = chunk?;
+            downloaded += chunk.len() as u64;
+            ensure!(
+                downloaded <= entry.total_size,
+                "Resource download exceeds official size"
+            );
+            archive.write_all(&chunk).await?;
+            progress(DownloadProgress {
+                name,
+                downloaded,
+                total: entry.total_size,
+                cached: false,
+            });
+        }
+        ensure!(
+            downloaded == entry.total_size,
+            "Resource download is incomplete"
+        );
+        archive.sync_all().await?;
+        drop(archive);
+        self.trace(name, TransferState::Verifying, None, None);
+        let source = self.clone();
+        let output = destination.clone();
+        let entry_copy = entry.clone();
+        tokio::task::spawn_blocking(move || {
+            let _guard = guard;
+            let result =
+                source
+                    .cache
+                    .unpack(&archive_path, &output, &entry_copy, &source.cancelled);
+            drop(staging);
+            result
+        })
+        .await??;
+        Ok(destination)
+    }
+
+    pub async fn prefetch(
+        &self,
+        names: &[String],
+        concurrency: usize,
+        progress: impl Fn(DownloadProgress<'_>) + Send + Sync,
+    ) -> Result<Vec<PathBuf>> {
+        let progress = &progress;
+        let batch = self.with_cancellation(self.cancelled.child_token());
+        let source = &batch;
+        let results: Vec<Result<(usize, PathBuf)>> =
+            stream::iter(names.iter().cloned().enumerate())
+                .map(|(i, name)| async move {
+                    let result = source.bundle(&name, progress).await.map(|path| (i, path));
+                    if result.is_err() {
+                        source.cancelled.cancel();
+                    }
+                    result
+                })
+                .buffer_unordered(concurrency.clamp(1, 8))
+                .collect()
+                .await;
+        let mut error = None;
+        let mut result = Vec::new();
+        for item in results {
+            match item {
+                Ok(value) => result.push(value),
+                Err(problem) => {
+                    if error.is_none()
+                        || problem
+                            .downcast_ref::<Error>()
+                            .is_none_or(|e| !matches!(e, Error::Cancelled))
+                    {
+                        error = Some(problem);
+                    }
+                }
+            }
+        }
+        if let Some(error) = error {
+            return Err(error);
+        }
+        result.sort_by_key(|(i, _)| *i);
+        Ok(result.into_iter().map(|(_, path)| path).collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[tokio::test]
+    async fn cancellation_interrupts_a_pending_resource_lock() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let cancel = CancellationToken::new();
+        let entry = Entry {
+            name: "a.ab".into(),
+            md5: String::new(),
+            ab_size: 3,
+            total_size: 3,
+            extra: BTreeMap::new(),
+        };
+        let source = Source::new(
+            temp.path().to_owned(),
+            Manifest {
+                platform: Platform::Android,
+                version: "test".into(),
+                client_version: "1".into(),
+                base_url: String::new(),
+                entries: BTreeMap::from([(entry.name.clone(), entry)]),
+            },
+            cancel.clone(),
+        )?;
+        let lock = path_lock(&source.cached_path("a.ab")?)?;
+        let guard = lock.lock().await;
+        let task = tokio::spawn(async move { source.bundle("a.ab", |_| {}).await });
+        tokio::task::yield_now().await;
+        cancel.cancel();
+        let error = tokio::time::timeout(Duration::from_secs(1), task)
+            .await??
+            .unwrap_err();
+        assert!(matches!(
+            error.downcast_ref::<Error>(),
+            Some(Error::Cancelled)
+        ));
+        drop(guard);
+        Ok(())
+    }
+}

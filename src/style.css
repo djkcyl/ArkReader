@@ -1,0 +1,1084 @@
+/* ArkNative is loaded by StageRenderer after the UI source is ready. */
+* {
+  box-sizing: border-box;
+}
+html {
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  background: #101418;
+  color: #e4e8ea;
+  font:
+    14px ArkNative,
+    'Microsoft YaHei',
+    sans-serif;
+}
+button,
+input,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: inherit;
+  border: 1px solid #6a778366;
+  color: inherit;
+  background: #20292e;
+  padding: 11px 21px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+button:not(
+    :where(
+      .stage button,
+      .native-settings button,
+      .native-skip button,
+      .native-history button,
+      .native-prompt button
+    )
+  ):hover {
+  background: #34434b;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+button:not(
+    :where(
+      .stage button,
+      .native-settings button,
+      .native-skip button,
+      .native-history button,
+      .native-prompt button
+    )
+  ):focus-visible,
+a:focus-visible {
+  outline: 2px solid #4bc3e3;
+  outline-offset: 3px;
+}
+[hidden] {
+  display: none !important;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  padding: 25px 4vw;
+  border-bottom: 1px solid #ffffff12;
+}
+.brand a {
+  text-decoration: none;
+  color: #eef6f8;
+  font-weight: 900;
+  letter-spacing: 4px;
+  font-size: 18px;
+}
+.brand a span {
+  font-weight: 400;
+  color: #8999a3;
+}
+.subtitle {
+  color: #8999a3;
+}
+.connection {
+  margin-left: auto;
+  font-size: 12px;
+  color: #91b2bd;
+}
+.intro {
+  max-width: 1040px;
+  margin: 9vh auto 8vh;
+  padding: 32px;
+}
+.eyebrow {
+  letter-spacing: 4px;
+  color: #63b9d1;
+  font-size: 12px;
+}
+h1 {
+  font-size: clamp(32px, 5vw, 64px);
+  font-weight: 500;
+  letter-spacing: 2px;
+  margin: 24px 0;
+}
+h2 {
+  font-weight: 400;
+  font-size: 30px;
+}
+.intro > p {
+  font-size: 18px;
+  color: #9eacb4;
+}
+.intro .description {
+  font-size: 15px;
+  line-height: 2;
+  color: #73848f;
+  margin: 40px 0;
+}
+.start-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.primary {
+  background: #bfe8ed;
+  color: #12242c;
+  border: 0;
+  min-width: 180px;
+}
+.primary:hover {
+  background: #e4f9fa;
+}
+.primary span {
+  margin-left: 30px;
+}
+.start-row label {
+  color: #7e919d;
+  font-size: 12px;
+}
+.start-row input {
+  background: transparent;
+  color: #e1edef;
+  border: 0;
+  border-bottom: 1px solid #50616d;
+  padding: 10px 4px;
+  margin-left: 12px;
+  width: 140px;
+  font: inherit;
+}
+.intro .hint {
+  font-size: 12px;
+  margin-top: 30px;
+  color: #647985;
+}
+#loading {
+  color: #d6b77c;
+  margin-top: 25px;
+}
+.chapterbar {
+  display: flex;
+  justify-content: space-between;
+  color: #99abb5;
+  letter-spacing: 1px;
+  padding: 20px 0;
+}
+#player-panel {
+  max-width: 1360px;
+  margin: auto;
+  padding: 0 28px;
+}
+.stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 20px 70px #0007;
+  isolation: isolate;
+}
+.stage:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+  display: grid;
+  place-items: center;
+}
+.stage:fullscreen canvas {
+  object-fit: contain;
+  max-height: 100vh;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+.controls {
+  position: absolute;
+  top: 2%;
+  right: 2%;
+  display: flex;
+  gap: 6px;
+  z-index: 5;
+}
+.choices {
+  position: absolute;
+  inset: 24% 18% auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  z-index: 4;
+}
+.choices:empty {
+  display: none;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+}
+.clean .controls,
+.clean .choices {
+  visibility: hidden;
+}
+.footnote {
+  font-size: 12px;
+  color: #6b808d;
+  line-height: 1.8;
+}
+footer {
+  margin: 45px 4vw 25px;
+  font-size: 10px;
+  color: #53626b;
+  letter-spacing: 2px;
+  display: flex;
+  justify-content: space-between;
+}
+dialog {
+  border: 1px solid #67808a66;
+  background: #151d22;
+  color: #dde9ed;
+  width: min(850px, 90vw);
+  max-height: 82vh;
+  padding: 0;
+}
+dialog::backdrop {
+  background: #000a;
+}
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 30px;
+  border-bottom: 1px solid #3c4b54;
+}
+.dialog-heading h2 {
+  font-size: 20px;
+}
+#history-list {
+  max-height: 60vh;
+  overflow: auto;
+  padding: 15px 32px;
+}
+#history-list article {
+  padding: 16px 0;
+  border-bottom: 1px solid #2e3a42;
+}
+#history-list strong {
+  font-weight: 400;
+  color: #69b9ce;
+}
+#history-list p {
+  line-height: 1.9;
+  margin: 8px 0;
+}
+@media (max-width: 700px) {
+  .brand {
+    padding: 18px;
+    gap: 10px;
+  }
+  .subtitle {
+    display: none;
+  }
+  .connection {
+    font-size: 10px;
+  }
+  #player-panel {
+    padding: 0;
+  }
+  .chapterbar,
+  .footnote {
+    padding: 12px 16px;
+  }
+  .controls {
+    gap: 2px;
+  }
+  .choices {
+    gap: 7px;
+    inset: 20% 15% auto;
+  }
+  .choices button {
+    min-height: 34px;
+    padding: 4px;
+  }
+  .intro {
+    margin-top: 5vh;
+    padding: 25px;
+  }
+  .stage {
+    margin-top: 20px;
+  }
+}
+.viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 16/9;
+}
+.stage:fullscreen .viewport {
+  width: min(100vw, 177.777778vh);
+  height: min(100vh, 56.25vw);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.volume {
+  float: right;
+  color: #8199a5;
+  font-size: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+}
+.volume input {
+  width: 90px;
+  accent-color: #bfe8ed;
+}
+.viewport {
+  container-type: inline-size;
+}
+.choices {
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 39.0625%;
+  gap: 2.34375cqw;
+}
+.choices button {
+  position: relative;
+  isolation: isolate;
+  background: none !important;
+  border: 0;
+  box-shadow: none;
+  min-height: 0;
+  height: 5.46875cqw;
+  padding: 0;
+  flex-shrink: 0;
+  font: 1.953125cqw ArkNative;
+  color: white !important;
+}
+.choices button::before {
+  content: '';
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: 157.4%;
+  height: 105.7143%;
+  z-index: -1;
+  background: url(/media/native-choice-normal.png) center/100% 100% no-repeat;
+}
+.choices button:is([data-native-state='highlighted'], [data-native-state='selected'])::before {
+  filter: brightness(0.960784316);
+}
+.choices button[data-native-state='pressed']::before {
+  filter: brightness(0.784313738);
+}
+.choices button[data-native-state='disabled']::before {
+  filter: brightness(0.784313738);
+  opacity: 0.501960814;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  body.playing .brand,
+  body.playing footer,
+  body.playing .chapterbar,
+  body.playing .footnote,
+  body.playing .volume {
+    display: none;
+  }
+  body.playing #player-panel {
+    padding: 0;
+    max-width: none;
+  }
+  body.playing .stage {
+    width: 100vw;
+    height: 100dvh;
+    aspect-ratio: auto;
+    display: grid;
+    place-items: center;
+    margin: 0;
+  }
+  body.playing .viewport {
+    width: min(100vw, 177.777778dvh);
+    height: min(100dvh, 56.25vw);
+  }
+}
+.story-select {
+  margin: 0 0 24px;
+  color: #95a9b4;
+}
+.story-select select {
+  margin-left: 16px;
+  background: #1b252c;
+  color: #d4e8ee;
+  border: 1px solid #4e6570;
+  padding: 11px 18px;
+  font: inherit;
+}
+
+#story-search {
+  display: block;
+  max-width: 100%;
+  width: 360px;
+  margin-bottom: 14px;
+  padding: 10px;
+  background: #182126;
+  color: #e4e8ea;
+  border: 1px solid #50616d;
+  font: inherit;
+}
+.story-select select {
+  max-width: 100%;
+}
+
+.playback-options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.playback-options li {
+  position: relative;
+  padding-inline-start: 1.25em;
+  line-height: 1.9;
+  white-space: pre-wrap;
+}
+.playback-options li[aria-current='true'] {
+  color: #00a0e9;
+}
+.playback-options img {
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 0.875em;
+  height: 0.875em;
+}
+.playback-options .fallback-marker::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 0.875em;
+  height: 0.875em;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.choices button:nth-child(n + 2) {
+  height: 5.4609375cqw;
+}
+.choices button::before {
+  height: 5.78125cqw;
+}
+.choices .choice-label {
+  position: absolute;
+  left: 0.78125cqw;
+  top: calc(50% - 0.234375cqw);
+  transform: translateY(-50%);
+  width: calc(100% - 1.5625cqw);
+  height: calc(100% - 3.59375cqw);
+  pointer-events: none;
+}
+#reading-settings {
+  width: min(28rem, 94vw);
+}
+#reading-settings fieldset {
+  margin: 1.25rem;
+  border: 0;
+  padding: 0;
+  display: flex;
+  gap: 1rem;
+}
+#reading-settings legend {
+  margin-bottom: 0.5rem;
+}
+#reading-settings fieldset[hidden] {
+  display: none;
+}
+#reading-settings label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  cursor: pointer;
+}
+/* AVG's hold-to-play affordance stays opposite the pressed side. */
+#canvas {
+  touch-action: none;
+}
+.quick-play {
+  position: absolute;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.quick-play .quick-graphic,
+.quick-play button {
+  position: absolute;
+  max-width: none;
+  max-height: none;
+}
+.quick-play .quick-graphic {
+  pointer-events: none;
+}
+.quick-play button {
+  pointer-events: auto;
+  padding: 0;
+  border: 0;
+  background: none !important;
+  box-shadow: none;
+  transition: none;
+  touch-action: none;
+}
+/* Native Reader uses a 1280 x 720 logical canvas and a recycled list. */
+.reader-view {
+  position: absolute;
+  inset: 0 0 3.683758cqw;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: none;
+  z-index: 2;
+  color: white;
+  scrollbar-width: none;
+}
+.reader-view::-webkit-scrollbar {
+  display: none;
+}
+/* avg_reader_main_dialog/scroll_view/scrollbar, 9 wide, right 18, top/bottom 48.
+ * UIWrappedScrollRect reserves width+spacing = 9-3 when this bar is visible. */
+.reader-track {
+  position: absolute;
+  z-index: 4;
+  right: 1.40625cqw;
+  top: 3.75cqw;
+  bottom: 7.433758cqw;
+  width: 0.703125cqw;
+  touch-action: none;
+  cursor: default;
+  border: 0;
+}
+.reader-track::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-style: solid;
+  border-width: 0.78125cqw 0.3515625cqw;
+  border-image: url('/media/native-playback-track.png') 10 fill stretch;
+  filter: brightness(0);
+  pointer-events: none;
+}
+.reader-thumb {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  background: url('/media/native-playback-scrollbar.png') 0 0/100% 100%;
+  filter: brightness(1);
+}
+.reader-track:is([data-native-state='highlighted'], [data-native-state='selected']) .reader-thumb {
+  filter: brightness(0.960784316);
+}
+.reader-track[data-native-state='pressed'] .reader-thumb {
+  filter: brightness(0.784313738);
+}
+.reader-content {
+  position: relative;
+  margin-left: 0.390625cqw;
+  width: calc(100% - 4.6875cqw);
+}
+.reader-cell {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  min-height: 0;
+}
+.reader-name {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.reader-text {
+  position: absolute;
+  left: 22.125001cqw;
+  top: 0.311722cqw;
+  min-height: 1.875cqw;
+}
+.reader-cell canvas {
+  display: block;
+  pointer-events: none;
+}
+.reader-current {
+  position: absolute;
+  left: 19.54687cqw;
+  top: 0.03125cqw;
+  width: 1.640625cqw;
+  height: 2.03125cqw;
+  pointer-events: none;
+}
+.reader-live-decision .reader-text {
+  left: 19.153911cqw;
+  top: 0.077348cqw;
+  width: 75.205469cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15625cqw;
+}
+.reader-live-decision button {
+  height: 4.53125cqw;
+  min-height: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 0 0 3.90625cqw;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: white;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: visible;
+  transition: none;
+}
+article.reader-end .reader-text {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+article.reader-end img {
+  position: absolute;
+  bottom: 2.415555cqw;
+  transform: translate(-50%, 50%);
+  opacity: 0.352941185;
+  pointer-events: none;
+}
+article.reader-end .reader-end {
+  left: 50%;
+  width: 3.046875cqw;
+  height: 1.25cqw;
+}
+.reader-line-left {
+  left: calc(50% - 15.625cqw);
+  width: 25.78125cqw;
+  height: 0.15625cqw;
+}
+.reader-line-right {
+  left: calc(50% + 15.625cqw);
+  width: 25.78125cqw;
+  height: 0.15625cqw;
+}
+.reader-movie-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.reader-live-decision button:is([data-native-state='highlighted'], [data-native-state='selected']) {
+  background: transparent;
+  filter: brightness(0.960784316);
+}
+.reader-live-decision button[data-native-state='pressed'] {
+  filter: brightness(0.784313738);
+}
+.reader-option-bg {
+  position: absolute;
+  inset: 0 -1.5625cqw -1.5625cqw 0;
+  border-style: solid;
+  border-width: 0.703125cqw 1.796875cqw 2.421875cqw 1.5625cqw;
+  border-image: url('/media/native-reader-option.png') 9 23 31 20 fill stretch;
+  pointer-events: none;
+  z-index: -1;
+}
+.reader-option-icon {
+  position: absolute;
+  left: 1.484375cqw;
+  top: 1.0546875cqw;
+  width: 2.421875cqw;
+  height: 2.421875cqw;
+  pointer-events: none;
+}
+.reader-chosen {
+  position: absolute;
+  left: 19.458594cqw;
+  width: 1.640625cqw;
+  height: 1.640625cqw;
+  pointer-events: none;
+}
+.reader-top {
+  position: absolute;
+  z-index: 4;
+  left: calc(50% + 1.198194cqw);
+  top: 3.601508cqw;
+  width: 41.474094cqw;
+  height: 6.351101cqw;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  touch-action: none;
+}
+.reader-top:hover,
+.reader-top:active {
+  background: transparent;
+}
+.reader-top img {
+  position: absolute;
+  left: calc(50% + 0.239305cqw);
+  top: calc(50% - 0.226508cqw);
+  transform: translate(-50%, -50%);
+  width: 3.28125cqw;
+  height: 2.65625cqw;
+  pointer-events: none;
+}
+
+/* Keep the existing toolbar in logical canvas units while Reader is visible;
+   fixed CSS pixels otherwise cover the native center navigation on touch widths. */
+.stage:has(.reader-view:not([hidden])) .controls {
+  gap: 0.46875cqw;
+}
+.reader-live-decision button {
+  isolation: isolate;
+}
+/* The original top/bottom sliced gradient graphics are siblings after panel_ui.
+   Hide All preserves them; the independent movie canvas remains above them. */
+.reader-gradients {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.reader-gradients::before,
+.reader-gradients::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 14.53125cqw;
+  border-style: solid;
+  border-width: 0 0.15625cqw 0 0.234375cqw;
+  border-image: url('/media/native-reader-gradient.png') 0 2 0 3 fill stretch;
+}
+.reader-gradients::before {
+  top: 0;
+}
+.reader-gradients::after {
+  bottom: 0;
+  transform: scaleY(-1);
+}
+/* Reader prefab icon rectangles and their independent click areas. */
+.stage.reader-active .controls {
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+.stage.reader-active .controls button {
+  position: absolute;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+}
+.stage.reader-active .controls :is(#settings, #reader-mode, #hide, #skip) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0;
+  color: transparent;
+  touch-action: manipulation;
+}
+.stage.reader-active .controls :is(#settings, #reader-mode, #hide, #skip)::before {
+  content: '';
+  position: absolute;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: none;
+}
+.stage.reader-active
+  #skip:is([data-native-state='highlighted'], [data-native-state='selected'])::before {
+  filter: brightness(0.960784316);
+}
+.stage.reader-active #skip[data-native-state='pressed']::before {
+  filter: brightness(0.784313738);
+}
+.stage.reader-active #settings {
+  left: 3.852375cqw;
+  top: 4.163462cqw;
+  width: 6.504016cqw;
+  height: 6.192274cqw;
+}
+.stage.reader-active #settings::before {
+  left: calc(50% + 0.249188cqw);
+  top: calc(50% - 0.202523cqw);
+  width: 3.90625cqw;
+  height: 3.75cqw;
+  background-image: url('/media/native-reader-settings.png');
+}
+.stage.reader-active #reader-mode {
+  left: 10.203125cqw;
+  top: 3.960938cqw;
+  width: 6.25cqw;
+  height: 6.25cqw;
+}
+.stage.reader-active #reader-mode::before {
+  left: 50%;
+  top: 50%;
+  width: 3.90625cqw;
+  height: 3.125cqw;
+  background-image: url('/media/native-reader-exit.png');
+}
+.stage.reader-active #hide {
+  left: 16.578125cqw;
+  top: 3.960938cqw;
+  width: 6.25cqw;
+  height: 6.25cqw;
+}
+.stage.reader-active #hide::before {
+  left: 50%;
+  top: 50%;
+  width: 4.375cqw;
+  height: 4.21875cqw;
+  background-image: url('/media/native-reader-hide.png');
+}
+.stage.reader-active #skip {
+  left: 93.75cqw;
+  top: 3.90625cqw;
+  width: 12.5cqw;
+  height: 7.8125cqw;
+}
+.stage.reader-active #skip::before {
+  left: calc(50% - 1.328125cqw);
+  top: calc(50% + 0.234375cqw);
+  width: 6.015625cqw;
+  height: 2.265625cqw;
+  background-image: url('/media/native-reader-skip.png');
+}
+@font-face {
+  font-family: ArkReaderAuto;
+  src: url('/media/native-reader-auto.ttf') format('truetype');
+  font-display: swap;
+}
+.stage.reader-active :is(#auto, #auto-speed) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0;
+  color: transparent;
+  touch-action: manipulation;
+}
+.stage.reader-active #auto {
+  left: 82.859375cqw;
+  top: 3.90625cqw;
+  width: 7.484375cqw;
+  height: 7.8125cqw;
+}
+.stage.reader-active #auto::before {
+  content: '';
+  position: absolute;
+  left: 0.6484375cqw;
+  top: 2.9296875cqw;
+  width: var(--reader-auto-width, 4.375cqw);
+  height: 2.421875cqw;
+  box-sizing: border-box;
+  border-style: solid;
+  border-width: 0 0 0 4.375cqw;
+  border-image: url('/media/native-reader-auto.png') 0 0 0 56 fill repeat stretch;
+  pointer-events: none;
+  transition: none;
+}
+.stage.reader-active #auto::after {
+  content: 'OFF';
+  position: absolute;
+  left: 4.1015625cqw;
+  top: 2.701953cqw;
+  width: 5.234375cqw;
+  height: 2.236719cqw;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font: 1.5625cqw/1 ArkReaderAuto;
+  color: #b8b8b9;
+  pointer-events: none;
+}
+.stage.reader-active #auto[aria-pressed='true']::after {
+  display: none;
+}
+.stage.reader-active #auto-speed {
+  left: 74.632617cqw;
+  top: 3.90625cqw;
+  width: 8.859375cqw;
+  height: 7.8125cqw;
+}
+.stage.reader-active #auto-speed::before,
+.stage.reader-active #auto-speed::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  background-size: 100% 100%;
+  transition: none;
+}
+.stage.reader-active #auto-speed::before {
+  left: 1.867383cqw;
+  top: 3.046875cqw;
+  width: 6.5625cqw;
+  height: 2.1875cqw;
+  background-image: url('/media/native-reader-speed.png');
+}
+.stage.reader-active #auto-speed::after {
+  left: 3.976758cqw;
+  top: 3.359375cqw;
+  width: 2.34375cqw;
+  height: 1.5625cqw;
+  background-image: url('/media/native-reader-speed-1.png');
+}
+.stage.reader-active #auto-speed[data-speed='2']::after {
+  background-image: url('/media/native-reader-speed-2.png');
+}
+.stage.reader-active #auto-speed[data-speed='3']::after {
+  background-image: url('/media/native-reader-speed-3.png');
+}
+.stage.reader-active
+  :is(#auto, #auto-speed):is(
+    [data-native-state='highlighted'],
+    [data-native-state='selected']
+  )::before,
+.stage.reader-active
+  #auto-speed:is([data-native-state='highlighted'], [data-native-state='selected'])::after {
+  filter: brightness(0.960784316);
+}
+.stage.reader-active :is(#auto, #auto-speed)[data-native-state='pressed']::before,
+.stage.reader-active #auto-speed[data-native-state='pressed']::after {
+  filter: brightness(0.784313738);
+}
+
+/* These browser controls must not wrap when their right-aligned hitbox shrinks. */
+.controls :is(#pause, #window-full, #full) {
+  white-space: nowrap;
+}
+/* Reader settings use the original stage-space panel, not the normal dialog box. */
+#reading-settings.native-settings {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  max-width: none;
+  max-height: none;
+  min-width: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  overflow: hidden;
+  container-type: inline-size;
+  color: white;
+}
+#reading-settings.native-settings::backdrop {
+  background: transparent;
+}
+#reading-settings.native-settings .dialog-heading {
+  display: contents;
+}
+#reading-settings.native-settings h2,
+#reading-settings.native-settings legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  margin: 0;
+  padding: 0;
+}
+#reading-settings.native-settings fieldset {
+  display: contents;
+}
+.reader-settings-art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.reader-setting-graphic {
+  position: absolute;
+  pointer-events: none;
+  box-sizing: border-box;
+  font-family: ArkNative;
+  line-height: 1;
+  white-space: pre;
+}
+.reader-setting-title-flow {
+  position: absolute;
+  display: flex;
+  align-items: flex-start;
+  white-space: nowrap;
+}
+.reader-settings-blocker {
+  position: absolute;
+  background: transparent;
+}
+#reading-settings.native-settings .reader-setting-hit {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  display: block;
+  font-size: 0;
+  color: transparent;
+  z-index: 1;
+}
+#reading-settings.native-settings .reader-setting-hit input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#reading-settings.native-settings .reader-setting-hit:has(input:focus-visible) {
+  outline: 2px solid #4bc3e3;
+  outline-offset: 2px;
+}
+#reading-settings.native-settings #close-settings {
+  position: absolute;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  min-width: 0;
+  color: transparent;
+  font-size: 0;
+  touch-action: manipulation;
+}
+
+/* Native setting labels must not acquire the browser touch highlight. */
+#reading-settings.native-settings {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Selectable disabled color belongs to targetGraphic, not the whole button.
+ * Reader settings/exit/hide point at NonDrawingGraphic hotzones and do not tint.
+ */
+.stage.reader-active
+  .controls
+  :is(#auto, #auto-speed, #skip, #settings, #reader-mode, #hide):disabled {
+  opacity: 1;
+}
+.stage.reader-active :is(#auto, #auto-speed, #skip)[data-native-state='disabled']::before,
+.stage.reader-active #auto-speed[data-native-state='disabled']::after {
+  filter: brightness(0.784313738);
+  opacity: 0.501960814;
+}
+.reader-live-decision button[data-native-state='disabled'] {
+  filter: brightness(0.784313738);
+  opacity: 0.501960814;
+}
+.choices button:disabled {
+  opacity: 1;
+  cursor: default;
+}

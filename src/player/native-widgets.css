@@ -1,0 +1,168 @@
+/* Neutral host elements. Only authored graphics paint the player controls. */
+.native-widget-art {
+  position: absolute;
+  pointer-events: none;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.native-prompt {
+  position: absolute;
+  inset: 0;
+  container-type: inline-size;
+  background: transparent;
+  display: block;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  isolation: isolate;
+  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+}
+.native-prompt-content {
+  position: absolute;
+  text-align: center;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  scrollbar-width: none;
+  line-height: 1.6;
+  padding: 0;
+}
+.native-prompt-content::-webkit-scrollbar {
+  display: none;
+}
+.native-prompt-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25cqw;
+  min-height: 100%;
+  padding: 1.5625cqw 0;
+}
+.native-prompt-content :is(h2, p) {
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+.native-prompt .native-prompt-button {
+  position: absolute;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: white;
+  transition: none;
+  touch-action: manipulation;
+}
+.native-prompt-button:is(:hover, :active, :focus-visible) {
+  background: transparent;
+  outline: none;
+}
+.native-prompt-button-label {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  pointer-events: none;
+  line-height: 1;
+  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+}
+.native-prompt-button-art {
+  filter: brightness(1);
+}
+.native-prompt-button:is([data-native-state='highlighted'], [data-native-state='selected'])
+  .native-prompt-button-art {
+  filter: brightness(0.960784316);
+}
+.native-prompt-button[data-native-state='pressed'] .native-prompt-button-art {
+  filter: brightness(0.784313738);
+}
+.native-prompt-button:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.native-prompt-button[data-native-state='disabled'] .native-prompt-button-art {
+  filter: brightness(0.784313738);
+  opacity: calc(var(--native-base-alpha, 1) * 0.501960814) !important;
+}
+dialog.native-prompt {
+  position: fixed;
+  inset: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  overflow: hidden;
+}
+dialog.native-prompt::backdrop {
+  background: transparent;
+}
+dialog.native-prompt:not([open]) {
+  display: none;
+}
+#reading-settings .native-volume {
+  position: relative;
+  display: block;
+  width: 100%;
+  container-type: inline-size;
+  grid-column: 1/-1;
+  touch-action: none;
+  cursor: pointer;
+}
+#reading-settings .native-volume .native-volume-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+  appearance: none;
+  outline: none;
+}
+.native-volume-value {
+  position: absolute;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.prompt-track {
+  position: absolute;
+  touch-action: none;
+  cursor: default;
+  border: 0;
+}
+.prompt-track::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-style: solid;
+  border-width: 0.78125cqw 0.3515625cqw;
+  border-image: url('/media/native-playback-track.png') 10 fill stretch;
+  filter: brightness(0);
+  pointer-events: none;
+}
+.prompt-thumb {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  background: url('/media/native-playback-scrollbar.png') 0 0/100% 100%;
+}
+.prompt-track:is([data-native-state='highlighted'], [data-native-state='selected']) .prompt-thumb {
+  filter: brightness(0.960784316);
+}
+.prompt-track[data-native-state='pressed'] .prompt-thumb {
+  filter: brightness(0.784313738);
+}
+:is(.reader-track, .history-track, .prompt-track):focus-visible {
+  outline: none;
+}

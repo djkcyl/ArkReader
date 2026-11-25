@@ -1,0 +1,176 @@
+/* Generated from Windows 2.7.91 native ordinary AVG rectangles. */
+.stage:not(.reader-active) .controls {
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+.stage:not(.reader-active) .controls button {
+  position: absolute;
+  pointer-events: auto;
+}
+.stage:not(.reader-active)
+  .controls
+  :is(#skip, #auto, #auto-speed, #log, #hide, #settings, #reader-mode) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0;
+  color: transparent;
+  touch-action: manipulation;
+}
+.stage:not(.reader-active)
+  .controls
+  :is(#skip, #auto, #auto-speed, #log, #hide, #settings, #reader-mode)::before,
+.stage:not(.reader-active) #auto-speed::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.stage:not(.reader-active) #skip {
+  left: 87.51562595cqw;
+  top: 0.01562595cqw;
+  width: 12.5cqw;
+  height: 7.8125cqw;
+}
+.stage:not(.reader-active) #skip::before {
+  left: 1.9140625cqw;
+  top: 3.0078125cqw;
+  width: 6.015625cqw;
+  height: 2.265625cqw;
+  --native-base-alpha: 1;
+  opacity: var(--native-base-alpha);
+  background-image: url('/media/native-control-skip.png');
+}
+.stage:not(.reader-active) #auto {
+  left: 79.1874994cqw;
+  top: 0.01562595cqw;
+  width: 7.48437524cqw;
+  height: 7.8125cqw;
+}
+.stage:not(.reader-active) #auto::before {
+  left: 0.64843763cqw;
+  top: 2.9296875cqw;
+  width: 4.6875cqw;
+  height: 2.421875cqw;
+  --native-base-alpha: 1;
+  opacity: var(--native-base-alpha);
+  background-image: url('/media/native-control-auto.png');
+  background: none;
+  box-sizing: border-box;
+  width: var(--reader-auto-width, 4.375cqw);
+  border-style: solid;
+  border-width: 0 0 0 4.375cqw;
+  border-image: url('/media/native-control-auto.png') 0 0 0 56 fill repeat stretch;
+}
+.stage:not(.reader-active) #auto-speed {
+  left: 70.27324155cqw;
+  top: 0.01562595cqw;
+  width: 8.85937512cqw;
+  height: 7.8125cqw;
+}
+.stage:not(.reader-active) #auto-speed::before {
+  left: 1.86738297cqw;
+  top: 3.046875cqw;
+  width: 6.5625cqw;
+  height: 2.1875cqw;
+  --native-base-alpha: 1;
+  opacity: var(--native-base-alpha);
+  background-image: url('/media/native-control-speed.png');
+}
+.stage:not(.reader-active) #auto-speed::after {
+  left: 3.97675797cqw;
+  top: 3.359375cqw;
+  width: 2.34375cqw;
+  height: 1.5625cqw;
+  --native-base-alpha: 1;
+  opacity: var(--native-base-alpha);
+  background-image: url('/media/native-reader-speed-1.png');
+}
+.stage:not(.reader-active) #log {
+  left: 7.25312593cqw;
+  top: -0.09726509cqw;
+  width: 5.88750005cqw;
+  height: 7.99609363cqw;
+}
+.stage:not(.reader-active) #log::before {
+  left: 0.84843752cqw;
+  top: 1.98007806cqw;
+  width: 4.375cqw;
+  height: 4.21875cqw;
+  --native-base-alpha: 1;
+  opacity: var(--native-base-alpha);
+  background-image: url('/media/native-control-log.png');
+}
+.stage:not(.reader-active) #hide {
+  left: 12.97031344cqw;
+  top: -0.16757765cqw;
+  width: 7.51406252cqw;
+  height: 8.06640625cqw;
+}
+.stage:not(.reader-active) #hide::before {
+  left: 1.42031251cqw;
+  top: 2.05039063cqw;
+  width: 4.375cqw;
+  height: 4.21875cqw;
+  --native-base-alpha: 1;
+  opacity: var(--native-base-alpha);
+  background-image: url('/media/native-control-hide.png');
+}
+.stage:not(.reader-active) #settings {
+  left: -0.11132814cqw;
+  top: -0.15625cqw;
+  width: 8.15859377cqw;
+  height: 7.8125cqw;
+}
+.stage:not(.reader-active) #settings::before {
+  left: 2.29882814cqw;
+  top: 2.265625cqw;
+  width: 3.90625cqw;
+  height: 3.75cqw;
+  --native-base-alpha: 0.5960784554481506;
+  opacity: var(--native-base-alpha);
+  background-image: url('/media/native-control-settings.png');
+}
+.stage:not(.reader-active) #reader-mode {
+  left: 7.73437498cqw;
+  top: -0.08710941cqw;
+  width: 5.10625005cqw;
+  height: 7.95234382cqw;
+}
+.stage:not(.reader-active) #reader-mode::before {
+  left: 0.58593752cqw;
+  top: 2.43085941cqw;
+  width: 3.90625cqw;
+  height: 3.125cqw;
+  --native-base-alpha: 0.5960784554481506;
+  opacity: var(--native-base-alpha);
+  background-image: url('/media/native-control-reader.png');
+}
+.stage:not(.reader-active) #auto::after {
+  content: 'OFF';
+  position: absolute;
+  pointer-events: none;
+  left: 4.10156269cqw;
+  top: 2.70195317cqw;
+  width: 5.234375cqw;
+  height: 2.23671868cqw;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font: 1.5625cqw/1 ArkReaderAuto;
+  color: #b8b8b9;
+}
+.stage:not(.reader-active) #auto[aria-pressed='true']::after {
+  display: none;
+}
+.stage:not(.reader-active) :is(#auto, #auto-speed) {
+  translate: var(--normal-auto-shift, 0cqw) 0;
+}
+.stage:not(.reader-active) #auto-speed[data-speed='2']::after {
+  background-image: url('/media/native-reader-speed-2.png');
+}
+.stage:not(.reader-active) #auto-speed[data-speed='3']::after {
+  background-image: url('/media/native-reader-speed-3.png');
+}

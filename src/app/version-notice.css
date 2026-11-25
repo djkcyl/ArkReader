@@ -1,0 +1,94 @@
+.version-notice {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  margin: 0 0 14px;
+  border: 1px solid #b7a27c66;
+  border-radius: 5px;
+  background: #ede5d6;
+  color: #735d3c;
+  font:
+    12px/1.6 'Segoe UI',
+    'Microsoft YaHei',
+    sans-serif;
+}
+.version-notice > div {
+  flex: 1;
+  min-width: 0;
+}
+.version-notice strong {
+  font-size: 12px;
+}
+.version-notice p {
+  margin: 3px 0 0;
+  font-size: 11px;
+}
+.version-notice button {
+  padding: 7px 10px;
+  border: 1px solid #b5a58a;
+  background: transparent;
+  border-radius: 3px;
+  color: #735d3c;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.resource-version-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px 24px;
+  margin: 18px 0;
+}
+.resource-version-list > div {
+  min-width: 0;
+}
+.resource-version-list dt {
+  font-size: 11px;
+  color: #78919b;
+}
+.resource-version-list dd {
+  margin: 3px 0 0;
+  font:
+    12px/1.6 Consolas,
+    'Microsoft YaHei',
+    sans-serif;
+  overflow-wrap: anywhere;
+  color: #355968;
+}
+.desktop-page .version-warning-text {
+  color: #9c6735;
+}
+.desktop-page #resource-version-card small {
+  color: #7d939b;
+  font-size: 11px;
+}
+.desktop-page #resource-version-card details {
+  font-size: 11px;
+  color: #94664d;
+  overflow-wrap: anywhere;
+}
+.version-notice button:hover {
+  background: #e2d6bf;
+}
+.version-notice small {
+  font-size: 10px;
+  color: #907c5e;
+}
+@media (max-width: 700px) {
+  .version-notice {
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 9px;
+  }
+  .version-notice > div {
+    flex-basis: 100%;
+  }
+  .version-notice button {
+    padding: 5px 8px;
+  }
+  .resource-version-list {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}

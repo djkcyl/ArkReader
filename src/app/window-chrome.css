@@ -1,0 +1,153 @@
+.app-titlebar {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+#app > .brand.app-titlebar,
+body.desktop-app .brand.app-titlebar {
+  padding-right: 0;
+  gap: 18px;
+}
+.window-controls {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  flex: none;
+  height: 64px;
+  margin: -16px 0 -16px 6px;
+}
+.window-controls button {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #b4c6ce;
+  cursor: default;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.window-controls button:hover {
+  background: #ffffff12;
+  color: #fff;
+}
+.window-controls button:active {
+  background: #ffffff20;
+}
+.window-controls #window-close:hover {
+  background: #c74343;
+  color: white;
+}
+.window-controls #window-close:active {
+  background: #a92f36;
+}
+.window-controls button:focus-visible {
+  outline: 2px solid #9bd1ce;
+  outline-offset: -5px;
+}
+.window-controls svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1;
+  pointer-events: none;
+}
+.app-titlebar.window-unfocused .window-controls button {
+  color: #7f959f;
+}
+.app-titlebar.window-unfocused .window-controls button:hover {
+  color: #fff;
+}
+.window-action-error {
+  position: fixed;
+  right: 16px;
+  top: 72px;
+  z-index: 1100;
+  max-width: min(500px, 90vw);
+  padding: 12px 16px;
+  background: #744c3d;
+  color: #fff0e7;
+  border: 1px solid #b1876d;
+  border-radius: 4px;
+  font:
+    12px/1.8 'Segoe UI',
+    'Microsoft YaHei',
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+.startup-titlebar {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 0 16px 24px;
+  background: #172128;
+  z-index: 10;
+  color: #dce7eb;
+  font:
+    600 12px 'Segoe UI',
+    sans-serif;
+  letter-spacing: 2px;
+}
+.startup-titlebar .startup-caption {
+  flex: 1;
+  font:
+    11px 'Microsoft YaHei',
+    sans-serif;
+  letter-spacing: 0;
+  color: #7c949f;
+}
+.startup-titlebar .window-controls {
+  margin-left: auto;
+}
+@media (max-width: 1100px) {
+  #app > .brand.app-titlebar,
+  body.desktop-app .brand.app-titlebar {
+    gap: 12px;
+  }
+  .app-titlebar .connection {
+    font-size: 10px;
+  }
+}
+@media (max-width: 700px) {
+  #app > .brand.app-titlebar,
+  body.desktop-app .brand.app-titlebar {
+    padding-top: 16px;
+    padding-bottom: 16px;
+    gap: 10px;
+  }
+  .app-titlebar .connection {
+    display: none;
+  }
+  .window-controls {
+    margin-left: auto;
+  }
+  .window-controls button {
+    width: 38px;
+  }
+  .startup-titlebar .startup-caption {
+    display: none;
+  }
+  .startup-titlebar .window-controls {
+    margin-left: auto;
+  }
+}
+@media (max-width: 480px) {
+  .app-titlebar .desktop-badge {
+    display: none;
+  }
+  .app-titlebar .window-controls {
+    margin-left: auto;
+  }
+}

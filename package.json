@@ -1,0 +1,37 @@
+{
+  "name": "arkreader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npm run native:prepare && tauri dev",
+    "desktop:dev": "npm run native:prepare && tauri dev",
+    "desktop:build": "node tools/build-desktop.mjs",
+    "desktop:build:windows": "node tools/build-desktop.mjs",
+    "desktop:portable": "node tools/build-portable.mjs",
+    "desktop:build:macos": "node tools/build-desktop.mjs",
+    "desktop:build:linux": "node tools/build-desktop.mjs",
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "format": "prettier --write . --ignore-path .gitignore --ignore-path .prettierignore && cargo fmt --manifest-path src-tauri/Cargo.toml --all",
+    "format:check": "prettier --check . --ignore-path .gitignore --ignore-path .prettierignore && cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check",
+    "native:prepare": "node tools/prepare-native.mjs",
+    "android:dev": "node tools/android.mjs dev",
+    "android:build": "node tools/android.mjs build --apk --target aarch64",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml --workspace"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.6",
+    "@types/node": "^26.6.6",
+    "esbuild": "0.28.2",
+    "fflate": "^0.8.3",
+    "prettier": "3.10.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.0"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.5",
+    "json5": "^2.2.3"
+  },
+  "license": "UNLICENSED"
+}

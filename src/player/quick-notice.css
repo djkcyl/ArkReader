@@ -1,0 +1,73 @@
+.quick-notices {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+}
+.quick-notice {
+  position: absolute;
+  left: 50%;
+  width: 34.375cqw;
+  height: 2.734375cqw;
+  transform: translate(-50%, -50%);
+  color: white;
+}
+.quick-notice-text {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 2.734375cqw;
+  transform: translateX(-50%);
+  padding: 0 3.90625cqw;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font: 1.5625cqw/1 ArkNative;
+  pointer-events: auto;
+}
+.quick-notice-text::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border-style: solid;
+  border-width: 0 1.25cqw;
+  border-image: url('/media/native-notice-bg.png') 0 16 fill stretch;
+  opacity: 0.501960813999176;
+  z-index: -1;
+}
+.quick-notice-known {
+  position: absolute;
+  left: 50%;
+  top: 5.000078678cqw;
+  transform: translate(-50%, -50%);
+  padding: 2.34375cqw;
+  border: 0;
+  background: none !important;
+  color: white;
+  pointer-events: auto;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+.quick-notice-known > span {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 3.359375cqw;
+  padding: 0 1.5625cqw 0.859375cqw;
+  font: 1.40625cqw/1 ArkNative;
+}
+.quick-notice-known > span::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border-style: solid;
+  border-width: 0 1.640625cqw;
+  border-image: url('/media/native-notice-button.png') 0 21 fill stretch;
+  z-index: -1;
+}
+.quick-notice-known:disabled {
+  opacity: 1;
+  cursor: default;
+}

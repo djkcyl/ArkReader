@@ -1,0 +1,94 @@
+/* Ordinary story UI m_TargetGraphic bindings decoded from sharedassets1.
+ * CanvasRenderer tint is independent of Image.m_Color's original opacity. */
+/* Native Selectable paints its selected ColorBlock; it has no extra browser
+ * focus rectangle. Browser-only controls keep their accessibility outline. */
+.controls :is(#auto, #auto-speed, #skip, #log, #hide, #settings, #reader-mode):focus-visible,
+.choices button:focus-visible,
+.reader-live-decision button:focus-visible,
+.native-history #close-log:focus-visible,
+.native-skip button:focus-visible,
+.quick-notice-known:focus-visible,
+#reading-settings.native-settings #close-settings:focus-visible,
+#reading-settings.native-settings .reader-setting-hit input:focus-visible {
+  outline: none;
+}
+#reading-settings.native-settings .reader-setting-hit:has(input:focus-visible) {
+  outline: none;
+}
+.stage:not(.reader-active)
+  .controls
+  :is(#auto, #auto-speed, #skip, #log, #hide, #settings, #reader-mode):disabled {
+  opacity: 1;
+}
+.stage:not(.reader-active)
+  .controls
+  :is(#auto, #auto-speed, #skip, #log, #hide, #settings, #reader-mode)::before,
+.stage:not(.reader-active) #auto-speed::after {
+  filter: brightness(1);
+}
+.stage:not(.reader-active)
+  .controls
+  :is(#auto, #auto-speed, #skip, #log, #hide, #settings, #reader-mode):is(
+    [data-native-state='highlighted'],
+    [data-native-state='selected']
+  )::before,
+.stage:not(.reader-active)
+  #auto-speed:is([data-native-state='highlighted'], [data-native-state='selected'])::after {
+  filter: brightness(0.960784316);
+}
+.stage:not(.reader-active)
+  .controls
+  :is(
+    #auto,
+    #auto-speed,
+    #skip,
+    #log,
+    #hide,
+    #settings,
+    #reader-mode
+  )[data-native-state='pressed']::before,
+.stage:not(.reader-active) #auto-speed[data-native-state='pressed']::after {
+  filter: brightness(0.784313738);
+}
+.stage:not(.reader-active)
+  .controls
+  :is(
+    #auto,
+    #auto-speed,
+    #skip,
+    #log,
+    #hide,
+    #settings,
+    #reader-mode
+  )[data-native-state='disabled']::before,
+.stage:not(.reader-active) #auto-speed[data-native-state='disabled']::after {
+  filter: brightness(0.784313738);
+  opacity: calc(var(--native-base-alpha, 1) * 0.501960814);
+}
+
+.native-history #close-log:disabled {
+  opacity: 1;
+}
+.native-history #close-log img,
+.history-thumb,
+.quick-notice-known > span {
+  filter: brightness(1);
+}
+.native-history
+  #close-log:is([data-native-state='highlighted'], [data-native-state='selected'])
+  img,
+.history-track:is([data-native-state='highlighted'], [data-native-state='selected']) .history-thumb,
+.quick-notice-known:is([data-native-state='highlighted'], [data-native-state='selected']) > span {
+  filter: brightness(0.960784316);
+}
+.native-history #close-log[data-native-state='pressed'] img,
+.history-track[data-native-state='pressed'] .history-thumb,
+.quick-notice-known[data-native-state='pressed'] > span {
+  filter: brightness(0.784313738);
+}
+.native-history #close-log[data-native-state='disabled'] img,
+.history-track[data-native-state='disabled'] .history-thumb,
+.quick-notice-known[data-native-state='disabled'] > span {
+  filter: brightness(0.784313738);
+  opacity: 0.501960814;
+}

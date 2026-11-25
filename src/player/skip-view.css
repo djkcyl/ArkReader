@@ -1,0 +1,57 @@
+dialog.native-skip {
+  position: fixed;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  max-width: none;
+  max-height: none;
+  overflow: hidden;
+  container-type: inline-size;
+  color: white;
+  user-select: none;
+}
+dialog.native-skip::backdrop {
+  background: transparent;
+}
+.native-skip .skip-art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.native-skip :is(.skip-image, .skip-text, .skip-center, button) {
+  position: absolute;
+}
+.native-skip .skip-text {
+  padding: 0;
+  margin: 0;
+  max-height: none;
+  pointer-events: none;
+}
+.native-skip .skip-center {
+  background: transparent;
+}
+/* Hit rectangles are intentionally wider than their icons. Keep every browser
+ * interaction state transparent; NativeSelectableSurface tints only the icon. */
+dialog.native-skip button,
+dialog.native-skip button:is(:hover, :active, :focus-visible) {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  min-width: 0;
+  touch-action: manipulation;
+  transition: none;
+}
+.native-skip button span {
+  margin: 0;
+}
+.native-skip button span {
+  pointer-events: none;
+  filter: brightness(1);
+}
+.native-skip button:is([data-native-state='highlighted'], [data-native-state='selected']) span {
+  filter: brightness(0.960784316);
+}
+.native-skip button[data-native-state='pressed'] span {
+  filter: brightness(0.784313738);
+}

@@ -1,0 +1,21 @@
+#resume-prompt.native-prompt {
+  width: min(1040px, calc(100vw - 32px), calc((100dvh - 48px) * 16 / 9));
+  height: auto;
+  aspect-ratio: 16/9;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+#resume-prompt::backdrop {
+  background: #0b171eb8;
+  backdrop-filter: blur(4px);
+}
+#resume-prompt #resume-heading {
+  font-weight: 600;
+}
+#resume-prompt #resume-excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

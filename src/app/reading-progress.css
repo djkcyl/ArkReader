@@ -1,0 +1,324 @@
+/* Progress belongs to the library, outside the official playback surface. */
+.reading-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: #6a858e;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+.reading-meter-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.reading-meter .reading-percent {
+  font:
+    600 12px/1.5 'Segoe UI',
+    sans-serif;
+  color: #496e78;
+  white-space: nowrap;
+}
+.reading-meter progress {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 4px;
+  border: 0;
+  border-radius: 4px;
+  background: #a5b9bf33;
+  accent-color: #4e8b91;
+}
+.reading-meter progress::-webkit-progress-bar {
+  background: #a5b9bf33;
+  border-radius: 4px;
+}
+.reading-meter progress::-webkit-progress-value {
+  background: #639a9f;
+  border-radius: 4px;
+}
+.reading-meter-detail {
+  color: #81949d;
+  font-size: 10px;
+}
+.reading-meter.is-complete .reading-percent {
+  color: #37867b;
+}
+.reading-meter.is-complete progress::-webkit-progress-value {
+  background: #62a194;
+}
+.reading-explainer {
+  display: block;
+  font-size: 10px;
+  color: #8b9da4;
+  margin-top: 5px;
+  line-height: 1.7;
+}
+.archive-card .reading-meter {
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid #92a4ac33;
+  color: inherit;
+}
+.archive-card .reading-meter .reading-percent {
+  color: inherit;
+}
+.archive-card .reading-meter-detail {
+  color: inherit;
+  opacity: 0.65;
+}
+.chapter-poster > .reading-meter {
+  margin: 18px 0 5px;
+  padding-top: 14px;
+  border-top: 1px solid #9dabb74d;
+}
+.track-title > .reading-meter {
+  width: min(200px, 100%);
+  gap: 3px;
+  margin-top: 3px;
+}
+.track-title .reading-meter-heading {
+  font-size: 9px;
+}
+.track-title .reading-percent {
+  font-size: 10px;
+}
+.track-title .reading-meter-detail {
+  display: none;
+}
+.story-track[aria-pressed='true'] .reading-meter,
+.story-track[aria-pressed='true'] .reading-percent {
+  color: #9ac8ca;
+}
+.story-track {
+  min-height: 88px;
+}
+.reading-panel .shelf-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-top: 12px;
+}
+.reading-panel .shelf-story {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 120px 110px 125px;
+  gap: 18px;
+  align-items: center;
+  flex: none;
+  min-height: 88px;
+  padding: 12px 18px;
+  border: 0;
+  border-bottom: 1px solid #bbc9d052;
+  border-radius: 0;
+  background: #edf2f380;
+}
+.reading-panel .shelf-story:hover {
+  background: #f6fafb;
+}
+.reading-panel .shelf-number {
+  align-self: center;
+}
+.reading-panel .shelf-story-text {
+  gap: 4px;
+}
+.reading-panel .shelf-story-text strong {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.reading-panel .shelf-story > .reading-meter {
+  width: 100%;
+  margin: 0;
+  white-space: normal;
+}
+.reading-panel .shelf-story > .reading-meter .reading-meter-detail {
+  display: none;
+}
+.reading-panel .shelf-meta {
+  font-size: 10px;
+  color: #879ca5;
+  text-align: right;
+  white-space: nowrap;
+}
+.reading-panel .shelf-open {
+  text-align: right;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.reading-panel .shelf-open::after {
+  content: none;
+}
+.shelf-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+}
+.reading-panel .shelf-actions button {
+  border: 0;
+  background: transparent;
+  padding: 5px 0;
+  color: #356672;
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+}
+.reading-panel .shelf-actions button:hover {
+  text-decoration: underline;
+}
+.reading-panel .shelf-actions .shelf-restart {
+  color: #81949d;
+  font-size: 10px;
+}
+.shelf-excerpt {
+  font-size: 11px;
+  color: #81949d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  font-weight: 400;
+}
+.history-chapter {
+  flex: none;
+  min-width: 0;
+  margin: 0 0 16px;
+}
+.history-chapter-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0;
+  padding: 12px 18px;
+  background: #becdd32e;
+  border-bottom: 1px solid #aebfc668;
+}
+.history-chapter-heading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #345260;
+  line-height: 1.5;
+}
+.history-chapter-heading > .reading-meter {
+  width: 220px;
+  flex: none;
+  gap: 3px;
+}
+.history-chapter-stories {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+@media (max-width: 1100px) {
+  .reading-panel .shelf-story {
+    grid-template-columns: 20px minmax(0, 1fr) 90px 125px;
+    gap: 12px;
+    padding: 10px 12px;
+  }
+  .reading-panel .shelf-meta {
+    display: none;
+  }
+  .reading-panel .shelf-chapter-progress {
+    display: none;
+  }
+  .history-chapter-heading > .reading-meter {
+    width: 190px;
+  }
+}
+@media (max-width: 700px) {
+  .history-chapter-heading {
+    gap: 12px;
+    padding: 10px;
+  }
+  .history-chapter-heading h2 {
+    font-size: 13px;
+  }
+  .history-chapter-heading > .reading-meter {
+    width: 140px;
+  }
+  .history-chapter-heading .reading-meter-detail {
+    font-size: 9px;
+  }
+  .reading-panel .shelf-story {
+    grid-template-columns: minmax(0, 1fr) 110px;
+    gap: 6px 12px;
+    min-height: 88px;
+    padding: 10px;
+  }
+  .reading-panel .shelf-number {
+    display: none;
+  }
+  .reading-panel .shelf-story-text {
+    grid-row: 1/3;
+  }
+  .reading-panel .shelf-story-text strong {
+    font-size: 13px;
+  }
+  .reading-panel .shelf-story > .reading-meter {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .reading-panel .shelf-actions {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .reading-panel .shelf-story > .shelf-chapter-progress {
+    display: none;
+  }
+  .reading-panel .shelf-meta {
+    grid-column: 2;
+    grid-row: 2;
+    font-size: 9px;
+  }
+  .reading-panel .shelf-open {
+    grid-column: 3;
+    grid-row: 1/3;
+  }
+  .reading-panel .shelf-story > .shelf-chapter-progress > progress {
+    display: none;
+  }
+  .reading-explainer {
+    font-size: 9px;
+  }
+  .chapter-poster,
+  .operator-detail .chapter-poster {
+    position: relative;
+    align-self: stretch;
+    width: 100%;
+    flex-wrap: wrap;
+    max-height: 132px;
+    min-height: 110px;
+    column-gap: 12px;
+    row-gap: 0;
+    padding-bottom: 38px;
+  }
+  .chapter-poster h2 {
+    max-width: calc(100% - 75px);
+  }
+  .chapter-poster > .reading-meter {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    gap: 2px;
+    margin: 0;
+    padding-top: 5px;
+  }
+  .chapter-poster > .reading-meter .reading-meter-detail {
+    display: none;
+  }
+  .chapter-poster .archive-cover,
+  .episode-detail .chapter-poster .episode-art,
+  .operator-detail .chapter-poster .operator-portrait {
+    max-height: 68px;
+    width: 50px;
+  }
+  .story-track {
+    min-height: 84px;
+  }
+}
