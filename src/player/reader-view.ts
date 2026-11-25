@@ -2,7 +2,7 @@ import { lineAdvance } from '../core/line-breaking';
 import type { StoryPlayer } from './runtime';
 import type { ReaderCell } from '../core/reader-model';
 import { readingMarkup, readingFont } from '../core/sticker-color';
-import { layoutDialogText, alignedTextOffset } from './dialog-layout';
+import { layoutDialogText, alignedTextOffset, textCanvasPixelHeight } from './dialog-layout';
 import {
   measureReaderCell,
   readerCellText,
@@ -258,7 +258,14 @@ export class ReaderView {
           cell.endtip,
         ]);
       if (this.keys[i] !== key) {
-        this.heights[i] = measureReaderCell(this.measure, cell, settings.font.size, scale);
+        this.heights[i] = measureReaderCell(
+          this.measure,
+          cell,
+          settings.font.size,
+          scale,
+          settings.font.nameSize,
+          devicePixelRatio || 1,
+        );
         this.keys[i] = key;
       }
       this.tops[i] = top;
@@ -334,7 +341,7 @@ export class ReaderView {
     const canvas = document.createElement('canvas'),
       dpr = devicePixelRatio || 1;
     canvas.width = Math.ceil(width * this.scale * dpr);
-    canvas.height = Math.ceil(Math.max(layout.height + 5, size) * this.scale * dpr);
+    canvas.height = textCanvasPixelHeight(layout, size, this.scale, dpr);
     canvas.style.width = width * this.scale + 'px';
     canvas.style.height = canvas.height / dpr + 'px';
     canvas.setAttribute('aria-hidden', 'true');

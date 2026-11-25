@@ -1,6 +1,6 @@
 import type { ReaderCell } from '../core/reader-model';
 import { readingMarkup } from '../core/sticker-color';
-import { layoutDialogText } from './dialog-layout';
+import { layoutDialogText, textCanvasPixelHeight } from './dialog-layout';
 
 // avg_reader_text_item and avg_reader_main_dialog from avg/[uc]common.ab.
 export const READER_LAYOUT = {
@@ -29,25 +29,43 @@ export function measureReaderCell(
   cell: ReaderCell,
   size: number,
   scale: number,
+  nameSize = 30,
+  pixelRatio = 1,
 ): number {
+  const nameMarkup = readingMarkup(cell.name),
+    nameText = nameMarkup?.plain ?? cell.name;
   const name = layoutDialogText(
     ctx,
-    cell.name,
-    undefined,
+    nameText,
+    nameMarkup,
     READER_LAYOUT.nameWidth,
-    size,
+    nameSize,
     scale,
     0.7,
-  ).height;
+    24,
+  );
   if (cell.decision && cell.decisionIndex < 0)
-    return name + cell.text.split(';').length * READER_LAYOUT.optionStep;
+    return (
+      layoutDialogText(ctx, '', undefined, READER_LAYOUT.nameWidth, size, scale, 0.7).height +
+      cell.text.split(';').length * READER_LAYOUT.optionStep
+    );
   // main_texta7862e.bytes: COMMON_AVGREADER_ENDTIP_SPACE is four newlines.
   const raw = cell.endtip ? '\n\n\n\n' : readerCellText(cell),
-    markup = readingMarkup(raw);
+    markup = readingMarkup(raw),
+    body = layoutDialogText(
+      ctx,
+      markup?.plain ?? raw,
+      markup,
+      READER_LAYOUT.textWidth,
+      size,
+      scale,
+      0.9,
+    );
+  if (cell.endtip) return body.height + 3;
   return Math.max(
-    name,
-    layoutDialogText(ctx, markup?.plain ?? raw, markup, READER_LAYOUT.textWidth, size, scale, 0.9)
-      .height + 3,
+    nameText ? textCanvasPixelHeight(name, nameSize, scale, pixelRatio) / (scale * pixelRatio) : 0,
+    READER_LAYOUT.textY +
+      textCanvasPixelHeight(body, size, scale, pixelRatio) / (scale * pixelRatio),
   );
 }
 export function readerVisibleRange(

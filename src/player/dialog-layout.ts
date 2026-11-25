@@ -12,6 +12,16 @@ export interface DialogLines {
   scale: number;
 }
 
+/** Shared backing height for text canvases and the rows that contain them. */
+export function textCanvasPixelHeight(
+  layout: DialogLines,
+  size: number,
+  scale: number,
+  pixelRatio = 1,
+): number {
+  return Math.ceil(Math.max(layout.height + 5, size) * scale * pixelRatio);
+}
+
 // GetTextOffset anchors the rect and FixLineHorizontalOffset offsets the
 // individual line. Both round to raster pixels before adding the positions.
 export function alignedTextOffset(

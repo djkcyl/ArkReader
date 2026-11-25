@@ -4,7 +4,7 @@ import { historyProfile as L } from './history-profile';
 import { ReaderScroll } from '../core/reader-scroll';
 import { NativeScrollbar } from './native-scrollbar';
 import { readerVisibleRange } from './reader-layout';
-import { layoutDialogText, alignedTextOffset } from './dialog-layout';
+import { layoutDialogText, alignedTextOffset, textCanvasPixelHeight } from './dialog-layout';
 import { readingMarkup, readingFont } from '../core/sticker-color';
 import { playerMediaUrl } from './package-source';
 import './history-view.css';
@@ -73,7 +73,7 @@ export class HistoryView {
     list.replaceChildren(this.content);
     place(list, L.viewport);
     this.content.style.left = logical(L.content[0] - L.viewport[0]);
-    this.content.style.width = logical(L.content[2]);
+    this.content.style.width = logical(Math.max(L.content[2], L.text[0] + L.text[2]));
     place(back, L.backHit);
     back.textContent = '';
     back.setAttribute('aria-label', '返回剧情');
@@ -276,18 +276,43 @@ export class HistoryView {
           const raw = content(cell),
             markup = readingMarkup(raw);
           const speakerMarkup = readingMarkup(cell.name);
+          const speakerText = speakerMarkup?.plain ?? cell.name,
+            pixelRatio = devicePixelRatio || 1;
           this.heights[i] = Math.max(
-            layoutDialogText(
-              this.measure,
-              speakerMarkup?.plain ?? cell.name,
-              speakerMarkup,
-              L.name[2],
-              30,
-              scale,
-              0.7,
-            ).height,
-            layoutDialogText(this.measure, markup?.plain ?? raw, markup, L.text[2], 24, scale, 0.9)
-              .height + L.contentPadding,
+            speakerText
+              ? textCanvasPixelHeight(
+                  layoutDialogText(
+                    this.measure,
+                    speakerText,
+                    speakerMarkup,
+                    L.name[2],
+                    30,
+                    scale,
+                    0.7,
+                    24,
+                  ),
+                  30,
+                  scale,
+                  pixelRatio,
+                ) /
+                  (scale * pixelRatio)
+              : 0,
+            L.text[1] +
+              textCanvasPixelHeight(
+                layoutDialogText(
+                  this.measure,
+                  markup?.plain ?? raw,
+                  markup,
+                  L.text[2],
+                  24,
+                  scale,
+                  0.9,
+                ),
+                24,
+                scale,
+                pixelRatio,
+              ) /
+                (scale * pixelRatio),
           );
           this.keys[i] = key;
         }
@@ -359,7 +384,7 @@ export class HistoryView {
     const canvas = document.createElement('canvas'),
       dpr = devicePixelRatio || 1;
     canvas.width = Math.ceil(width * this.scale * dpr);
-    canvas.height = Math.ceil(Math.max(layout.height + 5, size) * this.scale * dpr);
+    canvas.height = textCanvasPixelHeight(layout, size, this.scale, dpr);
     canvas.style.width = width * this.scale + 'px';
     canvas.style.height = canvas.height / dpr + 'px';
     canvas.setAttribute('aria-hidden', 'true');
