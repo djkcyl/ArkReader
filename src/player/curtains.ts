@@ -249,7 +249,10 @@ export function drawCurtains(ctx: CanvasRenderingContext2D, states: CurtainState
   for (const state of states) {
     if (!state.active || state.alpha <= 0) continue;
     const c = CURTAIN_CONFIGS[state.direction],
-      pad = c.padding ? (state.feather ? c.padding : 0) : state.gradient ? 20 : 0;
+      // The requested fill includes a gradient band only when it is painted.
+      // Subtracting an inactive band moves hard edges away from script positions
+      // (DT-1's bottom quarter became 160px instead of 180px).
+      pad = state.gradient ? c.padding || 20 : 0;
     ctx.save();
     ctx.translate(c.x, 720 - c.y);
     ctx.rotate((-c.angle * Math.PI) / 180);
