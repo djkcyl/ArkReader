@@ -6,6 +6,7 @@ import { mountWindowChrome } from './window-chrome';
 import { VersionNotice, type ResourceUpdate } from './version-notice';
 import { HomeMusic } from './home-music';
 import type { PreparedStartupMusic } from './home-music-boot';
+import { AudioPage } from './audio-page';
 interface Status {
   version: string | null;
   stories: number;
@@ -27,6 +28,7 @@ const icons = {
   library: '<path d="M4 5h6v14H4zM14 5h6v14h-6zM7 8v7M17 8v7"/>',
   storage: '<path d="M3 7h18v13H3zM3 7l3-4h12l3 4M8 12h8M10 16h4"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 10v7M12 7h.01"/>',
+  audio: '<path d="M3 9h4l5-4v14l-5-4H3zM16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/>',
 };
 const icon = (name: keyof typeof icons) =>
   `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[name]}</svg>`;
@@ -46,6 +48,8 @@ export function mountDesktopShell(options: {
   leave: () => void;
   reload: () => Promise<void>;
   music?: PreparedStartupMusic;
+  suspendForAudio: () => (() => void) | undefined;
+  previewUi: () => void;
 }): void {
   document.body.classList.add('desktop-app');
   document.body.dataset.desktopPage = 'library';
@@ -58,6 +62,7 @@ export function mountDesktopShell(options: {
       <button data-page="library" aria-current="page" title="剧情库">
         ${icon('library')}<span>剧情库</span></button
       ><button data-page="resources" title="资源管理">${icon('storage')}<span>资源</span></button
+      ><button data-page="audio" title="声音设置">${icon('audio')}<span>声音</span></button
       ><button data-page="about" title="应用信息">${icon('info')}<span>应用</span></button>
     </nav>
     <span class="desktop-rail-foot">DESKTOP<br /><span id="rail-version"></span></span>`;
@@ -75,6 +80,8 @@ export function mountDesktopShell(options: {
   titleLink.after(badge);
   mountWindowChrome(header);
   const homeMusic = new HomeMusic(header, options.music);
+  const audioPage = new AudioPage(() => show('library'), options.previewUi);
+  let resumeAudioPage: (() => void) | undefined;
   (window as unknown as { arkreaderHomeMusic: HomeMusic }).arkreaderHomeMusic = homeMusic;
   const resources = document.createElement('section');
   resources.id = 'desktop-resources';
@@ -161,7 +168,7 @@ export function mountDesktopShell(options: {
   notice.className = 'desktop-toast';
   notice.setAttribute('role', 'status');
   notice.hidden = true;
-  header.after(resources, about);
+  header.after(resources, audioPage.root, about);
   document.getElementById('app')!.append(notice);
   const versions = new VersionNotice(resources, () => show('resources'));
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -183,21 +190,38 @@ export function mountDesktopShell(options: {
       button.disabled = busy || jobRunning;
     $<HTMLButtonElement>('resource-refresh').disabled = scanBusy;
   }
-  function show(page: 'library' | 'resources' | 'about') {
-    if (document.body.matches('.playing,.resource-loading')) options.leave();
+  function show(page: 'library' | 'resources' | 'audio' | 'about') {
+    const previous = document.body.dataset.desktopPage;
+    if (page === previous) {
+      if (page === 'library' && document.body.matches('.playing,.resource-loading'))
+        options.leave();
+      return;
+    }
+    let resume: (() => void) | undefined;
+    if (previous === 'audio' && resumeAudioPage) {
+      if (page === 'library') resume = resumeAudioPage;
+      else options.leave();
+      resumeAudioPage = undefined;
+    } else if (page === 'audio' && document.body.matches('.playing:not(.resource-loading)')) {
+      resumeAudioPage = options.suspendForAudio();
+    } else if (document.body.matches('.playing,.resource-loading')) options.leave();
     document.body.dataset.desktopPage = page;
     resources.hidden = page !== 'resources';
     about.hidden = page !== 'about';
+    audioPage.root.hidden = page !== 'audio';
+    audioPage.setPlaying(!!resumeAudioPage);
     for (const button of rail.querySelectorAll('button')) {
       if (button.dataset.page === page) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
     }
     window.scrollTo(0, 0);
+    resume?.();
+    if (page === 'audio') audioPage.focus();
     if (page === 'resources') void refresh();
   }
   document.addEventListener('arkreader-show-library', () => show('library'));
   for (const button of rail.querySelectorAll<HTMLButtonElement>('button[data-page]'))
-    button.onclick = () => show(button.dataset.page as 'library' | 'resources' | 'about');
+    button.onclick = () => show(button.dataset.page as 'library' | 'resources' | 'audio' | 'about');
   function displayStatus(data: Status) {
     versions.update(data.resourceUpdate);
     $('storage-stories').textContent = data.storyPlayerScripts.toLocaleString();

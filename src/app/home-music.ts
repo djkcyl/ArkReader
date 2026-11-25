@@ -4,6 +4,7 @@ import { transferSpeed } from './transfer-labels';
 import './home-music.css';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { isDesktop } from './platform';
+import { audioLevels } from './audio-levels';
 
 import {
   musicSettings,
@@ -43,7 +44,7 @@ export class HomeMusic {
     this.startupPrepared = !!prepared;
     const settings = musicSettings();
     this.enabled = settings.enabled;
-    this.volume = settings.volume;
+    this.volume = audioLevels.get('theme') / 100;
     this.selected = settings.track;
     this.button.id = 'home-music-button';
     this.button.type = 'button';
@@ -78,11 +79,16 @@ export class HomeMusic {
       else this.reconcile();
     };
     this.el<HTMLInputElement>('home-music-volume').oninput = (event) => {
-      this.volume = Number((event.target as HTMLInputElement).value) / 100;
-      this.save();
-      this.current?.audio.setVolume(this.wanted ? this.volume : 0);
-      this.render();
+      audioLevels.set('theme', Number((event.target as HTMLInputElement).value));
     };
+    this.unlisten.push(
+      audioLevels.subscribe((channel, value) => {
+        if (channel !== 'theme' || this.disposed) return;
+        this.volume = value / 100;
+        this.current?.audio.setVolume(this.wanted ? this.volume : 0);
+        this.render();
+      }),
+    );
     this.el('home-music-retry').onclick = () => {
       if (this.catalog?.tracks.length) this.reconcile();
       else void this.loadCatalog();

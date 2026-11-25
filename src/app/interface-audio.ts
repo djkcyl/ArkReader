@@ -1,4 +1,5 @@
 import { playerMediaUrl } from '../player/package-source';
+import { audioLevels } from './audio-levels';
 
 interface Cue {
   key: string;
@@ -21,17 +22,16 @@ export class InterfaceAudio {
   private sources = new Set<AudioBufferSourceNode>();
   private volume = 1;
   constructor() {
-    try {
-      this.volume = Math.max(
-        0,
-        Math.min(1, Number(localStorage.getItem('arkreader.volume') ?? '100') / 100),
-      );
-    } catch {}
+    this.volume = audioLevels.get('ui') / 100;
+    const unlisten = audioLevels.subscribe((channel, value) => {
+      if (channel === 'ui') this.setVolume(value / 100);
+    });
     window.addEventListener('blur', () => this.stop());
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) this.stop();
     });
     window.addEventListener('pagehide', () => {
+      unlisten();
       this.stop();
       void this.context?.close();
     });

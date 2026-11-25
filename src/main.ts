@@ -1,4 +1,5 @@
 import { HistoryView } from './player/history-view';
+import { audioLevels } from './app/audio-levels';
 import { ScriptView } from './player/script-view';
 import { SkipView } from './player/skip-view';
 import { StoryVideo } from './player/video';
@@ -217,9 +218,8 @@ document.addEventListener('catalog-selection', (event) => {
 });
 try {
   $<HTMLInputElement>('nickname').value = localStorage.getItem('arkreader.nickname') ?? '博士';
-  const volume = localStorage.getItem('arkreader.volume');
-  if (volume !== null) $<HTMLInputElement>('volume').value = volume;
 } catch {}
+$<HTMLInputElement>('volume').value = String(audioLevels.get('player'));
 $('nickname').addEventListener('change', () => {
   try {
     localStorage.setItem('arkreader.nickname', $<HTMLInputElement>('nickname').value);
@@ -246,6 +246,12 @@ let player: StoryPlayer | undefined,
   audio: StoryAudio | undefined,
   renderer: StageRenderer | undefined;
 let storyHost: StandaloneStoryHost | undefined;
+audioLevels.subscribe((channel, value) => {
+  if (channel !== 'player') return;
+  $<HTMLInputElement>('volume').value = String(value);
+  volumeSlider?.sync();
+  audio?.setVolume(value / 100);
+});
 const hostBoundary = document.createElement('dialog');
 hostBoundary.id = 'story-host-boundary';
 hostBoundary.setAttribute('aria-labelledby', 'host-boundary-title');
@@ -594,6 +600,7 @@ async function start(target?: PlaybackTarget): Promise<void> {
     signal.throwIfAborted();
     const releasing = releasePlayback();
     newAudio = new StoryAudio();
+    newAudio.setVolume(audioLevels.get('player') / 100);
     signal.addEventListener('abort', cancelResources, { once: true });
     await Promise.all([releasing, newAudio.unlock()]);
     signal.throwIfAborted();
@@ -937,7 +944,7 @@ function frame(now: number): void {
       !document.querySelector('dialog[open]') &&
       (!quickPress.active || !!player.quickPlay),
   );
-  if (player && renderer) {
+  if (player && renderer && document.body.dataset.desktopPage !== 'audio') {
     const dt = lastFrame ? (now - lastFrame) / 1000 : 0;
     lastFrame = now;
     player.tick(dt);
@@ -1223,13 +1230,7 @@ $('skip').onclick = () => {
   if (player) skipView.show(player);
 };
 $('volume').oninput = () => {
-  const value = $<HTMLInputElement>('volume').value;
-  volumeSlider?.sync();
-  audio?.setVolume(Number(value) / 100);
-  interfaceAudio.setVolume(Number(value) / 100);
-  try {
-    localStorage.setItem('arkreader.volume', value);
-  } catch {}
+  audioLevels.set('player', Number($<HTMLInputElement>('volume').value));
 };
 $('pause').onclick = () => {
   readerSettingsView.dismiss(true);
@@ -1293,6 +1294,11 @@ window.addEventListener('arkreader-back', (event) => {
   if (modal) {
     event.preventDefault();
     if (modal.dispatchEvent(new Event('cancel', { cancelable: true }))) modal.close();
+    return;
+  }
+  if (document.body.dataset.desktopPage === 'audio') {
+    event.preventDefault();
+    document.querySelector<HTMLButtonElement>('[data-page="library"]')?.click();
     return;
   }
   if (loading || player || pendingPlayback) {
@@ -1420,7 +1426,32 @@ async function loadCatalog(): Promise<void> {
 }
 void loadCatalog();
 mountMobilePlatform();
+function suspendForAudio(): (() => void) | undefined {
+  const current = player;
+  if (!current) return;
+  cancelGesture();
+  keyboardQuick.cancel();
+  const wasPaused = current.paused;
+  current.setPaused(true);
+  saveReadingProgress();
+  readingShelf.flush();
+  document.body.classList.remove('playing');
+  return () => {
+    if (player !== current) return;
+    document.body.classList.add('playing');
+    current.setPaused(wasPaused);
+    lastFrame = performance.now();
+    sync();
+    $<HTMLCanvasElement>('canvas').focus({ preventScroll: true });
+  };
+}
 if (isNative)
-  mountDesktopShell({ leave: returnToLibrary, reload: loadCatalog, music: startupMusic });
+  mountDesktopShell({
+    leave: returnToLibrary,
+    reload: loadCatalog,
+    music: startupMusic,
+    suspendForAudio,
+    previewUi: () => interfaceAudio.play('shell.default'),
+  });
 document.documentElement.dataset.arkreaderUi = 'ready';
 document.dispatchEvent(new Event('arkreader-ui-ready'));

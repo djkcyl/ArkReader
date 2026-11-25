@@ -97,6 +97,8 @@ export class ScriptView {
         event.altKey ||
         event.metaKey ||
         event.isComposing ||
+        (document.body.dataset.desktopPage !== undefined &&
+          document.body.dataset.desktopPage !== 'library') ||
         !this.player ||
         document.querySelector('dialog[open]')
       )
