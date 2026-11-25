@@ -1,0 +1,59 @@
+.prts-cursor-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+  z-index: 2147483647;
+  user-select: none;
+}
+.prts-cursor-layer[hidden],
+.prts-cursor-layer[popover]:not(:popover-open) {
+  display: none !important;
+}
+.prts-cursor-layer::backdrop {
+  background: transparent !important;
+  pointer-events: none !important;
+}
+.prts-cursor-layer * {
+  pointer-events: none !important;
+}
+.prts-cursor-position,
+.prts-cursor-canvas,
+.prts-cursor-node {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  transform-origin: 0 0;
+}
+.prts-cursor-position {
+  will-change: transform;
+}
+.prts-cursor-node img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: fill;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+html.prts-cursor-active,
+html.prts-cursor-active *,
+html.prts-cursor-active *::before,
+html.prts-cursor-active *::after,
+html.prts-cursor-active *::backdrop {
+  cursor: none !important;
+}

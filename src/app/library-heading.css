@@ -1,0 +1,156 @@
+/* Every library tab uses the same title baseline and divider position. */
+.library-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  flex: none;
+  min-width: 0;
+  min-height: 72px;
+  margin: 0;
+  padding: 0 0 16px;
+  border-bottom: 1px solid #aebbc27a;
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+.library-heading-copy {
+  min-width: 0;
+}
+.library-heading .library-heading-kicker {
+  display: block;
+  margin: 0 0 7px;
+  color: #65747e;
+  font:
+    9px/12px 'Segoe UI',
+    'Microsoft YaHei',
+    sans-serif;
+  letter-spacing: 2px;
+}
+.library-heading-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 36px;
+}
+.library-heading .library-heading-title {
+  min-width: 0;
+  margin: 0;
+  color: #202b31;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 36px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.library-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+  min-height: 40px;
+}
+.library-heading-count {
+  display: block;
+  color: #7c929b;
+  font:
+    11px/20px 'Segoe UI',
+    'Microsoft YaHei',
+    sans-serif;
+  white-space: nowrap;
+}
+.library-heading .catalog-search {
+  flex: 0 1 310px;
+  width: 310px;
+  min-width: 0;
+  margin: 0;
+}
+.library-heading #story-search {
+  height: 40px;
+  margin: 0;
+}
+.library-heading #operator-filter-toggle {
+  height: 40px;
+  min-height: 40px;
+  margin: 0;
+  white-space: nowrap;
+  flex: none;
+}
+.library-heading #catalog-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: none;
+  align-self: center;
+  height: 36px;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid #a8bcc5;
+  border-radius: 4px;
+  background: #e9f0f2;
+  color: #3c606d;
+  font:
+    12px/1 'Segoe UI',
+    'Microsoft YaHei',
+    sans-serif;
+  letter-spacing: 0;
+  box-shadow: none;
+}
+.library-heading #catalog-back svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+  pointer-events: none;
+}
+.library-heading #catalog-back:hover {
+  background: #f5fafb;
+  border-color: #739aa8;
+  color: #294e5e;
+}
+.library-heading #catalog-back:active {
+  background: #d0e0e5;
+}
+.library-heading #catalog-back:focus-visible {
+  outline: 2px solid #007fa4;
+  outline-offset: 3px;
+}
+@media (max-width: 700px) {
+  .library-heading {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    min-height: 112px;
+    padding-bottom: 12px;
+  }
+  .library-heading .library-heading-kicker {
+    font-size: 8px;
+    line-height: 11px;
+    margin-bottom: 6px;
+  }
+  .library-heading .library-heading-title {
+    font-size: 22px;
+    line-height: 32px;
+    letter-spacing: 0.5px;
+  }
+  .library-heading-title-row {
+    min-height: 36px;
+    gap: 10px;
+  }
+  .library-heading-actions {
+    height: 40px;
+    min-height: 40px;
+    gap: 8px;
+  }
+  .library-heading .catalog-search {
+    flex: 1;
+    width: auto;
+  }
+}

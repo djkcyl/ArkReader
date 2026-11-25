@@ -1,0 +1,621 @@
+body.app-native-ui:not(.playing) {
+  color: #303236;
+  background: linear-gradient(118deg, #edeef0, #d6d8d9 54%, #c5c8ca);
+  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+}
+body.app-native-ui:not(.playing)::before {
+  background: repeating-linear-gradient(
+    137deg,
+    transparent 0 340px,
+    #74777a 341px 342px,
+    transparent 343px 570px
+  );
+  opacity: 0.08;
+}
+body.app-native-ui .brand,
+body.app-native-ui.playing .brand {
+  background: #202124;
+  border: 0;
+}
+body.app-native-ui .desktop-rail {
+  background: #242529;
+  color: #bcbcbc;
+}
+body.app-native-ui .desktop-rail nav {
+  padding-inline: 0;
+  gap: 0;
+}
+body.app-native-ui .desktop-rail button {
+  border-radius: 0;
+  min-height: 76px;
+  color: #b9babb;
+  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+}
+body.app-native-ui .desktop-rail button:hover {
+  background: #353638;
+  color: white;
+}
+body.app-native-ui .desktop-rail button[aria-current] {
+  background: #e9ebed;
+  color: #292b2e;
+}
+body.app-native-ui .desktop-rail button[aria-current]::before {
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #00abe1;
+}
+body.app-native-ui .desktop-monogram span {
+  color: #00ade3;
+}
+body.app-native-ui .desktop-badge {
+  border-radius: 0;
+  color: #c3c3c3;
+  border-color: #686868;
+}
+body.app-native-ui #app .library-tabs {
+  container: ark-library-tabs / inline-size;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 132px));
+  align-items: center;
+  height: 70px;
+  gap: clamp(4px, 1vw, 16px);
+  overflow: visible;
+  margin-bottom: 14px;
+  padding: 2px clamp(5px, 1vw, 16px) 14px;
+  border-color: #acb1b5;
+}
+body.app-native-ui #app :is(.library-tabs, .cache-tabs) button.ark-tab {
+  min-width: 0;
+  width: 100%;
+}
+body.app-native-ui .library-tab-count {
+  background: #ffffff20;
+  color: #ddd;
+  border-radius: 0;
+  min-width: 17px;
+  padding: 1px 4px;
+}
+body.app-native-ui .library-tabs > [aria-selected='true'] .library-tab-count {
+  background: #ffffff24;
+  color: #fff;
+}
+body.app-native-ui .archive-kicker,
+body.app-native-ui .desktop-eyebrow {
+  color: #787f85;
+}
+body.app-native-ui .library-heading h1,
+body.app-native-ui .desktop-page h1 {
+  color: #25282b;
+}
+body.app-native-ui .archive-body {
+  gap: 24px;
+}
+body.app-native-ui #catalog-nav button {
+  border-radius: 0;
+  color: #5b6064;
+}
+body.app-native-ui #catalog-nav button[aria-pressed='true'] {
+  background: #333538;
+  color: white;
+}
+body.app-native-ui #catalog-nav button[aria-pressed='true']::before {
+  background: #00abe1;
+}
+body.app-native-ui :is(.archive-card, .operator-card, .topic-card) {
+  border-radius: 0;
+}
+body.app-native-ui .archive-card .card-info {
+  background: #303235;
+}
+body.app-native-ui :is(#story-search, #cache-search, #faction-search, .desktop-path) {
+  border-radius: 0;
+  background: #f0f1f2;
+  border: 0;
+  border-bottom: 2px solid #6b7075;
+  color: #363b40;
+  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+}
+body.app-native-ui #nickname {
+  border-color: #747d83;
+  color: #30373d;
+}
+body.app-native-ui .story-track {
+  border-radius: 0;
+}
+body.app-native-ui .story-track[aria-pressed='true'] {
+  background: #33373c;
+  border-color: #00ade3;
+  color: #fff;
+}
+body.app-native-ui .start-row {
+  background: #e9edee;
+  border-radius: 0;
+  border: 0;
+  border-top: 1px solid #aab2b7;
+}
+body.app-native-ui .start-row .primary span {
+  margin-left: 12px;
+}
+body.app-native-ui .reading-panel {
+  color: #343c42;
+}
+body.app-native-ui .reading-panel .history-chapter {
+  border-radius: 0;
+}
+body.app-native-ui .reading-panel .shelf-story {
+  min-height: 88px;
+  background: #f1f2f3b3;
+  border-color: #bcc1c4;
+}
+body.app-native-ui .reading-panel .shelf-story:hover {
+  background: #f8f9fa;
+}
+body.app-native-ui .reading-panel .shelf-story-text strong {
+  color: #313940;
+}
+body.app-native-ui .reading-panel .shelf-actions {
+  gap: 7px;
+  align-items: flex-end;
+}
+body.app-native-ui .shelf-actions {
+  --ark-control-height: 30px;
+  --ark-control-padding: 11px;
+  --ark-control-font: 13px;
+}
+body.app-native-ui .reading-panel .shelf-restart {
+  color: #59656e;
+  text-decoration: none;
+  padding: 3px 2px;
+}
+body.app-native-ui .reading-panel .shelf-restart:hover {
+  color: #0089b4;
+  text-decoration: underline;
+}
+body.app-native-ui .reading-meter-track {
+  border-radius: 0;
+  background: #9aa2a655;
+}
+body.app-native-ui .reading-meter-fill {
+  border-radius: 0;
+  background: #00a7dc;
+}
+body.app-native-ui .reading-meter progress {
+  border-radius: 0;
+  accent-color: #00a7dc;
+}
+body.app-native-ui .reading-meter progress::-webkit-progress-bar {
+  border-radius: 0;
+  background: #9aa2a655;
+}
+body.app-native-ui .reading-meter progress::-webkit-progress-value {
+  border-radius: 0;
+  background: #00a7dc;
+}
+body.app-native-ui .desktop-page {
+  padding-top: 28px;
+  color: #333a3e;
+}
+body.app-native-ui .desktop-page-heading {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 70px;
+  margin-bottom: 22px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #acb1b5;
+}
+body.app-native-ui .desktop-page-heading > button {
+  margin-top: 0;
+}
+body.app-native-ui .desktop-page h1 {
+  font-size: 28px;
+}
+body.app-native-ui .desktop-card,
+body.app-native-ui .desktop-storage-grid article {
+  border: 0;
+  border-radius: 0;
+  background: #eff1f2a8;
+  box-shadow: none;
+}
+body.app-native-ui .desktop-storage-grid article {
+  border-top: 3px solid #34383b;
+}
+body.app-native-ui .desktop-storage-grid strong {
+  color: #343a3f;
+}
+body.app-native-ui .desktop-card {
+  padding: 20px 24px;
+}
+body.app-native-ui .desktop-card h2 {
+  font-size: 18px;
+  color: #343a3e;
+}
+body.app-native-ui .library-path-row {
+  align-items: center;
+  gap: 24px;
+}
+body.app-native-ui .library-path-row .desktop-path {
+  height: 38px;
+  min-height: 38px;
+  margin: 0;
+  min-width: 0;
+  border-bottom: 0;
+  background: #d4dadd;
+}
+body.app-native-ui .library-path-row .ark-action {
+  height: 38px;
+}
+body.app-native-ui .desktop-toast {
+  border-radius: 0;
+  background: #303235 url('/media/native-notice-bg.png') center/100% 100%;
+  color: #fff;
+}
+body.app-native-ui #desktop-audio .desktop-page-heading {
+  max-width: none;
+}
+body.app-native-ui .audio-mixer {
+  max-width: none;
+  border-top: 3px solid #35383b;
+  background: #e9ecef80;
+  padding: 5px 28px 10px;
+}
+body.app-native-ui .audio-level-row {
+  grid-template-columns: minmax(150px, 1fr) minmax(200px, 420px);
+  min-height: 104px;
+  gap: 28px;
+  color: #30363b;
+  border-color: #b4bcc0;
+  font:
+    20px/1.5 ArkNative,
+    'Microsoft YaHei',
+    sans-serif;
+}
+body.app-native-ui .audio-level-row > output {
+  display: none;
+}
+body.app-native-ui .audio-level-row .ark-range {
+  grid-column: 2;
+}
+body.app-native-ui #home-music-panel {
+  width: min(440px, calc(100vw - 24px));
+  padding: 20px;
+  border: 0;
+  border-radius: 0;
+  background: #dadddf;
+  color: #30373c;
+  box-shadow: 0 12px 35px #0005;
+  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+  gap: 15px;
+}
+body.app-native-ui #home-music-panel header {
+  background: #343639;
+  color: #fff;
+  margin: -20px -20px 0;
+  padding: 15px 20px;
+  border-bottom: 3px solid #00a8df;
+}
+body.app-native-ui #home-music-panel h2 {
+  font-size: 22px;
+  font-weight: 400;
+}
+body.app-native-ui .home-music-switch {
+  min-height: 42px;
+}
+body.app-native-ui .home-music-volume {
+  gap: 0;
+}
+body.app-native-ui .home-music-volume .ark-range {
+  grid-column: 1/-1;
+}
+body.app-native-ui #home-music-volume-value {
+  display: none;
+}
+body.app-native-ui #home-music-status {
+  color: #57636b;
+  line-height: 1.7;
+}
+body.app-native-ui #home-music-tracks {
+  border-color: #a4adb3;
+  padding-top: 0;
+}
+body.app-native-ui .home-music-track {
+  position: relative;
+  border-radius: 0;
+  min-height: 59px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #aeb6bc;
+  gap: 14px;
+}
+body.app-native-ui .home-music-track:has(input:checked) {
+  background: #33373b;
+  color: #fff;
+  box-shadow: inset 3px 0 #00ade3;
+}
+body.app-native-ui .home-music-track:hover:not(:has(input:checked)) {
+  background: #f4f5f6;
+}
+body.app-native-ui .home-music-track input {
+  appearance: none;
+  width: 13px;
+  height: 16px;
+  background: url('/media/native-playback-chosen.png') center / contain no-repeat;
+  border: 0;
+  border-radius: 0;
+}
+body.app-native-ui .home-music-track input:checked {
+  background-image: url('/media/native-playback-current.png');
+}
+body.app-native-ui .home-music-track strong {
+  font-size: 14px;
+  font-weight: 400;
+}
+body.app-native-ui .home-music-track small {
+  color: #8b959d;
+}
+body.app-native-ui .story-cache-panel {
+  color: #424b52;
+  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+}
+body.app-native-ui .cache-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 132px));
+  align-items: center;
+  min-height: 66px;
+  gap: 16px;
+  padding: 0 8px 12px;
+}
+body.app-native-ui .cache-filters label {
+  flex: 0 1 280px;
+}
+body.app-native-ui .cache-filters .ark-select {
+  width: min(220px, 100%);
+}
+body.app-native-ui .cache-selection-tools {
+  gap: 22px;
+  padding: 18px 5px 22px;
+}
+body.app-native-ui .cache-selection-tools .ark-action {
+  --ark-control-font: 13px;
+  --ark-control-height: 32px;
+}
+body.app-native-ui .cache-choice {
+  background: #eef0f1a0;
+  border-color: #bbc2c6;
+  min-height: 48px;
+  grid-template-columns: 26px minmax(0, 1fr) 58px;
+}
+body.app-native-ui .cache-choice:hover {
+  background: #f9fafb;
+}
+body.app-native-ui .cache-choice:has(input:checked) {
+  background: #fff;
+  box-shadow: inset 3px 0 #00a9dc;
+}
+body.app-native-ui .story-cache-panel > footer {
+  gap: 24px;
+  padding: 16px 5px 5px;
+}
+body.app-native-ui .operator-filter-dialog {
+  width: min(1000px, calc(100vw - 32px));
+  background: #dadddf;
+  color: #30383e;
+  border: 0;
+  border-radius: 0;
+  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+}
+body.app-native-ui .operator-filter-dialog > header {
+  background: #333639;
+  color: #fff;
+  border-bottom: 3px solid #00a8df;
+  align-items: center;
+  padding: 18px 26px;
+}
+body.app-native-ui .operator-filter-dialog header p {
+  display: none;
+}
+body.app-native-ui .operator-filter-dialog h2 {
+  font-size: 23px;
+  font-weight: 400;
+  margin: 0;
+}
+body.app-native-ui .operator-filter-dialog fieldset {
+  padding: 10px 0 18px;
+  border-bottom: 1px solid #b0b8be;
+  margin-bottom: 8px;
+}
+body.app-native-ui .operator-filter-dialog legend {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+body.app-native-ui .operator-filter-dialog [data-unlimited] {
+  border: 0;
+  border-radius: 0;
+  background: #31363b;
+  color: #eee;
+  padding: 4px 10px;
+}
+body.app-native-ui .operator-filter-dialog [data-unlimited][aria-pressed='true'] {
+  background: #008ebc;
+  color: #fff;
+}
+body.app-native-ui .filter-choices {
+  gap: 10px 12px;
+}
+body.app-native-ui .operator-filter-content {
+  padding: 18px 26px;
+}
+body.app-native-ui #operator-filter-dialog > footer {
+  border-color: #abb5bc;
+  gap: 22px;
+  padding: 18px 26px 24px;
+}
+body.app-native-ui .faction-level h3 {
+  color: #6a767f;
+  font-size: 12px;
+}
+body.app-native-ui .app-loading .loading-card {
+  width: min(760px, 100%);
+  max-height: calc(100dvh - 130px);
+  overflow: auto;
+  background: #eee url('/media/native-judge-dialog-bg.png') center / 100% 100%;
+  border: 0;
+  border-radius: 0;
+  padding: 30px 36px 32px;
+  color: #33393d;
+}
+body.app-native-ui .loading-card h2 {
+  font-size: 23px;
+}
+body.app-native-ui .load-actions {
+  gap: 26px;
+  padding-top: 10px;
+}
+body.app-native-ui .load-steps .current {
+  border-color: #00a7dc;
+  color: #007b9f;
+}
+body.app-native-ui .load-steps .done {
+  border-color: #7fa0ac;
+}
+body.app-native-ui :is(.loading-card, #home-music-panel, #story-cache-view) progress {
+  border-radius: 0;
+  accent-color: #00abe3;
+}
+body.app-native-ui
+  :is(.loading-card, #home-music-panel, #story-cache-view)
+  progress::-webkit-progress-bar {
+  border-radius: 0;
+  background: #b6bfc3;
+}
+body.app-native-ui
+  :is(.loading-card, #home-music-panel, #story-cache-view)
+  progress::-webkit-progress-value {
+  border-radius: 0;
+  background: #00abe3;
+}
+body.app-native-ui .version-notice {
+  border-radius: 0;
+  border-color: #a78b49;
+  background: #efe5c8;
+  color: #5f4c25;
+}
+body.app-native-ui .playback-heading #chapter-title {
+  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+}
+body.app-native-ui .playback-footer {
+  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+}
+body.app-native-ui .playback-progress {
+  gap: 12px;
+}
+body.app-native-ui .script-panel {
+  background: #25282b;
+  border-color: #545a5e;
+}
+body.app-native-ui .script-panel > header {
+  background: #33373a;
+  border-color: #535c63;
+}
+body.app-native-ui .script-panel button {
+  border-radius: 0;
+}
+body.app-native-ui .script-panel button[aria-pressed='true'] {
+  background: #e8ecef;
+  color: #252d34;
+  border-color: #e8ecef;
+}
+body.app-native-ui :is(#script-toggle, #script-follow) {
+  border-radius: 0;
+}
+@media (max-width: 900px) {
+  body.app-native-ui .audio-level-row {
+    grid-template-columns: minmax(100px, 1fr) minmax(180px, 360px);
+    gap: 16px;
+    font-size: 18px;
+  }
+  body.app-native-ui .cache-selection-tools {
+    gap: 16px;
+  }
+  body.app-native-ui .cache-filters label {
+    flex-basis: 220px;
+  }
+}
+@media (max-width: 700px) {
+  body.app-native-ui .library-tabs {
+    gap: 8px;
+    height: 66px;
+    padding-inline: 4px;
+  }
+  body.app-native-ui .library-tab-count {
+    font-size: 9px;
+    padding: 0 3px;
+    min-width: 12px;
+  }
+  body.app-native-ui .desktop-page {
+    padding: 18px 18px 30px;
+  }
+  body.app-native-ui .desktop-page-heading {
+    gap: 14px;
+  }
+  body.app-native-ui .desktop-page h1 {
+    font-size: 24px;
+  }
+  body.app-native-ui .audio-mixer {
+    padding: 8px 18px;
+  }
+  body.app-native-ui .audio-level-row {
+    grid-template-columns: 1fr;
+    min-height: 120px;
+    padding: 13px 0 5px;
+    gap: 0;
+  }
+  body.app-native-ui .audio-level-row .ark-range {
+    grid-column: 1;
+    grid-row: 2;
+    max-width: 440px;
+    justify-self: end;
+  }
+  body.app-native-ui .operator-filter-content {
+    padding: 12px 16px;
+  }
+  body.app-native-ui #operator-filter-dialog > footer {
+    padding: 16px;
+    gap: 14px;
+  }
+  body.app-native-ui .cache-selection-tools {
+    flex-wrap: wrap;
+    padding-bottom: 18px;
+    gap: 16px;
+  }
+  body.app-native-ui .story-cache-panel > footer {
+    gap: 16px;
+  }
+  body.app-native-ui .app-loading .loading-card {
+    padding: 24px;
+    max-height: calc(100dvh - 75px);
+  }
+  body.app-native-ui .loading-card h2 {
+    font-size: 19px;
+  }
+  body.app-native-ui .reading-panel .shelf-actions {
+    align-items: stretch;
+  }
+  body.app-native-ui .reading-panel .shelf-actions .ark-action {
+    --ark-control-font: 12px;
+    --ark-control-min: 0px;
+  }
+}
+@container ark-library-tabs (max-width: 560px) {
+  body.app-native-ui #app .library-tabs button.ark-tab {
+    padding: 0 8px;
+    font-size: 13px;
+  }
+  body.app-native-ui .library-tabs .library-tab-count {
+    display: none;
+  }
+}
+@container ark-library-tabs (max-width: 360px) {
+  body.app-native-ui #app .library-tabs button.ark-tab {
+    padding: 0 1px;
+    font-size: 12px;
+  }
+}

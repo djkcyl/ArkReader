@@ -1,0 +1,41 @@
+[package]
+name = "arkreader-resource-engine"
+version = "1.1.1"
+edition = "2021"
+description = "Native, cross-platform resource engine for ArkReader"
+publish = false
+
+[build-dependencies]
+sha2 = "0.10"
+
+[dependencies]
+anyhow = "1"
+byteorder = "1"
+lz4_flex = "0.14"
+lzma-rs = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+unity-rs-core = "=0.6.3"
+image = { version = "0.25", default-features = false, features = ["png", "webp"] }
+md-5 = "0.10"
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "gzip", "brotli", "deflate"] }
+tempfile = "3"
+zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
+tokio = { version = "1", features = ["fs", "io-util", "macros", "rt-multi-thread", "sync", "time", "process", "net"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+futures-util = "0.3"
+thiserror = "2"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+regex = "1"
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc"] }
+hex = "0.4"
+rquickjs = "0.14"
+crc32fast = "1"
+axum = "0.8"
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+rquickjs = { version = "0.14", features = ["bindgen"] }

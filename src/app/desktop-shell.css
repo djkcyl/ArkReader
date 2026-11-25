@@ -1,0 +1,393 @@
+/* Application chrome only: native stage, controls and story dialogs stay intact. */
+body.desktop-app {
+  --rail: 80px;
+  padding-left: var(--rail);
+}
+.desktop-rail {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--rail);
+  z-index: 20;
+  background: #151e24;
+  color: #a8b7c0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid #ffffff0b;
+  user-select: none;
+}
+.desktop-monogram {
+  height: 82px;
+  display: flex;
+  align-items: center;
+  font:
+    700 30px 'Segoe UI',
+    sans-serif;
+  letter-spacing: -3px;
+  color: #edf3f4;
+}
+.desktop-monogram span {
+  color: #99c9c6;
+  font-size: 37px;
+  font-weight: 300;
+}
+.desktop-rail nav {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+.desktop-rail button {
+  border: 0;
+  background: none;
+  color: #788d99;
+  border-radius: 6px;
+  padding: 14px 4px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  position: relative;
+}
+.desktop-rail svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.35;
+}
+.desktop-rail button:hover {
+  background: #24323b;
+  color: #d1e0e7;
+}
+.desktop-rail button[aria-current] {
+  background: #2a3b44;
+  color: #bce3df;
+}
+.desktop-rail button[aria-current]::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  background: #a9d5cd;
+}
+.desktop-rail-foot {
+  margin-top: auto;
+  padding: 22px 0;
+  text-align: center;
+  line-height: 1.7;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #506571;
+}
+body.desktop-app .brand,
+body.desktop-app.playing .brand {
+  padding: 17px 28px;
+  gap: 18px;
+  min-height: 64px;
+}
+body.desktop-app .brand a {
+  font-size: 14px;
+  letter-spacing: 3px;
+}
+.desktop-badge {
+  border: 1px solid #4e626b;
+  border-radius: 3px;
+  padding: 3px 5px;
+  color: #a3c6c7;
+  font:
+    8px 'Segoe UI',
+    sans-serif;
+  letter-spacing: 1px;
+}
+body.desktop-app .brand .subtitle {
+  font-size: 11px;
+}
+body.desktop-app #intro.intro {
+  padding: 30px 32px 20px;
+}
+body.desktop-app:not(.playing) footer {
+  margin: 12px 32px 22px;
+}
+body.desktop-app[data-desktop-page='resources'],
+body.desktop-app[data-desktop-page='about'] {
+  background: #e6e9eb;
+  color: #23313a;
+  background-image: none;
+}
+body.desktop-app:not([data-desktop-page='library']) #app > main,
+body.desktop-app:not([data-desktop-page='library']) #app > footer {
+  display: none;
+}
+.desktop-page {
+  position: relative;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 44px 40px 50px;
+  line-height: 1.7;
+}
+.desktop-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  margin-bottom: 28px;
+}
+.desktop-eyebrow {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #6c868d;
+}
+.desktop-page h1 {
+  margin: 9px 0 9px;
+  font-size: 32px;
+  letter-spacing: 1px;
+  font-weight: 600;
+  color: #1d2e36;
+}
+.desktop-page-heading p {
+  font-size: 13px;
+  color: #6c7c85;
+  margin: 0;
+}
+.desktop-page button {
+  border: 1px solid #bbc6cd;
+  color: #354c56;
+  background: #f6f8f8;
+  border-radius: 4px;
+  padding: 10px 17px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.desktop-page button:hover {
+  background: white;
+  border-color: #718e99;
+}
+.desktop-page button:disabled {
+  opacity: 0.45;
+}
+.desktop-page button.desktop-primary {
+  background: #2d4c55;
+  border-color: #2d4c55;
+  color: white;
+}
+.desktop-storage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 28px 0;
+}
+.desktop-storage-grid article {
+  background: #f7f9fa;
+  border: 1px solid #cfd7db;
+  border-top: 3px solid #83a7a8;
+  border-radius: 5px;
+  padding: 22px 25px;
+  display: flex;
+  flex-direction: column;
+}
+.desktop-storage-grid article > span {
+  font-size: 11px;
+  color: #6d828b;
+}
+.desktop-storage-grid strong {
+  font-size: 35px;
+  line-height: 1.7;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #223d46;
+}
+.desktop-storage-grid small {
+  font-size: 10px;
+  color: #84959d;
+  overflow-wrap: anywhere;
+}
+.desktop-card,
+.desktop-welcome {
+  background: #f7f9fa;
+  border: 1px solid #cfd7db;
+  border-radius: 5px;
+  padding: 26px 30px;
+  margin-top: 20px;
+}
+.desktop-card h2,
+.desktop-welcome h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.desktop-card p,
+.desktop-welcome p {
+  font-size: 12px;
+  color: #73838b;
+  line-height: 1.9;
+  margin: 9px 0 18px;
+}
+.desktop-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.desktop-card-heading h2 {
+  margin: 0;
+}
+.desktop-tag {
+  font-size: 9px;
+  color: #789197;
+  border: 1px solid #d1dedf;
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+.desktop-page .desktop-path {
+  padding: 12px 14px;
+  background: #e9eef0;
+  border-radius: 4px;
+  font:
+    12px/1.8 Consolas,
+    monospace;
+  color: #47636e;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.desktop-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.desktop-actions small {
+  font-size: 10px;
+  color: #91a1a8;
+}
+.desktop-cache-flow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 22px 0 10px;
+  font-size: 12px;
+  color: #51717c;
+}
+.desktop-cache-flow span {
+  background: #eaf0f1;
+  padding: 8px 14px;
+  border-radius: 4px;
+}
+.desktop-cache-flow b {
+  font-weight: 400;
+  color: #9cafb3;
+}
+.desktop-welcome {
+  background: #dbe7e8;
+  border-color: #b6cccf;
+  padding: 28px 30px;
+}
+.desktop-welcome h2 {
+  margin-top: 9px;
+}
+.desktop-welcome p {
+  max-width: 660px;
+  color: #5b747c;
+}
+.desktop-message {
+  font-size: 12px;
+  color: #4b6e75;
+  white-space: pre-wrap;
+}
+.desktop-message.is-error {
+  color: #a45138;
+}
+.desktop-fineprint {
+  font-size: 10px;
+  color: #8a989f;
+  margin-top: 28px;
+}
+.desktop-platforms {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid #d7e0e4;
+  padding-top: 20px;
+  margin-top: 24px;
+}
+.desktop-platforms dt {
+  font-size: 14px;
+  font-weight: 500;
+}
+.desktop-platforms dd {
+  font-size: 11px;
+  color: #8a9ba2;
+  margin: 6px 0;
+}
+#desktop-version {
+  font-size: 12px;
+  font-weight: 400;
+  color: #80969c;
+  margin-left: 10px;
+}
+body.desktop-app.playing #player-panel {
+  padding-top: 18px;
+}
+body.desktop-app.playing .playback-heading .chapterbar {
+  padding: 15px 0;
+}
+body.desktop-app.playing footer {
+  margin-top: 15px;
+}
+@media (max-width: 1100px) {
+  body.desktop-app {
+    --rail: 68px;
+  }
+  .desktop-page {
+    padding: 30px 25px;
+  }
+  .desktop-storage-grid {
+    gap: 12px;
+  }
+  .desktop-storage-grid article {
+    padding: 20px;
+  }
+  .desktop-page .desktop-card {
+    padding: 24px;
+  }
+  .desktop-cache-flow {
+    gap: 8px;
+  }
+  .desktop-cache-flow span {
+    padding: 8px;
+  }
+  .desktop-app .brand .subtitle {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  body.desktop-app {
+    --rail: 56px;
+  }
+  .desktop-rail button {
+    font-size: 9px;
+  }
+  .desktop-page {
+    padding: 25px 16px;
+  }
+  .desktop-page-heading {
+    display: block;
+  }
+  .desktop-page-heading > button {
+    margin-top: 15px;
+  }
+  .desktop-storage-grid {
+    grid-template-columns: 1fr;
+  }
+  .desktop-cache-flow {
+    flex-wrap: wrap;
+  }
+  body.desktop-app #intro.intro {
+    padding: 20px 16px;
+  }
+  .desktop-page h1 {
+    font-size: 25px;
+  }
+}

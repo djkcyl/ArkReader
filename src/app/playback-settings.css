@@ -1,0 +1,73 @@
+/* Place the original client settings controls beside the AVG settings page. */
+#reading-settings.native-settings.playback-settings-open
+  .reader-settings-art
+  > :not([data-settings-shell]) {
+  display: none !important;
+}
+#reading-settings.native-settings.playback-settings-open > .reader-setting-hit,
+#reading-settings.native-settings.playback-settings-open > fieldset {
+  display: none;
+}
+#reading-settings .settings-pages {
+  position: absolute;
+  left: 8.5cqw;
+  top: 2.109375cqw;
+  display: flex;
+  gap: 0.625cqw;
+  z-index: 3;
+}
+#reading-settings .playback-settings {
+  position: absolute;
+  left: 3.76048cqw;
+  top: 8.82958cqw;
+  width: 35.3125cqw;
+  z-index: 2;
+  color: white;
+  font:
+    var(--native-setting-font, 1.71875cqw)/1.5 ArkNative,
+    'Microsoft YaHei',
+    sans-serif;
+}
+.stage.playback-stopped .controls {
+  z-index: 7;
+  visibility: visible;
+}
+.stage.playback-stopped .controls button:not(#settings) {
+  visibility: hidden;
+}
+
+#reading-settings.playback-settings-open .reader-settings-blocker {
+  width: 35.9375cqw !important;
+}
+#reading-settings
+  .playback-settings
+  :is(.playback-setting-row, .playback-volume, .playback-switch) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25cqw;
+  min-height: 5.9375cqw;
+  margin: 0;
+  padding: 0;
+}
+#reading-settings
+  .playback-settings
+  :is(.playback-setting-row, .playback-volume, .playback-switch)
+  > span:first-child {
+  white-space: nowrap;
+}
+.playback-settings .browser-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.25cqw;
+}
+.playback-pause-slot {
+  display: flex;
+}
+#reading-settings .playback-volume .native-volume {
+  flex: 0 0 calc(var(--native-action-width) * 2 + 1.25cqw);
+  width: calc(var(--native-action-width) * 2 + 1.25cqw);
+}
+#reading-settings.playback-settings-open .reader-settings-blocker {
+  width: 42.1875cqw !important;
+}

@@ -1,0 +1,290 @@
+{
+  "activities/act20side/level_act20side_entry": {
+    "resource": "video/act20side/ic01.mp4",
+    "platform": "Android",
+    "version": "22-08-16-13-00-04-1fbccf",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/22-08-16-13-00-04-1fbccf/hot_update_list.json",
+    "manifestSha256": "0a6b20b12a5901de46a8563f75d6da7b0e33684c87a5e25ccc0767aaa5ae46fc",
+    "entry": {
+      "name": "raw/video/act20side/ic01.mp4",
+      "hash": "22-08-16-13-00-04-1fbccf",
+      "md5": "ab41cfe5aded9ee84f63ea7b253bdf92",
+      "totalSize": 37068971,
+      "abSize": 38471139,
+      "type": "video",
+      "cid": 6532
+    }
+  },
+  "activities/act21side/level_act21side_entry": {
+    "resource": "video/act21side/is01.mp4",
+    "platform": "Android",
+    "version": "22-11-10-06-33-43-d4232d",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/22-11-10-06-33-43-d4232d/hot_update_list.json",
+    "manifestSha256": "94eb67dc5eb0a190b92c24c11830f48820b3ae76abffbbe2ace18f4539a2e383",
+    "entry": {
+      "name": "raw/video/act21side/is01.mp4",
+      "hash": "f0222edf32c32d28d06ffffcbcb2cf8e",
+      "md5": "f0222edf32c32d28d06ffffcbcb2cf8e",
+      "totalSize": 54171326,
+      "abSize": 56093759,
+      "type": "video",
+      "cid": 7315
+    }
+  },
+  "activities/act15side/level_act15side_entry": {
+    "resource": "video/act15side/iw01.mp4",
+    "platform": "Android",
+    "version": "23-01-01-06-34-53-a02cc6",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/23-01-01-06-34-53-a02cc6/hot_update_list.json",
+    "manifestSha256": "1eaf80756f6696799819137bd1f76689069f68e751deef532c34017a596b650c",
+    "entry": {
+      "name": "raw/video/act15side/iw01.mp4",
+      "hash": "37022680d887406a5e5d0df9b45b5a41",
+      "md5": "37022680d887406a5e5d0df9b45b5a41",
+      "totalSize": 51006453,
+      "abSize": 53118838,
+      "type": "video",
+      "cid": 7497
+    }
+  },
+  "activities/act17side/level_act17side_entry": {
+    "resource": "video/act17side/sn01.mp4",
+    "platform": "Android",
+    "version": "23-04-17-10-48-11-2ed7b5",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/23-04-17-10-48-11-2ed7b5/hot_update_list.json",
+    "manifestSha256": "be6714fa3f1e41430d3e40d366552cf3b66594d86149e3cecc2a71036403fe61",
+    "entry": {
+      "name": "raw/video/act17side/sn01.mp4",
+      "hash": "1a01f5500a7887df10456f568d15be07",
+      "md5": "1a01f5500a7887df10456f568d15be07",
+      "totalSize": 46695319,
+      "abSize": 48855928,
+      "type": "video",
+      "cid": 7240
+    }
+  },
+  "activities/act23side/level_act23side_entry": {
+    "resource": "video/act23side/wb01.mp4",
+    "platform": "Android",
+    "version": "24-03-18-14-54-31-f08f85",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/24-03-18-14-54-31-f08f85/hot_update_list.json",
+    "manifestSha256": "38beada3d2c26ccfd7940f25974fa498586a794dd5561111a791ac5e79e50e05",
+    "entry": {
+      "name": "raw/video/act23side/wb01.mp4",
+      "hash": "d6a6da309524d03dc2e374f3bacf42f9",
+      "md5": "d6a6da309524d03dc2e374f3bacf42f9",
+      "totalSize": 48628500,
+      "abSize": 50681113,
+      "type": "video",
+      "cid": 9511
+    }
+  },
+  "activities/act31side/level_act31side_entry": {
+    "resource": "video/act31side/hs01.mp4",
+    "platform": "Android",
+    "version": "25-02-19-09-21-28-ba1f4e",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/25-02-19-09-21-28-ba1f4e/hot_update_list.json",
+    "manifestSha256": "7defddc59be921cd29c9d9c8798978b34e74203be6a206bd78dca7642fde8d33",
+    "entry": {
+      "name": "raw/video/act31side/hs01.mp4",
+      "hash": "e649415e6adf6719221ca2650bec80d7",
+      "md5": "e649415e6adf6719221ca2650bec80d7",
+      "totalSize": 35454989,
+      "abSize": 37195442,
+      "type": "video",
+      "cid": 11633
+    }
+  },
+  "activities/act25side/level_act25side_entry": {
+    "resource": "video/act25side/cw01.mp4",
+    "platform": "Android",
+    "version": "24-05-22-06-44-01-4a3244",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/24-05-22-06-44-01-4a3244/hot_update_list.json",
+    "manifestSha256": "d362d54ae58763e1c4df95119f83d57eef4926da3d7d5decd649fb8214ffdecf",
+    "entry": {
+      "name": "raw/video/act25side/cw01.mp4",
+      "hash": "a09ee95941f10a79b44a4fd60a16613c",
+      "md5": "a09ee95941f10a79b44a4fd60a16613c",
+      "totalSize": 58112999,
+      "abSize": 60843107,
+      "type": "video",
+      "cid": 9888
+    }
+  },
+  "activities/act27side/level_act27side_entry": {
+    "resource": "video/act27side/sl01.mp4",
+    "platform": "Android",
+    "version": "24-08-20-17-10-23-6de62c",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/24-08-20-17-10-23-6de62c/hot_update_list.json",
+    "manifestSha256": "fdfe5fe309314ec883429ed440ad2fa46331d0025201f264c681d4d0dc166050",
+    "entry": {
+      "name": "raw/video/act27side/sl01.mp4",
+      "hash": "e2e41d204b8f98380e9d291beaa84aed",
+      "md5": "e2e41d204b8f98380e9d291beaa84aed",
+      "totalSize": 25280377,
+      "abSize": 26242620,
+      "type": "video",
+      "cid": 10615
+    }
+  },
+  "activities/act35side/level_act35side_entry": {
+    "resource": "video/act35side/as01.mp4",
+    "platform": "Android",
+    "version": "25-09-17-05-25-13_d72007",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/25-09-17-05-25-13_d72007/hot_update_list.json",
+    "manifestSha256": "8811a57b85dd5f4b535ed08fc249b4739b7a9174c1cab07d12d8732f08bc930f",
+    "entry": {
+      "name": "raw/video/act35side/as01.usm",
+      "hash": "d1bbe6aaebf2093bd930574b7007b70f",
+      "md5": "d1bbe6aaebf2093bd930574b7007b70f",
+      "totalSize": 47699807,
+      "abSize": 48267872,
+      "type": "video",
+      "cid": 12591
+    }
+  },
+  "activities/act29side/level_act29side_entry": {
+    "resource": "video/act29side/zt01.mp4",
+    "platform": "Android",
+    "version": "24-11-21-11-04-45-bae23b",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/24-11-21-11-04-45-bae23b/hot_update_list.json",
+    "manifestSha256": "478029e4101d4ead5a73488ec35f15de64330c50dca687d40ee0f4c735e5b8f7",
+    "entry": {
+      "name": "raw/video/act29side/zt01.mp4",
+      "hash": "9e9bb4ef7a2568efa22f7932750d38dc",
+      "md5": "9e9bb4ef7a2568efa22f7932750d38dc",
+      "totalSize": 53153204,
+      "abSize": 55476937,
+      "type": "video",
+      "cid": 11081
+    }
+  },
+  "activities/act38side/level_act38side_entry": {
+    "resource": "video/act38side/pv01.mp4",
+    "platform": "Android",
+    "version": "25-11-21-15-21-44_ee1197",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/25-11-21-15-21-44_ee1197/hot_update_list.json",
+    "manifestSha256": "e9f7536fc20086ceaadf5579d1d26a20df1a767fcdab5ff94f98080e29858c69",
+    "entry": {
+      "name": "raw/video/act38side/pv01.usm",
+      "hash": "3eb4339974961c2dc6be076e1c6d6ca2",
+      "md5": "3eb4339974961c2dc6be076e1c6d6ca2",
+      "totalSize": 59343312,
+      "abSize": 60047296,
+      "type": "video",
+      "cid": 13274
+    }
+  },
+  "activities/act40side/level_act40side_entry": {
+    "resource": "video/act40side/or01.mp4",
+    "platform": "Android",
+    "version": "26-02-06-13-37-25_e45854",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/26-02-06-13-37-25_e45854/hot_update_list.json",
+    "manifestSha256": "c25808b88d757326ba4cfa6fe97e74c5d50d331a3b4a1d8ff22cc717d199d435",
+    "entry": {
+      "name": "raw/video/act40side/or01.usm",
+      "hash": "9afeea420133bfba908861492861a75f",
+      "md5": "9afeea420133bfba908861492861a75f",
+      "totalSize": 52065078,
+      "abSize": 52634080,
+      "type": "video",
+      "cid": 13696
+    }
+  },
+  "activities/act44side/level_act44side_entry": {
+    "resource": "video/act44side/at01.mp4",
+    "platform": "Android",
+    "version": "26-08-17-11-25-42_dbc172",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/26-08-17-11-25-42_dbc172/hot_update_list.json",
+    "manifestSha256": "f0d34d6256b3959cbf3bc50303ea7ec76d0650d871857e124afa619200a00b83",
+    "entry": {
+      "name": "raw/video/act44side/at01.usm",
+      "hash": "3273e0f933428cd11ab2dd531d3c4993",
+      "md5": "3273e0f933428cd11ab2dd531d3c4993",
+      "totalSize": 47386717,
+      "abSize": 47926784,
+      "type": "video",
+      "cid": 15048
+    }
+  },
+  "activities/act37side/level_act37side_entry": {
+    "resource": "video/act37side/go01.mp4",
+    "platform": "Android",
+    "version": "25-09-17-05-25-13_d72007",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/25-09-17-05-25-13_d72007/hot_update_list.json",
+    "manifestSha256": "8811a57b85dd5f4b535ed08fc249b4739b7a9174c1cab07d12d8732f08bc930f",
+    "entry": {
+      "name": "raw/video/act37side/go01.usm",
+      "hash": "4e65bf7ec5cb35a9e67feb47ceb75183",
+      "md5": "4e65bf7ec5cb35a9e67feb47ceb75183",
+      "totalSize": 27591181,
+      "abSize": 27927616,
+      "type": "video",
+      "cid": 12592
+    }
+  },
+  "activities/act46side/level_act46side_entry": {
+    "resource": "video/act46side/os01.mp4",
+    "platform": "Android",
+    "version": "25-11-21-15-21-44_ee1197",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/25-11-21-15-21-44_ee1197/hot_update_list.json",
+    "manifestSha256": "e9f7536fc20086ceaadf5579d1d26a20df1a767fcdab5ff94f98080e29858c69",
+    "entry": {
+      "name": "raw/video/act46side/os01.usm",
+      "hash": "00fd0f0f08e4032b986e7ddffe7d9e39",
+      "md5": "00fd0f0f08e4032b986e7ddffe7d9e39",
+      "totalSize": 59331269,
+      "abSize": 59963264,
+      "type": "video",
+      "cid": 13276
+    }
+  },
+  "activities/act49side/level_act49side_entry": {
+    "resource": "video/act49side/ta01.mp4",
+    "platform": "Android",
+    "version": "26-02-06-13-37-25_e45854",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/26-02-06-13-37-25_e45854/hot_update_list.json",
+    "manifestSha256": "c25808b88d757326ba4cfa6fe97e74c5d50d331a3b4a1d8ff22cc717d199d435",
+    "entry": {
+      "name": "raw/video/act49side/ta01.usm",
+      "hash": "1f5837b7af65e1f7f3914f3159f573f4",
+      "md5": "1f5837b7af65e1f7f3914f3159f573f4",
+      "totalSize": 64484257,
+      "abSize": 65223168,
+      "cid": 13698,
+      "cat": 2
+    }
+  },
+  "activities/act42side/level_act42side_entry": {
+    "resource": "video/act42side/mt01.mp4",
+    "platform": "Android",
+    "version": "26-05-20-12-59-09_e8f456",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/26-05-20-12-59-09_e8f456/hot_update_list.json",
+    "manifestSha256": "31154ce2eab7b532f647a15d5a298f832061d2455bb66e2b34cfd288e713e28b",
+    "entry": {
+      "name": "raw/video/act42side/mt01.usm",
+      "hash": "0e3e42ac26c39a7d91a1fbd75dc8eef0",
+      "md5": "0e3e42ac26c39a7d91a1fbd75dc8eef0",
+      "totalSize": 71201686,
+      "abSize": 72098080,
+      "type": "video",
+      "cid": 14308
+    }
+  },
+  "activities/act53side/level_act53side_entry": {
+    "resource": "video/act53side/to01.mp4",
+    "platform": "Android",
+    "version": "26-08-17-11-25-42_dbc172",
+    "manifestUrl": "https://ak.hycdn.cn/assetbundle/official/Android/assets/26-08-17-11-25-42_dbc172/hot_update_list.json",
+    "manifestSha256": "f0d34d6256b3959cbf3bc50303ea7ec76d0650d871857e124afa619200a00b83",
+    "entry": {
+      "name": "raw/video/act53side/to01.usm",
+      "hash": "0053e90c55959817b295b633566abbf6",
+      "md5": "0053e90c55959817b295b633566abbf6",
+      "totalSize": 41980415,
+      "abSize": 42446944,
+      "type": "video",
+      "cid": 15051
+    }
+  }
+}
