@@ -21,9 +21,11 @@ export class ScriptView {
   private step = -1;
   private index = -1;
   private state = '';
+  private pointer?: { x: number; y: number; top: number; left: number };
   constructor(
     private surface: HTMLElement,
     private toggle: HTMLButtonElement,
+    private jump: (commandIndex: number) => void,
   ) {
     this.panel.id = 'script-panel';
     this.panel.className = 'script-panel';
@@ -61,7 +63,38 @@ export class ScriptView {
       this.follow.setAttribute('aria-pressed', 'false');
     };
     this.list.addEventListener('wheel', stopFollow, { passive: true });
-    this.list.addEventListener('pointerdown', stopFollow, { passive: true });
+    this.list.addEventListener(
+      'pointerdown',
+      (event) => {
+        stopFollow();
+        this.pointer = {
+          x: event.clientX,
+          y: event.clientY,
+          top: this.list.scrollTop,
+          left: this.list.scrollLeft,
+        };
+      },
+      { passive: true },
+    );
+    this.list.addEventListener('pointercancel', () => {
+      this.pointer = undefined;
+    });
+    this.list.addEventListener('click', (event) => {
+      const row = (event.target as HTMLElement).closest<HTMLElement>('[data-command-index]');
+      if (!row) return;
+      const start = this.pointer;
+      this.pointer = undefined;
+      if (
+        event.detail &&
+        (!start ||
+          Math.hypot(event.clientX - start.x, event.clientY - start.y) > 6 ||
+          Math.abs(this.list.scrollTop - start.top) > 2 ||
+          Math.abs(this.list.scrollLeft - start.left) > 2 ||
+          !window.getSelection()?.isCollapsed)
+      )
+        return;
+      this.jumpTo(Number(row.dataset.commandIndex));
+    });
     this.list.addEventListener('keydown', (event) => {
       if (
         [
@@ -202,6 +235,18 @@ export class ScriptView {
       : '—';
     const content = document.createElement('div');
     content.className = 'script-line-content';
+    if (row.commandIndex !== undefined) {
+      node.title = `从第 ${row.line || '末'} 行开始播放`;
+      content.tabIndex = 0;
+      content.setAttribute('role', 'button');
+      content.setAttribute('aria-label', `跳转到第 ${row.line || '末'} 行：${row.title}`);
+      content.onkeydown = (event) => {
+        if (!['Enter', ' '].includes(event.key)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (!event.repeat) this.jumpTo(row.commandIndex!);
+      };
+    }
     if (this.source) {
       const code = document.createElement('code');
       this.tokens(code, row.tokens ?? [{ kind: 'text', text: row.raw }]);
@@ -253,6 +298,11 @@ export class ScriptView {
     state.className = 'script-row-state';
     node.append(number, state, content);
     return node;
+  }
+  private jumpTo(index: number): void {
+    this.following = true;
+    this.follow.setAttribute('aria-pressed', 'true');
+    this.jump(index);
   }
   private refresh(force = false): void {
     const player = this.player;

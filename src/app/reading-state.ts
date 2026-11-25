@@ -96,6 +96,10 @@ export function rememberStory(data: ShelfData, id: string, at = Date.now()): She
     ].slice(0, 12),
   };
 }
+export function forgetStory(data: ShelfData, id: string): void {
+  data.recent = data.recent.filter((record) => record.id !== id);
+  delete data.progress[id];
+}
 export function recordProgress(
   data: ShelfData,
   id: string,

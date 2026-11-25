@@ -7,6 +7,7 @@ import { VersionNotice, type ResourceUpdate } from './version-notice';
 import { HomeMusic } from './home-music';
 import type { PreparedStartupMusic } from './home-music-boot';
 import { AudioPage } from './audio-page';
+import { confirmAction } from './action-confirm';
 interface Status {
   version: string | null;
   stories: number;
@@ -297,6 +298,14 @@ export function mountDesktopShell(options: {
   document.addEventListener('arkreader-cache-finished', () => void scan());
   $('resource-clear').onclick = () =>
     void action(async () => {
+      if (
+        !(await confirmAction(
+          '清理缓存？',
+          '清理后，启动和播放需要重新准备。\n已下载资源、收藏和阅读记录会保留。',
+          '清理',
+        ))
+      )
+        return;
       await resourceRequest('/api/cache/clear', {});
       await options.reload();
       await scan();

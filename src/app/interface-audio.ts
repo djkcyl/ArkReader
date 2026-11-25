@@ -159,9 +159,21 @@ function targetFor(target: EventTarget | null): Target | undefined {
   else if (id === 'resume') role = 'prompt.ok';
   else if (id === 'script-close') role = 'shell.cancel';
   else if (id === 'script-toggle' || element.closest('#script-panel')) role = 'shell.tab';
-  else if (['restart', 'error-retry', 'host-continue', 'resume-continue'].includes(id))
+  else if (
+    [
+      'restart',
+      'error-retry',
+      'host-continue',
+      'resume-continue',
+      'action-confirm-accept',
+    ].includes(id)
+  )
     role = 'prompt.confirm';
-  else if (['library', 'error-library', 'host-leave', 'resume-restart'].includes(id))
+  else if (
+    ['library', 'error-library', 'host-leave', 'resume-restart', 'action-confirm-cancel'].includes(
+      id,
+    )
+  )
     role = 'prompt.cancel';
   else if (['leave-story', 'catalog-back', 'load-cancel', 'cache-cancel'].includes(id))
     role = 'shell.cancel';

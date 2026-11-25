@@ -5,6 +5,7 @@ import {
   parseShelf,
   rememberStory,
   recordProgress,
+  forgetStory,
   type ProgressLedger,
 } from './reading-state';
 import { chapterProgressView, storyProgressView } from './reading-progress-view';
@@ -14,6 +15,7 @@ import { resumeChoice } from './resume-choice';
 import { libraryHeading } from './library-heading';
 import { ReadingPreviews, previewText } from './reading-preview';
 import type { ScriptSource } from '../core/script-preview';
+import { confirmAction } from './action-confirm';
 export { parseShelf, rememberStory } from './reading-state';
 
 type LibraryTab = 'catalog' | 'recent' | 'favorites' | 'cache';
@@ -141,15 +143,7 @@ export class ReadingShelf {
     this.favorite.textContent = '☆ 收藏';
     this.favorite.hidden = true;
     document.getElementById('start')!.after(this.favorite);
-    this.favorite.onclick = () => {
-      if (!this.selected) return;
-      this.data.favorites = this.data.favorites.includes(this.selected)
-        ? this.data.favorites.filter((id) => id !== this.selected)
-        : [this.selected, ...this.data.favorites].slice(0, 200);
-      this.save();
-      this.render();
-      this.syncFavorite();
-    };
+    this.favorite.onclick = () => void this.toggleFavorite(this.selected);
     document.addEventListener('catalog-selection', (event) => {
       this.selected = (event as CustomEvent).detail.id ?? '';
       this.syncFavorite();
@@ -242,6 +236,36 @@ export class ReadingShelf {
     this.favorite.textContent = this.data.favorites.includes(this.selected) ? '★ 已收藏' : '☆ 收藏';
     this.favorite.setAttribute('aria-pressed', String(this.data.favorites.includes(this.selected)));
   }
+  private async toggleFavorite(id: string) {
+    if (!id) return;
+    const removing = this.data.favorites.includes(id);
+    const label = this.catalog?.stories.find((row) => row.id === id)?.label ?? id;
+    if (
+      !(await confirmAction(
+        removing ? '取消收藏？' : '收藏这段剧情？',
+        label,
+        removing ? '取消收藏' : '收藏',
+      ))
+    )
+      return;
+    this.data.favorites = removing
+      ? this.data.favorites.filter((story) => story !== id)
+      : [id, ...this.data.favorites.filter((story) => story !== id)].slice(0, 200);
+    this.save();
+    this.render();
+    this.syncFavorite();
+  }
+  private async removeHistory(id: string, label: string) {
+    if (
+      !(await confirmAction('删除这条阅读记录？', `${label}\n该剧情的观看进度也会清除。`, '删除'))
+    )
+      return;
+    forgetStory(this.data, id);
+    this.save();
+    this.changed(this.data.progress);
+    this.render();
+    document.getElementById('library-tab-recent')!.focus({ preventScroll: true });
+  }
   private render() {
     const known = new Map(this.catalog?.stories.map((row) => [row.id, row]));
     for (const tab of ['recent', 'favorites'] as const) {
@@ -315,6 +339,8 @@ export class ReadingShelf {
         action.dataset.resumeStory = id;
         action.onclick = () => this.open(id, resume?.target);
         actions.append(action);
+        const secondary = document.createElement('div');
+        secondary.className = 'shelf-secondary';
         if (position || approximate) {
           const restart = document.createElement('button');
           restart.type = 'button';
@@ -322,8 +348,22 @@ export class ReadingShelf {
           restart.textContent = '从头播放';
           restart.dataset.restartStory = id;
           restart.onclick = () => this.open(id);
-          actions.append(restart);
+          secondary.append(restart);
         }
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'shelf-restart shelf-remove';
+        remove.textContent = tab === 'recent' ? '删除' : '取消收藏';
+        remove.setAttribute('aria-label', `${remove.textContent}：${row.label}`);
+        if (tab === 'recent') {
+          remove.dataset.deleteHistory = id;
+          remove.onclick = () => void this.removeHistory(id, row.label);
+        } else {
+          remove.dataset.removeFavorite = id;
+          remove.onclick = () => void this.toggleFavorite(id);
+        }
+        secondary.append(remove);
+        actions.append(secondary);
         const excerpt = document.createElement('span');
         excerpt.className = 'shelf-excerpt';
         excerpt.textContent = approximate

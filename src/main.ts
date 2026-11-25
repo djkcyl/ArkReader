@@ -193,7 +193,15 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = /* HTML */ ` <header
   <footer>ARKREADER <span>原版资源 · 本地播放</span></footer>`;
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
-const scriptView = new ScriptView($('playback-surface'), $<HTMLButtonElement>('script-toggle'));
+const scriptView = new ScriptView(
+  $('playback-surface'),
+  $<HTMLButtonElement>('script-toggle'),
+  (commandIndex) => {
+    if (!player || loading) return;
+    interfaceAudio.play('normal.log-back');
+    void start({ commandIndex, position: player.replayPosition });
+  },
+);
 void prtsCursor()
   .load()
   .catch((error) => console.warn(String(error)));
@@ -690,7 +698,10 @@ async function start(target?: PlaybackTarget): Promise<void> {
     }
     newHost = new StandaloneStoryHost();
     const restoringAudio = new RestoringAudio(newAudio, () => newPlayer?.time ?? player?.time ?? 0),
-      restoringVideo = new RestoringVideo(new StoryVideo(newAudio.context, newAudio.master));
+      restoringVideo = new RestoringVideo(
+        new StoryVideo(newAudio.context, newAudio.master),
+        () => newPlayer?.scheduler.index !== target?.commandIndex,
+      );
     newPlayer = new StoryPlayer(pack, restoringAudio, savedSpeed, {
       commands: newHost,
       video: restoringVideo,
@@ -754,7 +765,10 @@ async function start(target?: PlaybackTarget): Promise<void> {
     if (target?.position && target.position.script !== newPlayer.scriptIdentity) {
       resumeNotice = '剧情内容已更新，上次位置不再适用，已从头播放。';
       newPlayer.tick(0);
-    } else if (target && (target.position || target.percent !== undefined)) {
+    } else if (
+      target &&
+      (target.position || target.percent !== undefined || target.commandIndex !== undefined)
+    ) {
       restoringAudio.restoring = true;
       restoringVideo.restoring = true;
       resumeNotice = await restorePosition(
@@ -764,11 +778,14 @@ async function start(target?: PlaybackTarget): Promise<void> {
         (fraction) =>
           loadingView.update({
             phase: 'seek',
-            message: target.review
-              ? '正在跳转到所选台词…'
-              : target.percent === undefined
-                ? '正在恢复上次观看位置…'
-                : `正在快进至 ${target.percent}%…`,
+            message:
+              target.commandIndex !== undefined
+                ? `正在跳转到第 ${newPlayer!.scheduler.commands[target.commandIndex].line} 行…`
+                : target.review
+                  ? '正在跳转到所选台词…'
+                  : target.percent === undefined
+                    ? '正在恢复上次观看位置…'
+                    : `正在快进至 ${target.percent}%…`,
             done: Math.floor(fraction * 100),
             total: 100,
           }),

@@ -5,16 +5,20 @@ import type { VideoPort } from './video';
 export interface PlaybackTarget {
   position?: PlaybackPosition;
   percent?: number;
+  commandIndex?: number;
   review?: boolean;
 }
 export class RestoringVideo implements VideoPort {
   restoring = false;
-  constructor(private video: VideoPort) {}
+  constructor(
+    private video: VideoPort,
+    private skipDuringRestore: () => boolean = () => true,
+  ) {}
   get frame() {
     return this.video.frame;
   }
   play(url: string, started: () => void, ended: (error?: string) => void) {
-    if (this.restoring) {
+    if (this.restoring && this.skipDuringRestore()) {
       started();
       ended();
     } else this.video.play(url, started, ended);
@@ -37,7 +41,15 @@ export async function restorePosition(
   draw: () => void,
 ): Promise<string> {
   const saved = target.position,
-    exact = target.percent === undefined;
+    exact = target.percent === undefined && target.commandIndex === undefined;
+  const commandIndex = target.commandIndex;
+  if (
+    commandIndex !== undefined &&
+    (!Number.isInteger(commandIndex) ||
+      commandIndex < 0 ||
+      commandIndex >= player.scheduler.commands.length)
+  )
+    throw Error('所选脚本行不存在。');
   if (saved && saved.script !== player.scriptIdentity) {
     player.tick(0);
     return '剧情内容已更新，上次位置不再适用，已从头播放。';
@@ -46,8 +58,8 @@ export async function restorePosition(
     player.tick(0);
     return '';
   }
-  const percent = Math.max(0, Math.min(100, target.percent ?? saved!.percent));
-  const targetIndex = Math.ceil((player.scheduler.commands.length * percent) / 100);
+  const percent = Math.max(0, Math.min(100, target.percent ?? saved?.percent ?? 0));
+  const targetIndex = commandIndex ?? Math.ceil((player.scheduler.commands.length * percent) / 100);
   const actions = saved?.actions ?? [];
   let actionIndex = 0,
     iterations = 0,
@@ -63,6 +75,8 @@ export async function restorePosition(
   const previousYield = player.scheduler.yieldAfterCommand;
   if (target.review && saved)
     player.scheduler.yieldAfterCommand = () => player.playbackStep >= saved.step;
+  else if (commandIndex !== undefined)
+    player.scheduler.yieldAfterCommand = () => player.scheduler.index === commandIndex;
   try {
     while (!player.finished) {
       signal.throwIfAborted();
@@ -75,13 +89,26 @@ export async function restorePosition(
         player.tick(0.1);
         if (player.error) throw Error(player.error);
         if (
+          commandIndex !== undefined &&
+          player.scheduler.current &&
+          player.scheduler.index === commandIndex
+        )
+          return finish();
+        if (
           exact &&
           player.playbackStep === saved!.step &&
           player.scheduler.index === saved!.index &&
           (player.canBookmark || target.review)
         )
           return finish();
-        if (!exact && player.canBookmark && (player.scheduler.index >= targetIndex || player.atEnd))
+        if (commandIndex !== undefined && player.atEnd)
+          return finish('所选行未在当前分支执行，已停在剧情结尾。');
+        if (
+          commandIndex === undefined &&
+          !exact &&
+          player.canBookmark &&
+          (player.scheduler.index >= targetIndex || player.atEnd)
+        )
           return finish();
         if (exact && player.playbackStep > saved!.step)
           throw Error('无法匹配已保存的剧情位置，请从头播放。');
@@ -124,7 +151,7 @@ export async function restorePosition(
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
     if (exact) throw Error('剧情已结束，无法匹配保存的位置，请从头播放。');
-    return finish();
+    return finish(commandIndex !== undefined ? '当前分支没有执行所选行，剧情已结束。' : '');
   } finally {
     player.scheduler.yieldAfterCommand = previousYield;
   }

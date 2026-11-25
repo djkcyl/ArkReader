@@ -188,6 +188,14 @@ body.playing #player-panel.script-visible .chapterbar {
   font-size: 10px;
   text-align: right;
 }
+.script-row[data-command-index]:is(:hover, :focus-within) {
+  background: #899fa326;
+  border-left-color: #9ebac3;
+  cursor: pointer;
+}
+.script-line-content[role='button']:focus-visible {
+  outline: none;
+}
 .script-line-content {
   display: flex;
   align-items: baseline;

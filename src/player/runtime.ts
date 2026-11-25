@@ -407,17 +407,20 @@ export class StoryPlayer {
       (this.savedPosition?.step !== this.playbackStep ||
         this.savedPosition.actions.length !== this.playbackActions.length)
     ) {
-      this.savedPosition = {
-        schema: 1,
-        script: this.scriptIdentity,
-        index: this.scheduler.index,
-        step: this.playbackStep,
-        percent: this.playbackPercent,
-        actions: this.playbackActions.map((a) => ({ ...a })),
-        seen: this.viewingProgress.snapshot,
-      };
+      this.savedPosition = this.replayPosition;
     }
     return this.savedPosition;
+  }
+  get replayPosition(): PlaybackPosition {
+    return {
+      schema: 1,
+      script: this.scriptIdentity,
+      index: this.scheduler.index,
+      step: this.playbackStep,
+      percent: this.playbackPercent,
+      actions: this.playbackActions.map((action) => ({ ...action })),
+      seen: this.viewingProgress.snapshot,
+    };
   }
   restoreViewed(ranges: [number, number][]): void {
     this.viewingProgress.restore(ranges, this.scheduler.index);

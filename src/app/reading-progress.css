@@ -157,6 +157,11 @@
   align-items: stretch;
   gap: 3px;
 }
+.shelf-secondary {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
 .reading-panel .shelf-actions button {
   border: 0;
   background: transparent;

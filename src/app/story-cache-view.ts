@@ -2,6 +2,7 @@ import type { CatalogData, CatalogStory } from '../player/catalog-view';
 import { resourceRequest, type OperationStatus } from './resource-api';
 import { renderTransfers, transferSpeed } from './transfer-labels';
 import { libraryHeading } from './library-heading';
+import { confirmAction } from './action-confirm';
 import './story-cache.css';
 
 interface CacheItem {
@@ -303,13 +304,25 @@ export class StoryCacheView {
     this.el('cache-error').hidden = false;
   }
   private async start(ids: string[]) {
-    if (!ids.length || this.busy) return;
+    if (!ids.length || this.busy || this.data.job?.running) return;
     this.busy = true;
     this.el('cache-error').hidden = true;
     this.controls();
-    this.open();
-    this.tab(true);
     try {
+      const label =
+        ids.length === 1
+          ? (this.catalog.stories.find((row) => row.id === ids[0])?.label ?? ids[0])
+          : `已选择 ${ids.length} 段剧情。`;
+      if (
+        !(await confirmAction(
+          '缓存所选剧情？',
+          `${label}\n将下载所需资源，已缓存的资源会复用。`,
+          '开始缓存',
+        ))
+      )
+        return;
+      this.open();
+      this.tab(true);
       await resourceRequest('/api/story-cache', { stories: ids });
       await this.refresh();
     } catch (error) {
@@ -325,6 +338,9 @@ export class StoryCacheView {
     this.busy = true;
     this.controls();
     try {
+      if (!(await confirmAction('取消缓存任务？', '已下载的资源会保留，可稍后继续。', '取消缓存')))
+        return;
+      if (!this.data.job?.running || this.data.job.id !== job.id) return;
       await resourceRequest(`/api/operations/${job.id}/cancel`, {});
       await this.refresh();
     } catch (error) {

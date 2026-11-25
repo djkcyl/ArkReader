@@ -1,4 +1,4 @@
-#resume-prompt.native-prompt {
+:is(#resume-prompt, #action-confirm).native-prompt {
   width: min(1040px, calc(100vw - 32px), calc((100dvh - 48px) * 16 / 9));
   height: auto;
   aspect-ratio: 16/9;
@@ -6,11 +6,11 @@
   top: 50%;
   transform: translate(-50%, -50%);
 }
-#resume-prompt::backdrop {
+:is(#resume-prompt, #action-confirm)::backdrop {
   background: #0b171eb8;
   backdrop-filter: blur(4px);
 }
-#resume-prompt #resume-heading {
+:is(#resume-prompt #resume-heading, #action-confirm-heading) {
   font-weight: 600;
 }
 #resume-prompt #resume-excerpt {
