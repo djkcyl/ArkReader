@@ -100,6 +100,6 @@ jobs:
               exit 0
             fi
           else
-            gh release create "$tag" --draft --target "$GITHUB_SHA" --title "ArkReader $version" --notes-file docs/releases/1.0.0.md
+            gh release create "$tag" --draft --target "$GITHUB_SHA" --title "ArkReader $version" --notes-file "docs/releases/$version.md"
           fi
           gh release upload "$tag" release/ArkReader-* release/SHA256SUMS.txt --clobber
