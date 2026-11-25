@@ -42,6 +42,7 @@ export class Scheduler {
   currentDecision: Command | null = null;
   waitingForInput = false;
   ended = false;
+  yieldAfterCommand?: () => boolean;
   private activeCheckers: PostChecker[] = [];
   private generation = 0;
   private readonly labels: Map<string, number>;
@@ -126,7 +127,7 @@ export class Scheduler {
       }
       this.activeCheckers = this.postCheckers.get(command.name) ?? [];
       for (const checker of this.activeCheckers) checker.enter(command);
-      if (this.blocking.length) return;
+      if (this.blocking.length || this.yieldAfterCommand?.()) return;
       for (const checker of this.activeCheckers) checker.exit(command);
       this.activeCheckers = [];
       this.waitingForInput = false;

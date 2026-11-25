@@ -12,6 +12,7 @@ import { renderChoices } from './player/choices';
 import { dialogPresets } from './core/dialog-presets';
 import { packagedChapters, profileUrl } from './player/package-source';
 import { QuickPress } from './core/quick-play';
+import { KeyboardQuickPlay } from './player/keyboard-quick-play';
 import { QuickPanel } from './player/quick-panel';
 import { QuickNoticeView } from './player/quick-notice';
 import { ReaderView } from './player/reader-view';
@@ -326,7 +327,15 @@ readerSurface.className = 'reader-view';
 readerSurface.hidden = true;
 readerSurface.setAttribute('aria-label', '剧情阅读');
 $('canvas').after(readerSurface);
-const readerView = new ReaderView(readerSurface);
+function jumpToReview(cell: { text: string }): void {
+  if (!player || loading) return;
+  const position = player.reviewPosition(cell);
+  if (position) {
+    interfaceAudio.play('normal.log-back');
+    void start({ position, review: true });
+  }
+}
+const readerView = new ReaderView(readerSurface, jumpToReview);
 const nativeNavigation = new NativeNavigation(
   $('stage'),
   () => !!player && !player.finished && !player.paused && !player.error,
@@ -402,6 +411,7 @@ readerButton.onclick = () => {
   }
 };
 function selectQuickSpeed(index: number): void {
+  if (keyboardQuick.active) return;
   if (!player?.quickPlay || index === player.quickSpeedIndex) return;
   player.setQuickSpeed(index);
   try {
@@ -422,6 +432,16 @@ const quickPress = new QuickPress(
     if (player) selectQuickSpeed(Math.max(0, Math.min(3, player.quickSpeedIndex + direction)));
   },
 );
+const keyboardQuick = new KeyboardQuickPlay(
+  () => player,
+  () =>
+    !!player?.canQuickPlay &&
+    !loading &&
+    !hiddenUI &&
+    !document.hidden &&
+    !document.querySelector('dialog[open]'),
+  cancelGesture,
+);
 let pressPointer: number | null = null,
   suppressPointerClickUntil = 0;
 
@@ -435,6 +455,7 @@ function releasePlayback(): Promise<void> {
   storyBackInput.clear();
   skipView.clear();
   cancelGesture();
+  keyboardQuick.cancel();
   quickNotice.clear();
   renderChoices($('choices'), [], () => {});
   const oldAudio = audio;
@@ -589,6 +610,7 @@ async function start(target?: PlaybackTarget): Promise<void> {
       $('stage').querySelector<HTMLElement>('.viewport')!,
       $('history-list'),
       $('close-log'),
+      jumpToReview,
     );
     quickPanel ??= new QuickPanel($('quick-play'), selectQuickSpeed);
     requirePackResources(pack);
@@ -697,7 +719,7 @@ async function start(target?: PlaybackTarget): Promise<void> {
     history.replaceState(null, '', locationUrl);
     $('chapter-title').textContent = title;
     $('ended-title').textContent = title + ' · 播放完毕';
-    $('story-note').textContent = '点击画面或按空格推进';
+    $('story-note').textContent = '点击画面或按空格推进 · 按住 Ctrl 32× 快进';
     $('intro').hidden = true;
     $('player-panel').hidden = false;
     $('ended').hidden = true;
@@ -725,8 +747,9 @@ async function start(target?: PlaybackTarget): Promise<void> {
         (fraction) =>
           loadingView.update({
             phase: 'seek',
-            message:
-              target.percent === undefined
+            message: target.review
+              ? '正在跳转到所选台词…'
+              : target.percent === undefined
                 ? '正在恢复上次观看位置…'
                 : `正在快进至 ${target.percent}%…`,
             done: Math.floor(fraction * 100),
@@ -895,9 +918,14 @@ function sync(): void {
 }
 function frame(now: number): void {
   quickNotice.update();
+  keyboardQuick.update(now);
   quickPress.update(
     now,
-    !!player?.canQuickPlay && !hiddenUI && (!quickPress.active || !!player.quickPlay),
+    !!player?.canQuickPlay &&
+      !hiddenUI &&
+      !keyboardQuick.active &&
+      !document.querySelector('dialog[open]') &&
+      (!quickPress.active || !!player.quickPlay),
   );
   if (player && renderer) {
     const dt = lastFrame ? (now - lastFrame) / 1000 : 0;
@@ -1013,7 +1041,7 @@ function cancelGesture(): void {
 }
 gestureCanvas.addEventListener('pointerdown', (e) => {
   suppressPointerClickUntil = 0;
-  if (e.button !== 0 || !player?.canQuickPlay || hiddenUI) return;
+  if (e.button !== 0 || !player?.canQuickPlay || hiddenUI || keyboardQuick.active) return;
   if (pressPointer !== null) return;
   pressPointer = e.pointerId;
   const rect = gestureCanvas.getBoundingClientRect();
@@ -1044,6 +1072,9 @@ gestureCanvas.addEventListener('lostpointercapture', (e) => {
   if (pressPointer === e.pointerId) cancelGesture();
 });
 window.addEventListener('blur', cancelGesture);
+window.addEventListener('blur', () => keyboardQuick.cancel());
+document.addEventListener('keydown', (event) => keyboardQuick.keydown(event));
+document.addEventListener('keyup', (event) => keyboardQuick.keyup(event));
 $('auto-speed').onclick = () => {
   if (!player) return;
   if (player.readerMode) {
@@ -1233,12 +1264,14 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     cancelGesture();
+    keyboardQuick.cancel();
     player?.setPaused(true);
   }
   lastFrame = performance.now();
 });
 window.addEventListener('arkreader-native-background', () => {
   cancelGesture();
+  keyboardQuick.cancel();
   player?.setPaused(true);
   lastFrame = performance.now();
   sync();

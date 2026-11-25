@@ -63,6 +63,7 @@ export function storyNavigationEntries(stage: HTMLElement): NavigationEntry[] {
     } else if (modal.id === 'history') {
       add(modal.querySelector('#close-log'), P.history.close);
       add(modal.querySelector('.history-track'));
+      for (const row of modal.querySelectorAll<HTMLElement>('.review-jump')) add(row);
     }
     return entries;
   }
@@ -71,7 +72,7 @@ export function storyNavigationEntries(stage: HTMLElement): NavigationEntry[] {
   for (const [id, rect] of Object.entries(profile))
     add(id === 'top' ? stage.querySelector('.reader-top') : stage.querySelector('#' + id), rect);
   for (const element of stage.querySelectorAll<HTMLElement>(
-    '.choices button,.reader-live-decision button,.reader-track,[data-quick-speed]',
+    '.choices button,.reader-live-decision button,.reader-track,.review-jump,[data-quick-speed]',
   ))
     add(element);
   // QuickPlayKnownNotify's Button RectTransform is zero-sized. Its child
@@ -242,6 +243,7 @@ export class NativeNavigation {
           (reader && element.matches('#hide,#settings'));
     const button =
       (element instanceof HTMLButtonElement && !custom) ||
+      element.matches('.review-jump') ||
       (modal?.id === 'skip-confirm' && element === modal);
     this.stage.dispatchEvent(
       new CustomEvent('native-navigation-submit', {

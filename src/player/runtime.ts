@@ -362,6 +362,22 @@ export class StoryPlayer {
   playbackStep = 0;
   private playbackActions: PlaybackAction[] = [];
   private savedPosition?: PlaybackPosition;
+  private reviewPoints = new WeakMap<object, { step: number; index: number }>();
+  reviewPosition(cell: { text: string }): PlaybackPosition | undefined {
+    const point = this.reviewPoints.get(cell);
+    if (!point) return;
+    return {
+      schema: 1,
+      script: this.scriptIdentity,
+      ...point,
+      percent: Math.min(99, Math.floor((point.index / this.scheduler.commands.length) * 100)),
+      label: cell.text.slice(0, 180),
+      actions: this.playbackActions
+        .filter((action) => action.step < point.step)
+        .map((a) => ({ ...a })),
+      seen: this.viewingProgress.snapshot,
+    };
+  }
   get canBookmark(): boolean {
     return (
       !!this.scheduler.current &&
@@ -662,7 +678,13 @@ export class StoryPlayer {
       this.scheduler.register(name, {
         uiInput: true,
         execute: (command, done) => {
+          const count = this.reader.cells.length;
           const event = this.reader.process(command, this.scheduler.predicator.selectedIndexes);
+          for (const cell of this.reader.cells.slice(count))
+            this.reviewPoints.set(cell, {
+              step: this.playbackStep + 1,
+              index: this.scheduler.index,
+            });
           if (command.name === 'decision') {
             if (this.quickPlay && this.skipQuickDecisions) {
               done();
@@ -709,6 +731,7 @@ export class StoryPlayer {
         execute: (command, done) => {
           this.line = command.line;
           this.playbackStep++;
+          const historyCount = this.history.length;
           this.emit('command', { name: command.name, params: command.params });
           const line = command.line,
             epoch = this.commandEpoch;
@@ -722,6 +745,8 @@ export class StoryPlayer {
             });
             done();
           });
+          for (const cell of this.history.slice(historyCount))
+            this.reviewPoints.set(cell, { step: this.playbackStep, index: this.scheduler.index });
         },
       });
   }

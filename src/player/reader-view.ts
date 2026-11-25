@@ -13,6 +13,7 @@ import { playerMediaUrl } from './package-source';
 import { ReaderScroll } from '../core/reader-scroll';
 import { NativeScrollbar } from './native-scrollbar';
 import { NativeSelectableSurface } from './native-selectable';
+import { bindReviewJump } from './review-jump';
 
 /** Separate Reader scroll surface. Layout snapshots survive scrolling; only
  * visible rows own DOM/canvas objects, like the native recycle-list adapter. */
@@ -41,7 +42,10 @@ export class ReaderView {
   private heights: number[] = [];
   private scale = 1;
   private settingsKey = '';
-  constructor(readonly element: HTMLElement) {
+  constructor(
+    readonly element: HTMLElement,
+    private jump?: (cell: ReaderCell) => void,
+  ) {
     this.scrollbar = new NativeScrollbar(
       this.scroll,
       () => this.applyScroll(),
@@ -53,9 +57,12 @@ export class ReaderView {
     element.after(this.scrollbar.track);
     this.selectable = new NativeSelectableSurface(
       element.parentElement!,
-      '.reader-track',
+      '.reader-track,.review-jump',
       () => !element.hidden,
-      () => [{ element: this.scrollbar.thumb }],
+      (el) =>
+        el.classList.contains('review-jump')
+          ? [...el.querySelectorAll('canvas')].map((element) => ({ element }))
+          : [{ element: this.scrollbar.thumb }],
     );
     this.content.className = 'reader-content';
     element.replaceChildren(this.content);
@@ -136,6 +143,7 @@ export class ReaderView {
     });
     const end = (e: PointerEvent) => {
       if (this.pointer?.id !== e.pointerId) return;
+      if (e.type === 'pointercancel') this.pointer.dragged = true;
       this.scroll.end();
       if (element.hasPointerCapture(e.pointerId)) element.releasePointerCapture(e.pointerId);
     };
@@ -423,6 +431,13 @@ export class ReaderView {
       }
     }
     row.append(name, text);
+    if (this.jump && !cell.current && !cell.endtip && !live && p.reviewPosition(cell))
+      bindReviewJump(
+        row,
+        readerCellText(cell),
+        () => this.jump?.(cell),
+        () => !!this.pointer?.dragged || this.suppressReaderClick,
+      );
     return row;
   }
 }

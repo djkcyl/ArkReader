@@ -5,6 +5,7 @@ import type { VideoPort } from './video';
 export interface PlaybackTarget {
   position?: PlaybackPosition;
   percent?: number;
+  review?: boolean;
 }
 export class RestoringVideo implements VideoPort {
   restoring = false;
@@ -59,65 +60,72 @@ export async function restorePosition(
     draw();
     return notice;
   };
-  while (!player.finished) {
-    signal.throwIfAborted();
-    if (performance.now() > deadline || iterations > 120000)
-      throw Error('恢复进度耗时过长，可返回剧情库后从头播放。');
-    const batchEnd = performance.now() + 10;
-    do {
+  const previousYield = player.scheduler.yieldAfterCommand;
+  if (target.review && saved)
+    player.scheduler.yieldAfterCommand = () => player.playbackStep >= saved.step;
+  try {
+    while (!player.finished) {
       signal.throwIfAborted();
-      iterations++;
-      player.tick(0.1);
-      if (player.error) throw Error(player.error);
-      if (
-        exact &&
-        player.playbackStep === saved!.step &&
-        player.scheduler.index === saved!.index &&
-        player.canBookmark
-      )
-        return finish();
-      if (!exact && player.canBookmark && (player.scheduler.index >= targetIndex || player.atEnd))
-        return finish();
-      if (exact && player.playbackStep > saved!.step)
-        throw Error('无法匹配已保存的剧情位置，请从头播放。');
-      const action = actions[actionIndex];
-      if (action && action.step < player.playbackStep)
-        throw Error('已保存的分支记录与剧情不匹配，请从头播放。');
-      if (action?.step === player.playbackStep) {
-        if (action.kind === 'choice') {
-          if (!player.choices[action.index] || player.choices[action.index].disabled)
-            throw Error('已保存的剧情选项已不可用，请从头播放。');
-          player.choose(action.index);
-        } else if (action.kind === 'skip') {
-          if (!player.skip()) throw Error('无法恢复已保存的跳过位置。');
-        } else if (!player.receiveHostSignal(action.command, action.signal))
-          throw Error('无法恢复已保存的剧情衔接。');
-        actionIndex++;
-        continue;
-      }
-      if (player.choices.length || player.hostCommands.waiting) {
-        if (exact) throw Error('此位置缺少分支记录，请从头播放。');
-        return finish(
-          player.choices.length
-            ? '已停在未记录的剧情选项，请选择后继续阅读。'
-            : '已停在剧情衔接处，请确认后继续阅读。',
-        );
-      }
-      if (player.canBookmark) player.advance();
-    } while (performance.now() < batchEnd && !player.finished);
-    shown = Math.max(
-      shown,
-      Math.min(
-        0.99,
-        exact
-          ? player.playbackStep / Math.max(1, saved!.step)
-          : player.scheduler.index / Math.max(1, targetIndex),
-      ),
-    );
-    onProgress(shown);
-    draw();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      if (performance.now() > deadline || iterations > 120000)
+        throw Error('恢复进度耗时过长，可返回剧情库后从头播放。');
+      const batchEnd = performance.now() + 10;
+      do {
+        signal.throwIfAborted();
+        iterations++;
+        player.tick(0.1);
+        if (player.error) throw Error(player.error);
+        if (
+          exact &&
+          player.playbackStep === saved!.step &&
+          player.scheduler.index === saved!.index &&
+          (player.canBookmark || target.review)
+        )
+          return finish();
+        if (!exact && player.canBookmark && (player.scheduler.index >= targetIndex || player.atEnd))
+          return finish();
+        if (exact && player.playbackStep > saved!.step)
+          throw Error('无法匹配已保存的剧情位置，请从头播放。');
+        const action = actions[actionIndex];
+        if (action && action.step < player.playbackStep)
+          throw Error('已保存的分支记录与剧情不匹配，请从头播放。');
+        if (action?.step === player.playbackStep) {
+          if (action.kind === 'choice') {
+            if (!player.choices[action.index] || player.choices[action.index].disabled)
+              throw Error('已保存的剧情选项已不可用，请从头播放。');
+            player.choose(action.index);
+          } else if (action.kind === 'skip') {
+            if (!player.skip()) throw Error('无法恢复已保存的跳过位置。');
+          } else if (!player.receiveHostSignal(action.command, action.signal))
+            throw Error('无法恢复已保存的剧情衔接。');
+          actionIndex++;
+          continue;
+        }
+        if (player.choices.length || player.hostCommands.waiting) {
+          if (exact) throw Error('此位置缺少分支记录，请从头播放。');
+          return finish(
+            player.choices.length
+              ? '已停在未记录的剧情选项，请选择后继续阅读。'
+              : '已停在剧情衔接处，请确认后继续阅读。',
+          );
+        }
+        if (player.canBookmark) player.advance();
+      } while (performance.now() < batchEnd && !player.finished);
+      shown = Math.max(
+        shown,
+        Math.min(
+          0.99,
+          exact
+            ? player.playbackStep / Math.max(1, saved!.step)
+            : player.scheduler.index / Math.max(1, targetIndex),
+        ),
+      );
+      onProgress(shown);
+      draw();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+    if (exact) throw Error('剧情已结束，无法匹配保存的位置，请从头播放。');
+    return finish();
+  } finally {
+    player.scheduler.yieldAfterCommand = previousYield;
   }
-  if (exact) throw Error('剧情已结束，无法匹配保存的位置，请从头播放。');
-  return finish();
 }

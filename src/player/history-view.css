@@ -95,3 +95,7 @@ dialog.native-history::backdrop {
   width: 100%;
   background: url('/media/native-playback-scrollbar.png') 0 0/100% 100%;
 }
+.review-jump {
+  cursor: pointer;
+  outline: none;
+}

@@ -9,6 +9,7 @@ import { readingMarkup, readingFont } from '../core/sticker-color';
 import { playerMediaUrl } from './package-source';
 import './history-view.css';
 import { NativeSelectableSurface } from './native-selectable';
+import { bindReviewJump } from './review-jump';
 type Cell = StoryPlayer['history'][number];
 const logical = (n: number) => `${n / 12.8}cqw`;
 function place(el: HTMLElement, rect: readonly number[]) {
@@ -57,12 +58,14 @@ export class HistoryView {
     dragged: boolean;
   } | null = null;
   private resume = false;
+  private suppressClick = false;
   private selectable: NativeSelectableSurface;
   constructor(
     private dialog: HTMLDialogElement,
     private viewport: HTMLElement,
     private list: HTMLElement,
     back: HTMLElement,
+    private jump?: (cell: Cell) => void,
   ) {
     dialog.classList.add('native-history');
     dialog.setAttribute('aria-label', '剧情回顾');
@@ -92,9 +95,12 @@ export class HistoryView {
     dialog.append(this.track);
     this.selectable = new NativeSelectableSurface(
       dialog,
-      '#close-log,.history-track',
+      '#close-log,.history-track,.review-jump',
       () => dialog.open,
-      (el) => [{ element: el === back ? icon : this.thumb }],
+      (el) =>
+        el.classList.contains('review-jump')
+          ? [...el.querySelectorAll('canvas')].map((element) => ({ element }))
+          : [{ element: el === back ? icon : this.thumb }],
     );
     back.onclick = () => this.dismiss();
     dialog.addEventListener('cancel', (e) => {
@@ -112,6 +118,7 @@ export class HistoryView {
     // PlaybackPanel.OnPointerClick is a no-op. Background clicks never dismiss.
     list.addEventListener('pointerdown', (e) => {
       if (e.button === 0) {
+        this.suppressClick = false;
         this.scroll.velocity = 0;
         this.pointer = { id: e.pointerId, y: e.clientY, start: e.clientY, dragged: false };
       }
@@ -133,6 +140,7 @@ export class HistoryView {
     });
     const end = (e: PointerEvent) => {
       if (this.pointer?.id !== e.pointerId) return;
+      this.suppressClick = this.pointer.dragged || e.type === 'pointercancel';
       this.scroll.end();
       this.pointer = null;
       if (list.hasPointerCapture(e.pointerId)) list.releasePointerCapture(e.pointerId);
@@ -405,6 +413,18 @@ export class HistoryView {
         marker('native-playback-chosen.png', L.chosen[cell.decisionIndex], '已选择');
     }
     row.append(name, text);
+    if (this.jump && this.player?.reviewPosition(cell))
+      bindReviewJump(
+        row,
+        cell.text,
+        () => {
+          this.resume = false;
+          this.fade?.cancel();
+          this.dialog.close();
+          this.jump?.(cell);
+        },
+        () => this.suppressClick,
+      );
     return row;
   }
 }
