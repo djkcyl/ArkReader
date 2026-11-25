@@ -144,6 +144,17 @@ body.desktop-app .brand.app-titlebar {
   }
 }
 @media (max-width: 480px) {
+  #app > .brand.app-titlebar {
+    gap: 8px;
+    padding-left: 12px;
+  }
+  body.desktop-app .brand.app-titlebar a {
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .app-titlebar .window-controls button {
+    width: 32px;
+  }
   .app-titlebar .desktop-badge {
     display: none;
   }

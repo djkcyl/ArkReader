@@ -10,6 +10,7 @@ body {
   height: 100dvh;
   min-width: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 64px minmax(0, 1fr);
   overflow: hidden;
 }
@@ -17,6 +18,7 @@ body {
 body.desktop-app .brand,
 body.desktop-app:not(.playing) .brand {
   grid-row: 1;
+  min-width: 0;
   position: relative;
   top: auto;
   min-height: 0;
@@ -328,7 +330,7 @@ body.desktop-app #intro.intro {
 #intro .primary span {
   margin-left: 20px;
 }
-#intro #favorite-story {
+body:not(.app-native-ui) #intro #favorite-story {
   padding: 10px 12px;
   border: 1px solid #b5c7cf;
   border-radius: 4px;
@@ -336,7 +338,7 @@ body.desktop-app #intro.intro {
   color: #496774;
   font-size: 12px;
 }
-#intro #favorite-story[aria-pressed='true'] {
+body:not(.app-native-ui) #intro #favorite-story[aria-pressed='true'] {
   background: #d8e9e8;
   border-color: #8db5b0;
   color: #2d666a;

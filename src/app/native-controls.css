@@ -6,16 +6,17 @@ body.app-native-ui :is(#app, #home-music-panel) button.ark-action {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 36px;
-  min-width: 98px;
-  padding: 8px 19px;
+  height: var(--ark-control-height, 38px);
+  min-height: var(--ark-control-height, 38px);
+  min-width: var(--ark-control-min, 96px);
+  padding: 0 var(--ark-control-padding, 16px);
   border: 0;
   border-radius: 0;
   background: transparent !important;
   color: #fff;
   box-shadow: none;
   font:
-    16px/1.25 ArkNative,
+    var(--ark-control-font, 14px)/1.25 ArkNative,
     'Microsoft YaHei',
     sans-serif;
   white-space: nowrap;
@@ -28,11 +29,11 @@ body.app-native-ui :is(#app, #home-music-panel) button.ark-action::before {
   content: '';
   position: absolute;
   z-index: -1;
-  left: -8.958%;
-  top: 0.888%;
-  width: 117.914%;
-  height: 167.7%;
-  background: url('/media/native-setting-action.png') 0 0 / 100% 100% no-repeat;
+  left: var(--ark-action-left);
+  top: var(--ark-action-top);
+  width: var(--ark-action-width);
+  height: var(--ark-action-height);
+  background: var(--ark-action-image) 0 0 / 100% 100% no-repeat;
   pointer-events: none;
 }
 @media (hover: hover) and (pointer: fine) {
@@ -66,28 +67,36 @@ body.app-native-ui :is(#app, #home-music-panel) button.ark-action:focus-visible 
 body.app-native-ui :is(#app, #home-music-panel) button.ark-primary {
   min-width: 154px;
 }
-body.app-native-ui :is(#app, #home-music-panel) button.ark-primary::before {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url('/media/native-judge-confirm-bg.png');
+body.app-native-ui :is(#app, #home-music-panel) button.ark-primary::before,
+body.app-native-ui #app button#favorite-story[aria-pressed='true']::before {
+  left: var(--ark-primary-left);
+  top: var(--ark-primary-top);
+  width: var(--ark-primary-width);
+  height: var(--ark-primary-height);
+  background-image: var(--ark-primary-image);
 }
 body.app-native-ui :is(#app, #home-music-panel) button.ark-tab {
-  min-width: 126px;
-  height: 40px;
-  padding: 8px 16px;
+  width: 132px;
+  min-width: 132px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 12px;
 }
 body.app-native-ui :is(#app, #home-music-panel) button.ark-tab::before {
-  left: -3%;
-  top: -1%;
-  width: 106%;
-  height: 160%;
-  background-image: url('/media/native-setting-tab-off.png');
+  left: var(--ark-tab-off-left);
+  top: var(--ark-tab-off-top);
+  width: var(--ark-tab-off-width);
+  height: var(--ark-tab-off-height);
+  background-image: var(--ark-tab-off-image);
 }
 body.app-native-ui
   :is(#app, #home-music-panel)
   button.ark-tab:is([aria-selected='true'], [aria-pressed='true'])::before {
-  background-image: url('/media/native-setting-tab-on.png');
+  left: var(--ark-tab-on-left);
+  top: var(--ark-tab-on-top);
+  width: var(--ark-tab-on-width);
+  height: var(--ark-tab-on-height);
+  background-image: var(--ark-tab-on-image);
 }
 body.app-native-ui :is(#app, #home-music-panel) button.ark-tab::after {
   display: none;
@@ -95,7 +104,7 @@ body.app-native-ui :is(#app, #home-music-panel) button.ark-tab::after {
 body.app-native-ui :is(#app, #home-music-panel) button.ark-back {
   width: 148px;
   min-width: 148px;
-  padding: 8px 8px 8px 50px;
+  padding: 0 8px 0 50px;
   font-size: 14px;
 }
 body.app-native-ui #app button.ark-back#catalog-back {
@@ -104,9 +113,10 @@ body.app-native-ui #app button.ark-back#catalog-back {
   padding-left: 32px;
 }
 body.app-native-ui :is(#app, #home-music-panel) button.ark-back::before {
-  inset: -3px -6px auto;
-  width: calc(100% + 12px);
-  height: 54px;
+  left: var(--ark-back-left);
+  top: var(--ark-back-top);
+  width: var(--ark-back-width);
+  height: var(--ark-back-height);
   background-image: var(--ark-back);
 }
 body.app-native-ui :is(#app, #home-music-panel) button.ark-back svg {
@@ -353,15 +363,15 @@ body.app-native-ui .filter-chip:focus-within {
   outline-offset: 2px;
 }
 @media (max-width: 700px) {
-  body.app-native-ui :is(#app, #home-music-panel) button.ark-action {
-    min-width: 78px;
-    padding: 8px 13px;
-    font-size: 14px;
+  body.app-native-ui {
+    --ark-control-min: 78px;
+    --ark-control-padding: 13px;
   }
   body.app-native-ui :is(#app, #home-music-panel) button.ark-tab {
-    min-width: 84px;
+    width: 112px;
+    min-width: 112px;
     font-size: 13px;
-    padding: 7px 9px;
+    padding: 0 9px;
   }
   body.app-native-ui :is(#app, #home-music-panel) button.ark-back {
     width: 124px;

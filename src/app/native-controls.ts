@@ -32,6 +32,42 @@ function rect(node: HTMLElement, values: number[], unit = 'px'): void {
   );
 }
 
+/** Keep the visible button face aligned with its hit area. The authored sprites
+ * include different transparent gutters and shadows for each selected state. */
+function buttonFace(role: string, image: HTMLImageElement): void {
+  const canvas = document.createElement('canvas');
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('无法读取原版控件尺寸');
+  context.drawImage(image, 0, 0);
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  let peak = 0;
+  for (let i = 3; i < pixels.length; i += 4) peak = Math.max(peak, pixels[i]);
+  let left = canvas.width,
+    top = canvas.height,
+    right = -1,
+    bottom = -1;
+  for (let y = 0; y < canvas.height; y++)
+    for (let x = 0; x < canvas.width; x++) {
+      if (!peak || pixels[(y * canvas.width + x) * 4 + 3] < peak * 0.98) continue;
+      left = Math.min(left, x);
+      top = Math.min(top, y);
+      right = Math.max(right, x);
+      bottom = Math.max(bottom, y);
+    }
+  if (right < left || bottom < top) throw new Error('原版控件贴图为空');
+  const width = right - left + 1,
+    height = bottom - top + 1;
+  for (const [name, value] of Object.entries({
+    left: (-left / width) * 100,
+    top: (-top / height) * 100,
+    width: (canvas.width / width) * 100,
+    height: (canvas.height / height) * 100,
+  }))
+    document.documentElement.style.setProperty(`--ark-${role}-${name}`, `${value}%`);
+}
+
 class AppRange implements Control {
   readonly root = span('ark-range');
   private track: HTMLElement;
@@ -463,14 +499,31 @@ export async function mountApplicationControls(): Promise<void> {
     img.src = playerMediaUrl(g.sprite);
     await img.decode();
     document.documentElement.style.setProperty(`--ark-${role}`, `url("${img.src}")`);
+    if (role === 'back') buttonFace(role, img);
     if (g.border.some((n) => n > 0))
       document.documentElement.style.setProperty(
         `--ark-${role}-slice`,
         [g.border[3], g.border[2], g.border[1], g.border[0]].join(' '),
       );
   });
+  const buttonImages = Object.entries({
+    action: profile.settings.action.background.sprite!,
+    'tab-off': profile.settings.tabs.game.off.background.sprite!,
+    'tab-on': profile.settings.tabs.game.on.background.sprite!,
+    primary: profile.dialogs.judge.controls.confirm.background.sprite!,
+  }).map(async ([role, file]) => {
+    const image = new Image();
+    image.src = playerMediaUrl(file);
+    await image.decode();
+    buttonFace(role, image);
+    document.documentElement.style.setProperty(`--ark-${role}-image`, `url("${image.src}")`);
+  });
   const font = new FontFace('ArkNative', `url("${playerMediaUrl('native-dialog.ttf')}")`);
-  await Promise.all([...images, font.load().then((loaded) => document.fonts.add(loaded))]);
+  await Promise.all([
+    ...images,
+    ...buttonImages,
+    font.load().then((loaded) => document.fonts.add(loaded)),
+  ]);
   const known = new Set<Control>();
   const scan = () => {
     for (const control of known)
