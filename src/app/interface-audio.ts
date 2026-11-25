@@ -167,14 +167,14 @@ function targetFor(target: EventTarget | null): Target | undefined {
     role = 'shell.cancel';
   else if (
     element.matches('input[type="checkbox"],input[type="radio"]') &&
-    element.closest('#story-cache-view,#home-music-panel')
+    element.closest('#story-cache-view,#home-music-panel,#operator-filter-dialog')
   )
     role = 'shell.checkbox';
   else if (element.matches('[role="tab"],[data-page]')) role = 'shell.tab';
   else if (
     element.matches('button') &&
     element.closest(
-      '#intro,.desktop-page,.desktop-rail,#app-loading,#home-music-panel,#home-music-button',
+      '#intro,.desktop-page,.desktop-rail,#app-loading,#home-music-panel,#home-music-button,#operator-filter-dialog,.ark-select-options',
     )
   )
     role = 'shell.default';

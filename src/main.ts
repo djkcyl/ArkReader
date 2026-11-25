@@ -56,6 +56,7 @@ import { RestoringAudio } from './player/restoring-audio';
 import { adoptStartupMusic } from './app/home-music-boot';
 import { invoke } from '@tauri-apps/api/core';
 import './app/mobile.css';
+import { mountApplicationControls, syncApplicationControl } from './app/native-controls';
 
 if (isNative && !document.getElementById('startup-root')) {
   await invoke('app_retry');
@@ -844,6 +845,7 @@ function sync(): void {
   saveReadingProgress();
   if (!scrubbing) {
     $<HTMLInputElement>('playback-seek').value = String(player.playbackPercent);
+    syncApplicationControl($('playback-seek'));
     $('playback-percent').textContent = `${player.playbackPercent}%`;
   }
   if (storyHost?.homeRequested && (player.atEnd || player.finished)) {
@@ -1453,5 +1455,6 @@ if (isNative)
     suspendForAudio,
     previewUi: () => interfaceAudio.play('shell.default'),
   });
+if (isNative) await mountApplicationControls();
 document.documentElement.dataset.arkreaderUi = 'ready';
 document.dispatchEvent(new Event('arkreader-ui-ready'));

@@ -376,6 +376,7 @@ impl Engine {
             "arts/avg_shader_profile.ab".into(),
             ui::widgets::SETTINGS.into(),
         ]);
+        bundles.extend(ui::application::BUNDLES.iter().map(|s| s.to_string()));
         bundles.insert(
             index
                 .routes
@@ -419,6 +420,9 @@ impl Engine {
             ui::widgets::prepare(source, client, self.store.clone(), common.clone())
                 .await?
                 .into();
+        profile["applicationWidgets"] = ui::application::prepare(index, source, self.store.clone())
+            .await?
+            .into();
         job.phase(Phase::Ui, "准备光标与点击反馈…", 2, 6, "PRTS 光标");
         profile["cursor"] = ui::cursor::prepare(index, source, self.store.clone())
             .await?
@@ -545,7 +549,8 @@ impl Engine {
             "job":job,
             "baseResources":{"ready":self.is_ready(),"bundleCount":current.map_or(0,|v|v.base.bundles.len()),"coverCount":current.map_or(0,|v|v.base.covers.len())},
             "setupPaused":self.data.join("setup-paused").exists(),
-            "startupSkinReady":self.store.directory.join("native-judge-dialog-bg.png").is_file(),
+            "startupSkinReady":self.store.directory.join("native-judge-dialog-bg.png").is_file()
+                && self.store.directory.join("native-setting-action.png").is_file(),
             "cursorReady":self.store.directory.join("native-cursor.json").is_file(),
             "resourceUpdate":self.update.lock().unwrap().clone()
         }))

@@ -5,6 +5,7 @@ import './home-music.css';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { isDesktop } from './platform';
 import { audioLevels } from './audio-levels';
+import { syncApplicationControl } from './native-controls';
 
 import {
   musicSettings,
@@ -319,6 +320,8 @@ export class HomeMusic {
     this.button.hidden = this.storyActive;
     this.el<HTMLInputElement>('home-music-enabled').checked = this.enabled;
     this.el<HTMLInputElement>('home-music-volume').value = String(Math.round(this.volume * 100));
+    syncApplicationControl(this.el('home-music-volume'));
+    syncApplicationControl(this.el('home-music-enabled'));
     this.el('home-music-volume-value').textContent = Math.round(this.volume * 100) + '%';
     const name = this.catalog?.tracks.find((t) => t.id === this.selected)?.name;
     this.el('home-music-status').textContent =

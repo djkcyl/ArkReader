@@ -1,5 +1,6 @@
 import { audioLevels, type AudioChannel } from './audio-levels';
 import './audio-page.css';
+import { syncApplicationControl } from './native-controls';
 
 export class AudioPage {
   readonly root = document.createElement('section');
@@ -73,6 +74,7 @@ export class AudioPage {
       input.value = String(value);
       output.value = `${value}%`;
       input.setAttribute('aria-valuetext', value === 0 ? '静音' : `${value}%`);
+      syncApplicationControl(input);
     }
   }
 }

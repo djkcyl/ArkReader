@@ -1,3 +1,4 @@
+pub mod application;
 pub mod audio;
 pub mod cursor;
 mod sprites;

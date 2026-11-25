@@ -387,3 +387,37 @@ body.startup-page.native-skin::before {
 body.startup-page::before {
   transition: opacity 0.25s;
 }
+body.startup-page.native-skin .startup-actions button {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+  border: 0;
+  color: white;
+  font:
+    16px/1.25 ArkBoot,
+    'Microsoft YaHei',
+    sans-serif;
+}
+body.startup-page.native-skin .startup-actions button::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: -8.958%;
+  top: 0.888%;
+  width: 117.914%;
+  height: 167.7%;
+  background: url('/media/native-setting-action.png') 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
+}
+body.startup-page.native-skin .startup-actions button:hover::before {
+  filter: brightness(0.960784316);
+}
+body.startup-page.native-skin .startup-actions button:active::before {
+  filter: brightness(0.784313738);
+}
+body.startup-page.native-skin .startup-actions #retry::before {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/media/native-judge-confirm-bg.png');
+}
