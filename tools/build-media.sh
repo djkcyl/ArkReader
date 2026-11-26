@@ -3,6 +3,7 @@ set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 target="${1:?Specify windows-x64, linux-x64, macos-arm64 or android-ABI}"
+if test "$target" = windows-x64; then root="$(cygpath -u "$root")"; fi
 version=9.0.2
 checksum=8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e
 cache="$root/artifacts/media-build"
