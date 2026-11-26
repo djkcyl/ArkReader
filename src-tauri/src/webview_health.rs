@@ -76,7 +76,7 @@ fn create_at(app: &tauri::AppHandle, geometry: Option<Geometry>) -> tauri::Resul
     let state = app.state::<AppState>();
     let generation = state.health.generation.fetch_add(1, Ordering::SeqCst) + 1;
     *state.health.heartbeat.lock().unwrap() = Instant::now();
-    let hidden = std::env::var_os("ARKREADER_VERIFY_HIDDEN").is_some();
+    let hidden = std::env::var("ARKREADER_VERIFY_HIDDEN").is_ok_and(|value| value != "0");
     let builder = WebviewWindowBuilder::new(
         app,
         "main",

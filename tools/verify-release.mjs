@@ -17,7 +17,7 @@ try {
   const env = {
     ...process.env,
     ARKREADER_DATA: path.join(directory, 'library'),
-    ARKREADER_VERIFY_HIDDEN: '1',
+    ARKREADER_VERIFY_HIDDEN: process.env.CI === 'true' ? '0' : '1',
     ARKREADER_VERIFY_EXIT_READY: '1',
     ARKREADER_VERIFY_SCRIPT: path.join(root, 'tools/verify-native-media.js'),
     WEBVIEW2_USER_DATA_FOLDER: path.join(directory, 'webview'),

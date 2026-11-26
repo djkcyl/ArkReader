@@ -72,6 +72,7 @@ jobs:
         if: runner.os == 'Linux'
         env:
           WEBKIT_DISABLE_DMABUF_RENDERER: '1'
+          GST_DEBUG: '2'
         run: |
           pulseaudio --start --exit-idle-time=-1
           pactl load-module module-null-sink sink_name=arkreader_verify
