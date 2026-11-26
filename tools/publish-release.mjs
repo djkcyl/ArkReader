@@ -113,5 +113,7 @@ run('gh', [
   '--clobber',
 ]);
 
+run(process.execPath, ['tools/publish-web.mjs', archive, sourceCommit]);
+
 run('gh', ['release', 'edit', tag, '--draft=false', '--latest']);
 console.log(`Published ${tag} with the verified static Web ZIP.`);

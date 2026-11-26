@@ -17,14 +17,21 @@ export function browserNetwork(module) {
         resume: null,
       };
       requests.set(id, request);
-      const timer = setTimeout(() => controller.abort(Error('资源下载超时。')), timeout);
+      const abort = () => controller.abort(Error('资源下载超时。'));
+      const deadline = timeout ? setTimeout(abort, timeout) : undefined;
+      let idle;
+      const watch = () => {
+        if (!timeout) idle = setTimeout(abort, 30_000);
+      };
       void (async () => {
         try {
+          watch();
           const response = await fetch(url, {
             signal: controller.signal,
             credentials: 'omit',
             cache: 'no-store',
           });
+          clearTimeout(idle);
           request.meta = encode({ status: response.status });
           const reader = response.body?.getReader();
           if (reader)
@@ -34,7 +41,9 @@ export function browserNetwork(module) {
                   request.resume = resolve;
                 });
               if (controller.signal.aborted) throw controller.signal.reason;
+              watch();
               const { done, value } = await reader.read();
+              clearTimeout(idle);
               if (done) break;
               request.chunks.push(value);
               request.size += value.byteLength;
@@ -44,7 +53,8 @@ export function browserNetwork(module) {
           request.meta ??= encode({ error: request.error });
         } finally {
           request.done = true;
-          clearTimeout(timer);
+          clearTimeout(deadline);
+          clearTimeout(idle);
         }
       })();
       return id;

@@ -113,18 +113,19 @@ Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需
 
 Release 中的 **Web ZIP** 是完整静态站点。解压后将文件原样上传到支持 HTTPS 的静态托管服务即可，不需要后端或转发服务器。也可以部署到网站子目录。
 
-腾讯云 Makers（原 EdgeOne Pages）连接本仓库后，选择 `main` 分支，并手动填写以下构建参数：
+腾讯云 Makers（原 EdgeOne Pages）连接本仓库后，选择 `web` 分支，并手动填写以下构建参数：
 
-| 项目     | 值                         |
-| -------- | -------------------------- |
-| 框架     | Other                      |
-| 根目录   | `./`                       |
-| 安装命令 | `npm ci`                   |
-| 构建命令 | `npm run web:build:hosted` |
-| 输出目录 | `web-dist`                 |
-| Node.js  | `24.11.0`                  |
+| 项目     | 值              |
+| -------- | --------------- |
+| 框架     | Other           |
+| 根目录   | `./`            |
+| 安装命令 | `npm ci`        |
+| 构建命令 | `npm run build` |
+| 输出目录 | `dist`          |
 
-构建脚本会准备 Rust 和 Emscripten，编译浏览器资源引擎及精简影片组件。其他 Linux 静态构建平台也可使用同一命令，需要提供 Git、Python 3、C 编译器和 GNU Make。部署后的站点不需要这些工具。
+`web` 分支由 Actions 在发行验证通过后更新，只保留一个提交。分支内已包含完整静态站点，构建命令只用 Node.js 将文件复制到 `dist`。开启该分支的自动部署后，新版本发布即可自动更新网站。
+
+如需从源码编译 Web，使用 `main` 分支和 `npm run web:build:hosted`。这需要完整 Linux 构建环境，包括 Git、Python 3、C 编译器和 GNU Make；脚本会准备 Rust 与 Emscripten。Makers 的受限构建环境请使用上面的 `web` 分支方案。
 
 ## 源码构建
 

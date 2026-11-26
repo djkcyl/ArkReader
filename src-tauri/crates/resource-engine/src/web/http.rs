@@ -23,7 +23,7 @@ impl Drop for Ticket {
 pub struct Client;
 pub struct Request {
     url: Url,
-    timeout: Duration,
+    timeout: Option<Duration>,
 }
 pub struct Response {
     ticket: Arc<Ticket>,
@@ -34,15 +34,12 @@ impl Client {
         Self
     }
     pub fn get(&self, url: Url) -> Request {
-        Request {
-            url,
-            timeout: Duration::from_secs(90),
-        }
+        Request { url, timeout: None }
     }
 }
 impl Request {
     pub fn timeout(mut self, timeout: Duration) -> Self {
-        self.timeout = timeout;
+        self.timeout = Some(timeout);
         self
     }
     pub async fn send(self) -> Result<Response> {
@@ -50,7 +47,9 @@ impl Request {
         let ticket = Arc::new(Ticket(unsafe {
             ark_net_start(
                 url.as_ptr().cast(),
-                self.timeout.as_millis().min(u128::from(u32::MAX)) as u32,
+                self.timeout.map_or(0, |timeout| {
+                    timeout.as_millis().min(u128::from(u32::MAX)) as u32
+                }),
             )
         }));
         loop {

@@ -97,6 +97,7 @@ desktop.ini
 !/tools/resource_refs.ts
 !/tools/release-assets.mjs
 !/tools/publish-release.mjs
+!/tools/publish-web.mjs
 !/tools/verify-release.mjs
 !/tools/verify-web.mjs
 !/tools/verify-native-media.js

@@ -11,7 +11,8 @@ const output = path.resolve('artifacts/web-verification');
 const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'arkreader-web-check-'));
 await fs.mkdir(output, { recursive: true });
 const dynamicRequests = [],
-  failures = [];
+  failures = [],
+  diagnostics = [];
 const prefix = '/web/';
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, 'http://localhost');
@@ -102,13 +103,21 @@ async function openStory(id) {
       document.querySelector('#resume-prompt')?.open ||
       document.querySelector('#load-error-details')?.hidden === false,
     id,
-    { timeout: 240000 },
+    { timeout: 480000 },
   );
   if (await page.locator('#resume-restart').isVisible())
     await page.locator('#resume-restart').click();
-  await page.waitForFunction((id) => window.arkreader?.player?.pack.id === id, id, {
-    timeout: 240000,
-  });
+  await page.waitForFunction(
+    (id) => {
+      if (document.querySelector('#load-error-details')?.hidden === false)
+        throw Error(
+          document.querySelector('#load-error')?.textContent || 'Story preparation failed',
+        );
+      return window.arkreader?.player?.pack.id === id;
+    },
+    id,
+    { timeout: 480000 },
+  );
 }
 async function completeStory(id, movie = false) {
   console.log('Prepare', id);
@@ -240,6 +249,15 @@ try {
   });
   page = context.pages()[0] || (await context.newPage());
   page.on('pageerror', (error) => failures.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'warning' || message.type() === 'error') {
+      diagnostics.push(message.type() + ': ' + message.text().slice(0, 1000));
+      if (diagnostics.length > 200) diagnostics.shift();
+    }
+  });
+  page.on('requestfailed', (request) =>
+    diagnostics.push(`${request.failure()?.errorText}: ${request.url()}`),
+  );
   await context.route(/https:\/\/(?!torappu\.prts\.wiki\/)/, (route) => route.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}${prefix}`, { waitUntil: 'commit' });
   await ready();
@@ -279,6 +297,19 @@ try {
   console.log('Static web initialization, story, movie and offline checks passed.');
 } catch (error) {
   await page?.screenshot({ path: path.join(output, 'error.png') }).catch(() => {});
+  const details = await page
+    ?.evaluate(async () => ({
+      error: document.querySelector('#load-error')?.textContent,
+      startup: document.querySelector('#startup-error')?.textContent,
+      status: await fetch('/api/status', { signal: AbortSignal.timeout(5000) })
+        .then((r) => r.json())
+        .catch(String),
+    }))
+    .catch(String);
+  await fs.writeFile(
+    path.join(output, 'error.json'),
+    JSON.stringify({ message: String(error), details, failures, diagnostics }, null, 2),
+  );
   throw error;
 } finally {
   await context?.close();

@@ -63,6 +63,11 @@ jobs:
           path: artifacts/web-verification/
           retention-days: 7
       - run: node tools/release-assets.mjs --web
+      - name: Verify the deployment branch build
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          node tools/publish-web.mjs "release/ArkReader-$version-web.zip" "$(git rev-parse HEAD)" --verify-only
+          npm ci --ignore-scripts --prefix artifacts/web-deploy-check
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-web

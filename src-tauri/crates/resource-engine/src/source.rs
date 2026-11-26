@@ -129,7 +129,7 @@ pub(crate) fn client() -> Result<Client> {
     Ok(Client::builder()
         .user_agent(concat!("ArkReader/", env!("CARGO_PKG_VERSION")))
         .connect_timeout(Duration::from_secs(15))
-        .timeout(Duration::from_secs(90))
+        .read_timeout(Duration::from_secs(30))
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
             if attempt.previous().len() < 6 && attempt.url().scheme() == "https" {
                 attempt.follow()
