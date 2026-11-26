@@ -20,7 +20,11 @@ export function browserNetwork(module) {
       const timer = setTimeout(() => controller.abort(Error('资源下载超时。')), timeout);
       void (async () => {
         try {
-          const response = await fetch(url, { signal: controller.signal, credentials: 'omit' });
+          const response = await fetch(url, {
+            signal: controller.signal,
+            credentials: 'omit',
+            cache: 'no-store',
+          });
           request.meta = encode({ status: response.status });
           const reader = response.body?.getReader();
           if (reader)
