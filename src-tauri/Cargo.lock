@@ -55,7 +55,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "arkreader-desktop"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "arkreader-resource-engine",
  "axum",
@@ -74,7 +74,7 @@ dependencies = [
 
 [[package]]
 name = "arkreader-resource-engine"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "anyhow",
  "axum",
