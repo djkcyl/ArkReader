@@ -6,6 +6,10 @@ on:
         description: Existing tag or commit to build (defaults to the triggering ref)
         type: string
         default: ''
+      reuse_run:
+        description: Reuse verified packages from this run; source_ref must match
+        type: string
+        default: ''
       publish:
         description: Create or update a draft release after all builds pass
         type: boolean
@@ -21,11 +25,13 @@ concurrency:
 jobs:
   desktop:
     name: Desktop
+    if: ${{ !inputs.reuse_run }}
     uses: ./.github/workflows/desktop.yml
     with:
       source_ref: ${{ inputs.source_ref || github.ref }}
   mobile:
     name: Mobile
+    if: ${{ !inputs.reuse_run }}
     uses: ./.github/workflows/mobile.yml
     with:
       source_ref: ${{ inputs.source_ref || github.ref }}
@@ -33,19 +39,31 @@ jobs:
   draft-release:
     name: Release draft
     needs: [desktop, mobile]
-    if: startsWith(github.ref, 'refs/tags/') || inputs.publish
+    if: ${{ !cancelled() && (startsWith(github.ref, 'refs/tags/') || inputs.publish) && (inputs.reuse_run || (needs.desktop.result == 'success' && needs.mobile.result == 'success')) }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_ref || github.ref }}
+      - name: Check reused build results
+        if: ${{ inputs.reuse_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN: ${{ inputs.reuse_run }}
+        run: |
+          [[ "$BUILD_RUN" =~ ^[0-9]+$ ]]
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN/jobs" --jq '.jobs[]' |
+            jq -s -e '[.[] | select(.name == "Desktop / Windows" or .name == "Desktop / macOS" or .name == "Desktop / Linux" or .name == "Mobile / Android")] | length == 4 and all(.conclusion == "success")'
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: release-*
           merge-multiple: true
           path: release
+          run-id: ${{ inputs.reuse_run || github.run_id }}
+          github-token: ${{ github.token }}
       - name: Verify and attach all platforms to a draft
         env:
           GH_TOKEN: ${{ github.token }}
@@ -57,6 +75,8 @@ jobs:
           version=$(node -p "require('./package.json').version")
           tag="v$version"
           source_commit=$(git rev-parse HEAD)
+          git fetch --no-tags origin "refs/tags/$tag"
+          test "$(git rev-parse 'FETCH_HEAD^{commit}')" = "$source_commit"
           test "$(wc -l < release/SHA256SUMS.txt)" -eq 7
           test -f "release/ArkReader-$version-android-arm64.apk"
           if gh release view "$tag" --json isDraft >/tmp/arkreader-release.json 2>/dev/null; then
@@ -65,7 +85,6 @@ jobs:
               exit 0
             fi
           else
-            gh release create "$tag" --draft --target "$source_commit" --title "ArkReader $version" --notes-file "docs/releases/$version.md"
+            gh release create "$tag" --verify-tag --draft --title "ArkReader $version" --notes-file "docs/releases/$version.md"
           fi
-          gh release edit "$tag" --target "$source_commit" --notes-file "docs/releases/$version.md"
           gh release upload "$tag" release/ArkReader-* release/SHA256SUMS.txt --clobber

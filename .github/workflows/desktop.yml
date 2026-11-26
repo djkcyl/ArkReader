@@ -39,10 +39,6 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          workspaces: src-tauri
-          cache-on-failure: true
       - name: Windows media build tools
         if: runner.os == 'Windows'
         id: msys2
@@ -56,8 +52,36 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2 libasound2-dev xvfb pulseaudio gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav
       - run: rustup update stable --no-self-update && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: src-tauri
+          cache-on-failure: true
       - run: npm ci
       - run: npm run format:check
+      - name: Identify native media toolchain
+        id: media_toolchain
+        env:
+          MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { appendFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import path from 'node:path';
+          const compiler = process.platform === 'win32' ? path.join(process.env.MSYS2_ROOT, 'ucrt64/bin/gcc.exe') : 'cc';
+          const key = createHash('sha256').update(execFileSync(compiler, ['--version'], { windowsHide: true })).digest('hex');
+          appendFileSync(process.env.GITHUB_OUTPUT, 'key=' + key + '\n');
+          NODE
+      - name: Cache native media binaries
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          key: media-${{ matrix.id }}-${{ env.ImageVersion }}-${{ hashFiles('tools/build-media.sh') }}-${{ steps.media_toolchain.outputs.key }}
+          path: |
+            artifacts/media-build/${{ matrix.id }}-*/ffmpeg
+            artifacts/media-build/${{ matrix.id }}-*/ffmpeg.exe
+            artifacts/media-build/${{ matrix.id }}-*/complete.sha256
+            artifacts/media-build/${{ matrix.id }}-*/FFmpeg-LICENSE.txt
+            artifacts/media-build/${{ matrix.id }}-*/FFmpeg-SOURCE.txt
       - name: Build installers and no-install packages
         env:
           MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
