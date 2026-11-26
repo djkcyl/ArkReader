@@ -390,7 +390,7 @@ mod tests {
                 .compression_method(zip::CompressionMethod::Deflated),
         )?;
         zip.write_all(b"first resource part")?;
-        zip.set_comment("APK directory test");
+        zip.set_comment("APK directory test")?;
         Ok(zip.finish()?.into_inner())
     }
 

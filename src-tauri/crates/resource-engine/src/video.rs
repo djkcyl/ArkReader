@@ -147,70 +147,6 @@ pub fn demux(path: &Path, video: &Path, audio: &Path, cancel: &CancellationToken
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn chunk(tag: &[u8; 4], data: &[u8], kind: u8) -> Vec<u8> {
-        let padding = (32 - data.len() % 32) % 32;
-        let mut bytes = vec![0; 32];
-        bytes[..4].copy_from_slice(tag);
-        bytes[4..8].copy_from_slice(&((24 + data.len() + padding) as u32).to_be_bytes());
-        bytes[9] = 24;
-        bytes[10..12].copy_from_slice(&(padding as u16).to_be_bytes());
-        bytes[15] = kind;
-        bytes.extend(data);
-        bytes.resize(bytes.len() + padding, 0);
-        bytes
-    }
-
-    fn movie() -> Vec<u8> {
-        let mut bytes = chunk(b"CRID", &[], 1);
-        bytes.extend(chunk(b"@SFV", b"DKIF\0\0\0\0VP90first-picture", 0));
-        bytes.extend(chunk(b"@SFA", b"\x80\x00adx-header00first-audio", 0));
-        bytes
-    }
-
-    fn run(bytes: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
-        let directory = tempfile::tempdir()?;
-        let input = directory.path().join("input.usm");
-        let video = directory.path().join("movie.ivf");
-        let audio = directory.path().join("movie.adx");
-        fs::write(&input, bytes)?;
-        demux(&input, &video, &audio, &CancellationToken::new())?;
-        Ok((fs::read(video)?, fs::read(audio)?))
-    }
-
-    #[test]
-    fn preserves_both_tracks_after_zero_filled_gaps() -> Result<()> {
-        let mut bytes = movie();
-        bytes.extend(vec![0; 2560]);
-        bytes.extend(chunk(b"@SFV", b"last-picture", 0));
-        bytes.extend(chunk(b"@SFA", b"last-audio", 0));
-        bytes.extend(vec![0; 131079]);
-        let (video, audio) = run(&bytes)?;
-        assert_eq!(video, b"DKIF\0\0\0\0VP90first-picturelast-picture");
-        assert_eq!(audio, b"\x80\x00adx-header00first-audiolast-audio");
-        Ok(())
-    }
-
-    #[test]
-    fn padding_does_not_hide_corrupt_or_truncated_chunks() {
-        let mut bytes = movie();
-        bytes.extend(vec![0; 64]);
-        bytes.extend(chunk(b"@SFV", b"last", 0));
-        bytes.pop();
-        assert!(run(&bytes).is_err());
-        let mut bytes = movie();
-        bytes.extend(vec![0; 65]);
-        bytes.extend(chunk(b"@SFV", b"misaligned", 0));
-        assert!(run(&bytes).is_err());
-        let mut bytes = movie();
-        bytes.extend(b"bad-tail");
-        assert!(run(&bytes).is_err());
-    }
-}
-
 impl Decoder {
     pub async fn export(&self, source: &Source, bundle: &str, store: &MediaStore) -> Result<Asset> {
         let entry = source
@@ -372,5 +308,69 @@ impl Decoder {
         write_json(&record, &asset)?;
         drop(staging);
         Ok(Asset::Video(asset))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn chunk(tag: &[u8; 4], data: &[u8], kind: u8) -> Vec<u8> {
+        let padding = (32 - data.len() % 32) % 32;
+        let mut bytes = vec![0; 32];
+        bytes[..4].copy_from_slice(tag);
+        bytes[4..8].copy_from_slice(&((24 + data.len() + padding) as u32).to_be_bytes());
+        bytes[9] = 24;
+        bytes[10..12].copy_from_slice(&(padding as u16).to_be_bytes());
+        bytes[15] = kind;
+        bytes.extend(data);
+        bytes.resize(bytes.len() + padding, 0);
+        bytes
+    }
+
+    fn movie() -> Vec<u8> {
+        let mut bytes = chunk(b"CRID", &[], 1);
+        bytes.extend(chunk(b"@SFV", b"DKIF\0\0\0\0VP90first-picture", 0));
+        bytes.extend(chunk(b"@SFA", b"\x80\x00adx-header00first-audio", 0));
+        bytes
+    }
+
+    fn run(bytes: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
+        let directory = tempfile::tempdir()?;
+        let input = directory.path().join("input.usm");
+        let video = directory.path().join("movie.ivf");
+        let audio = directory.path().join("movie.adx");
+        fs::write(&input, bytes)?;
+        demux(&input, &video, &audio, &CancellationToken::new())?;
+        Ok((fs::read(video)?, fs::read(audio)?))
+    }
+
+    #[test]
+    fn preserves_both_tracks_after_zero_filled_gaps() -> Result<()> {
+        let mut bytes = movie();
+        bytes.extend(vec![0; 2560]);
+        bytes.extend(chunk(b"@SFV", b"last-picture", 0));
+        bytes.extend(chunk(b"@SFA", b"last-audio", 0));
+        bytes.extend(vec![0; 131079]);
+        let (video, audio) = run(&bytes)?;
+        assert_eq!(video, b"DKIF\0\0\0\0VP90first-picturelast-picture");
+        assert_eq!(audio, b"\x80\x00adx-header00first-audiolast-audio");
+        Ok(())
+    }
+
+    #[test]
+    fn padding_does_not_hide_corrupt_or_truncated_chunks() {
+        let mut bytes = movie();
+        bytes.extend(vec![0; 64]);
+        bytes.extend(chunk(b"@SFV", b"last", 0));
+        bytes.pop();
+        assert!(run(&bytes).is_err());
+        let mut bytes = movie();
+        bytes.extend(vec![0; 65]);
+        bytes.extend(chunk(b"@SFV", b"misaligned", 0));
+        assert!(run(&bytes).is_err());
+        let mut bytes = movie();
+        bytes.extend(b"bad-tail");
+        assert!(run(&bytes).is_err());
     }
 }

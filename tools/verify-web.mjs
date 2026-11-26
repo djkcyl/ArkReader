@@ -258,6 +258,8 @@ try {
     await page.waitForTimeout(100);
   }
   assert.equal(operation.state, 'completed');
+  // Firefox's request interception bypasses service-worker navigation while offline.
+  await context.unrouteAll();
   await context.setOffline(true);
   await page.reload({ waitUntil: 'commit' });
   await ready();

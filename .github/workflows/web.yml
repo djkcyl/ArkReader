@@ -51,6 +51,7 @@ jobs:
       - name: Resource engine checks
         run: |
           cargo test --locked --manifest-path src-tauri/Cargo.toml -p arkreader-resource-engine --lib
+          cargo clippy --locked --manifest-path src-tauri/Cargo.toml -p arkreader-resource-engine --lib --tests -- -D warnings
           cargo clippy --locked --manifest-path src-tauri/Cargo.toml -p arkreader-resource-engine --features web --bin arkreader-web --target wasm32-unknown-emscripten -- -D warnings
       - run: npx playwright install --with-deps chrome
       - name: Static deployment, real playback and offline cache
