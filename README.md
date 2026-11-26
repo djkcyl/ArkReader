@@ -113,7 +113,7 @@ Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需
 
 Release 中的 **Web ZIP** 是完整静态站点。解压后将文件原样上传到支持 HTTPS 的静态托管服务即可，不需要后端或转发服务器。也可以部署到网站子目录。
 
-腾讯云 Makers（原 EdgeOne Pages）可直接连接本仓库，从 `main` 构建。仓库中的 [edgeone.json](edgeone.json) 已配置构建参数；手动填写时使用：
+腾讯云 Makers（原 EdgeOne Pages）连接本仓库后，选择 `main` 分支，并手动填写以下构建参数：
 
 | 项目     | 值                         |
 | -------- | -------------------------- |
