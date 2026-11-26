@@ -126,7 +126,7 @@ npm start
 | `npm run format:check`     | 格式检查                           |
 | `npm test`                 | Rust 工作区测试                    |
 
-Android 的 SDK、NDK、媒体组件和签名配置见 [Android 工作流](.github/workflows/android.yml)；桌面构建环境见 [桌面工作流](.github/workflows/desktop.yml)。
+[发行工作流](.github/workflows/release.yml)统一构建、验证 Windows、macOS、Linux 和 Android，全部通过后生成同一份草稿与校验清单。Android 的 SDK、NDK 和签名配置见 [Android 工作流](.github/workflows/android.yml)。
 
 ## 反馈与贡献
 
