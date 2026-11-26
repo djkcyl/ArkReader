@@ -68,9 +68,14 @@ void (async () => {
         await until(() => error || video.currentTime > 1, 'Movie did not play');
         check(!error, error);
         player.setPaused(true);
+        await until(() => video.paused, 'Movie did not enter pause');
+        await sleep(200);
         const pausedAt = video.currentTime;
         await sleep(250);
-        check(Math.abs(video.currentTime - pausedAt) < 0.2, 'Movie pause failed');
+        check(
+          video.paused && Math.abs(video.currentTime - pausedAt) < 0.15,
+          `Movie pause failed: ${pausedAt} -> ${video.currentTime}, paused=${video.paused}`,
+        );
         phase = id + ': seek';
         const position = Math.min(8, video.duration / 2);
         video.currentTime = position;
@@ -114,7 +119,7 @@ void (async () => {
         results.push({
           id,
           codecs: asset.codecs,
-          source: video.src.startsWith('blob:') ? 'blob' : 'protocol',
+          source: video.src.startsWith('http://127.0.0.1:') ? 'loopback' : 'protocol',
           width: video.videoWidth,
           height: video.videoHeight,
           duration: video.duration,

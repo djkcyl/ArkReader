@@ -22,6 +22,7 @@ pub mod interlude;
 pub mod jobs;
 pub mod materials;
 pub mod media;
+pub mod media_stream;
 pub mod model;
 pub mod music;
 pub mod planning;

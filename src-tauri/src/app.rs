@@ -22,11 +22,13 @@ use tower::ServiceExt;
 #[path = "webview_health.rs"]
 mod webview_health;
 
-const CSP:&str="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+const CSP:&str="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: http://127.0.0.1:*; connect-src 'self' ipc: http://ipc.localhost; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
 
 struct AppState {
     engine: Mutex<Option<Arc<Engine>>>,
     router: Mutex<Option<axum::Router>>,
+    #[cfg(target_os = "linux")]
+    media_stream: Mutex<Option<arkreader_resource_engine::media_stream::MediaStream>>,
     library: PathBuf,
     playing: AtomicBool,
     quitting: AtomicBool,
@@ -197,6 +199,14 @@ fn launch(app: tauri::AppHandle) {
                 );
             let native = Engine::with_decoder(data, render_root, Decoder { executable })
                 .map_err(|e| e.to_string())?;
+            #[cfg(target_os = "linux")]
+            {
+                let stream =
+                    arkreader_resource_engine::media_stream::MediaStream::start(native.clone())
+                        .await
+                        .map_err(|e| e.to_string())?;
+                *app.state::<AppState>().media_stream.lock().unwrap() = Some(stream);
+            }
             let router = arkreader_resource_engine::api::router(native.clone());
             *app.state::<AppState>().router.lock().unwrap() = Some(router);
             *app.state::<AppState>().engine.lock().unwrap() = Some(native.clone());
@@ -536,6 +546,13 @@ fn app_quit(app: tauri::AppHandle) {
         let _ = app.save_window_state(flags);
     }
     tauri::async_runtime::spawn(async move {
+        #[cfg(target_os = "linux")]
+        {
+            let stream = app.state::<AppState>().media_stream.lock().unwrap().take();
+            if let Some(stream) = stream {
+                stream.close().await;
+            }
+        }
         if let Ok(engine) = engine(&app) {
             engine.shutdown().await;
         }
@@ -615,6 +632,8 @@ pub fn run() {
             app.manage(AppState {
                 engine: Mutex::new(None),
                 router: Mutex::new(None),
+                #[cfg(target_os = "linux")]
+                media_stream: Mutex::new(None),
                 library,
                 playing: AtomicBool::new(false),
                 quitting: AtomicBool::new(false),

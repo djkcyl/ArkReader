@@ -9,8 +9,6 @@ export class StoryVideo implements VideoPort {
   frame: HTMLVideoElement | null = null;
   private node: MediaElementAudioSourceNode | null = null;
   private paused = false;
-  private loading: AbortController | null = null;
-  private objectUrl: string | null = null;
   constructor(
     private context: AudioContext,
     private output: AudioNode,
@@ -22,6 +20,7 @@ export class StoryVideo implements VideoPort {
     el.playsInline = true;
     el.preload = 'auto';
     el.loop = false;
+    el.crossOrigin = 'anonymous';
     this.node = this.context.createMediaElementSource(el);
     this.node.connect(this.output);
     el.onplaying = () => {
@@ -36,27 +35,8 @@ export class StoryVideo implements VideoPort {
     el.onerror = () => {
       if (this.frame === el) ended(el.error?.message || '影片解码失败');
     };
-    if (window.__ARKREADER_PLATFORM__ === 'linux') {
-      // WebKitGTK's media loader cannot read the application's custom URI scheme.
-      const controller = new AbortController();
-      this.loading = controller;
-      void fetch(url, { signal: controller.signal })
-        .then(async (response) => {
-          if (!response.ok) throw new Error('影片读取失败');
-          const data = await response.blob();
-          if (this.frame !== el || controller.signal.aborted) return;
-          this.loading = null;
-          this.objectUrl = URL.createObjectURL(data);
-          el.src = this.objectUrl;
-          if (!this.paused) this.resume(el, ended);
-        })
-        .catch((error: Error) => {
-          if (this.frame === el && !controller.signal.aborted) ended(error.message);
-        });
-    } else {
-      el.src = url;
-      if (!this.paused) this.resume(el, ended);
-    }
+    el.src = url;
+    if (!this.paused) this.resume(el, ended);
   }
   private resume(el: HTMLVideoElement, failed: (message: string) => void) {
     void el.play().catch((e: Error) => {
@@ -66,15 +46,13 @@ export class StoryVideo implements VideoPort {
   pause(paused: boolean) {
     this.paused = paused;
     const el = this.frame;
-    if (!el || el.ended || this.loading) return;
+    if (!el || el.ended) return;
     if (paused) el.pause();
     else this.resume(el, () => el.dispatchEvent(new Event('error')));
   }
   close() {
     const el = this.frame;
     this.frame = null;
-    this.loading?.abort();
-    this.loading = null;
     if (el) {
       el.onplaying = null;
       el.onended = null;
@@ -85,8 +63,6 @@ export class StoryVideo implements VideoPort {
     }
     this.node?.disconnect();
     this.node = null;
-    if (this.objectUrl) URL.revokeObjectURL(this.objectUrl);
-    this.objectUrl = null;
   }
 }
 

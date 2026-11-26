@@ -31,6 +31,7 @@ regex = "1"
 aes = "0.8"
 cbc = { version = "0.1", features = ["alloc"] }
 hex = "0.4"
+getrandom = "0.4"
 rquickjs = "0.14"
 crc32fast = "1"
 axum = "0.8"

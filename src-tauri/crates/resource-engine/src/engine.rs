@@ -28,7 +28,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+        Arc, Mutex, OnceLock,
     },
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -68,6 +68,7 @@ pub struct Engine {
     pub artifacts: Arc<Artifacts>,
     pub decode: Arc<Semaphore>,
     pub video: crate::video::Decoder,
+    pub(crate) movie_base: OnceLock<String>,
     session: Mutex<Option<crate::session::Session>>,
     cancel: CancellationToken,
     version: RwLock<Option<Arc<Version>>>,
@@ -114,6 +115,7 @@ impl Engine {
             artifacts,
             decode: Arc::new(Semaphore::new(2)),
             video,
+            movie_base: OnceLock::new(),
             session: Mutex::new(Some(session)),
             cancel,
             version: RwLock::new(None),
@@ -604,7 +606,20 @@ impl Engine {
         let engine = self.clone();
         let progress = job.clone();
         self.jobs.spawn(job.clone(), async move {
-            engine.prepare_story(version, &id, progress).await
+            let mut pack = engine.prepare_story(version, &id, progress).await?;
+            if let Some(base) = engine.movie_base.get() {
+                if let Some(assets) = pack["assets"].as_object_mut() {
+                    for asset in assets.values_mut().filter(|asset| asset["kind"] == "video") {
+                        if let Some(name) = asset["url"]
+                            .as_str()
+                            .and_then(|url| url.strip_prefix("/media/"))
+                        {
+                            asset["url"] = format!("{base}/{name}").into();
+                        }
+                    }
+                }
+            }
+            Ok(pack)
         });
         Ok(job)
     }
