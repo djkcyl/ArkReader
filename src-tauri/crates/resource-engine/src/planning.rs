@@ -140,10 +140,10 @@ impl Resolver<'_> {
         if !self.scanned.insert(bundle.into()) {
             return Ok(());
         }
-        let path = self.source.bundle(bundle, |_| {}).await?;
+        let path = self.source.bundle(bundle).await?;
         let cancel = self.source.cancellation();
         let prefix = prefix.map(str::to_owned);
-        let names = tokio::task::spawn_blocking(move || {
+        let names = crate::runtime::blocking(move || {
             let env = Unity::open(&[path], cancel)?;
             let mut names = BTreeSet::new();
             if let Some(prefix) = prefix {
@@ -302,7 +302,7 @@ pub async fn plan(stories: &Stories, id: &str) -> Result<Plan> {
     let index = stories.index.clone();
     let cancel = stories.source.cancellation();
     let references =
-        tokio::task::spawn_blocking(move || Analyzer::references(&text, &index.variables, &cancel))
+        crate::runtime::blocking(move || Analyzer::references(&text, &index.variables, &cancel))
             .await??;
     let mut result = Plan {
         id: id.into(),
@@ -356,6 +356,7 @@ pub async fn plan(stories: &Stories, id: &str) -> Result<Plan> {
                     &reference.raw,
                     &reference.key,
                     !stories.source.manifest.base_url.is_empty(),
+                    stories.source.manifest.origin,
                 )? {
                     result.historical.push(movie);
                     continue;

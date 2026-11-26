@@ -1,3 +1,9 @@
+body.web-app.mobile-app {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
 body.mobile-app,
 body.desktop-app.mobile-app {
   --rail: 0px;
@@ -376,6 +382,12 @@ body.mobile-app #full {
 }
 body.mobile-app .playback-setting-row:has(.browser-controls) {
   display: none;
+}
+body.web-app.mobile-app.web-system-fullscreen #full {
+  display: inline-flex;
+}
+body.web-app.mobile-app.web-system-fullscreen .playback-setting-row:has(.browser-controls) {
+  display: flex;
 }
 @media (max-width: 480px) {
   body.mobile-app .library-heading {

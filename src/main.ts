@@ -12,7 +12,6 @@ import { StageRenderer } from './player/renderer';
 import { CatalogView, type CatalogData } from './player/catalog-view';
 import { renderChoices } from './player/choices';
 import { dialogPresets } from './core/dialog-presets';
-import { packagedChapters, profileUrl } from './player/package-source';
 import { QuickPress } from './core/quick-play';
 import { KeyboardQuickPlay } from './player/keyboard-quick-play';
 import { QuickPanel } from './player/quick-panel';
@@ -27,12 +26,11 @@ import { topNativeDialog } from './player/native-dialogs';
 import { StandaloneStoryHost } from './player/standalone-story-host';
 import { unsupportedStandaloneHostCommands } from './core/story-host-requirements';
 import { parseScript } from './core/parser';
-import { mountBrowserOffline } from './player/browser-offline';
 import { StageFullscreen } from './player/stage-fullscreen';
 import { FloatingProgress } from './player/floating-progress';
 import { requirePackResources } from './core/pack-resources';
 import './player/page-frame.css';
-import { isNative, isMobile, setDesktopPlaying } from './app/platform';
+import { isNative, isMobile, isWeb, setDesktopPlaying } from './app/platform';
 import { mountMobilePlatform } from './app/mobile';
 import { mountDesktopShell } from './app/desktop-shell';
 import { ResumePrompt } from './app/resume-prompt';
@@ -62,7 +60,7 @@ if (isNative && !document.getElementById('startup-root')) {
   await invoke('app_retry');
   await new Promise(() => {});
 }
-const startupMusic = isNative ? adoptStartupMusic() : undefined;
+const startupMusic = isNative || isWeb ? adoptStartupMusic() : undefined;
 if (document.getElementById('startup-root')) {
   document.dispatchEvent(new Event('arkreader-startup-finished'));
   document.getElementById('startup-root')!.remove();
@@ -234,7 +232,6 @@ $('nickname').addEventListener('change', () => {
     localStorage.setItem('arkreader.nickname', $<HTMLInputElement>('nickname').value);
   } catch {}
 });
-if (packagedChapters) mountBrowserOffline($('intro'));
 const browserControls = playbackSettings.querySelector('.browser-controls')!;
 const windowFull = document.createElement('button');
 windowFull.id = 'window-full';
@@ -488,16 +485,7 @@ function releasePlayback(): Promise<void> {
 }
 
 function prepareStory(story: string, signal: AbortSignal): Promise<Pack> {
-  if (!packagedChapters)
-    return prepareRemoteStory<Pack>(story, signal, (state) => loadingView.update(state));
-  return (async () => {
-    signal.throwIfAborted();
-    const entry = packagedChapters?.find((c) => c.id === story);
-    if (packagedChapters && !entry) throw new Error('导出包中没有这篇剧情');
-    const response = await fetch(entry!.url, { signal });
-    if (!response.ok) throw new Error((await response.json()).detail ?? '剧情加载失败');
-    return (await response.json()) as Pack;
-  })();
+  return prepareRemoteStory<Pack>(story, signal, (state) => loadingView.update(state));
 }
 
 async function requestPlayback(): Promise<void> {
@@ -613,10 +601,6 @@ async function start(target?: PlaybackTarget): Promise<void> {
     signal.addEventListener('abort', cancelResources, { once: true });
     await Promise.all([releasing, newAudio.unlock()]);
     signal.throwIfAborted();
-    if (packagedChapters) {
-      const profile = await fetch(profileUrl('profile'), { signal });
-      if (!profile.ok) throw new Error((await profile.json()).detail);
-    }
     const pack = await prepareStory(story, signal);
     signal.throwIfAborted();
     readingShelf.scriptSource(story, pack);
@@ -1308,7 +1292,7 @@ window.addEventListener('arkreader-native-background', () => {
   sync();
 });
 window.addEventListener('arkreader-back', (event) => {
-  if (!isMobile) return;
+  if (!isMobile && !isWeb) return;
   const modal = topNativeDialog() ?? document.querySelector<HTMLDialogElement>('dialog[open]');
   if (modal) {
     event.preventDefault();
@@ -1354,23 +1338,12 @@ const readingShelf = new ReadingShelf(
     if (catalogView.select(id)) void start(target);
   },
   (ledger) => catalogView.setReadingProgress(ledger),
-  !packagedChapters,
-  packagedChapters
-    ? async (id) => {
-        const chapter = packagedChapters?.find((row) => row.id === id);
-        if (!chapter) throw Error('剧情文本暂不可用');
-        const response = await fetch(chapter.url, { signal: AbortSignal.timeout(10000) });
-        if (!response.ok) throw Error('剧情文本暂不可用');
-        return response.json();
-      }
-    : undefined,
 );
-const storyCache = packagedChapters
-  ? undefined
-  : new StoryCacheView(
-      (ids) => catalogView.setCachedStories(ids),
-      () => catalogView.cacheScope,
-    );
+const storyCache = new StoryCacheView(
+  (ids) => catalogView.setCachedStories(ids),
+  () => catalogView.cacheScope,
+);
+
 document.addEventListener('arkreader-before-close', () => {
   saveReadingProgress();
   readingShelf.flush();
@@ -1381,61 +1354,17 @@ async function loadCatalog(): Promise<void> {
   const generation = ++catalogGeneration;
   catalogView.busy();
   try {
-    let data: CatalogData;
-    if (packagedChapters) {
-      const groups = new Map<
-        string,
-        { id: string; name: string; category: string; stories: typeof packagedChapters }
-      >();
-      for (const row of packagedChapters)
-        if (row.groupId) {
-          let group = groups.get(row.groupId);
-          if (!group) {
-            group = {
-              id: row.groupId,
-              name: row.groupName ?? row.groupId,
-              category: row.category ?? '',
-              stories: [],
-            };
-            groups.set(row.groupId, group);
-          }
-          group.stories!.push(row);
-        }
-      const names: Record<string, string> = {
-        main: '主题曲',
-        side: '活动故事',
-        mini: '故事集',
-        memory: '干员密录',
-        roguelike: '集成战略',
-        sandbox: '生息演算',
-        other: '其他剧情',
-      };
-      data = {
-        stories: packagedChapters,
-        groups: [...groups.values()] as CatalogData['groups'],
-        categories: [
-          ...new Set(packagedChapters.map((r) => r.category).filter((v): v is string => !!v)),
-        ].map((id) => ({ id, name: names[id] ?? id })),
-      };
-    } else {
-      const response = await fetch('/api/catalog');
-      if (!response.ok) throw new Error((await response.json()).detail ?? '资源服务未连接');
-      data = await response.json();
-      for (const group of data.groups ?? [])
-        if (
-          ['side', 'mini', 'main', 'memory', 'roguelike', 'sandbox', 'other'].includes(
-            group.category,
-          )
-        )
-          group.cover = '/api/catalog-art/' + encodeURIComponent(group.id);
-    }
+    const response = await fetch('/api/catalog');
+    if (!response.ok) throw new Error((await response.json()).detail ?? '资源服务未连接');
+    const data: CatalogData = await response.json();
+    for (const group of data.groups ?? [])
+      if (group.hasCover) group.cover = '/api/catalog-art/' + encodeURIComponent(group.id);
     if (generation !== catalogGeneration) return;
     readingShelf.setCatalog(data);
     catalogView.load(data, initialCatalog ? requestedStory : undefined);
-    storyCache?.setCatalog(data);
+    storyCache.setCatalog(data);
     initialCatalog = false;
-    $('connection').textContent =
-      `${packagedChapters ? '离线剧情' : '剧情档案'} · ${data.stories.length.toLocaleString()} 段`;
+    $('connection').textContent = `剧情档案 · ${data.stories.length.toLocaleString()} 段`;
   } catch (error) {
     if (generation === catalogGeneration) {
       catalogView.fail(error);
@@ -1464,7 +1393,7 @@ function suspendForAudio(): (() => void) | undefined {
     $<HTMLCanvasElement>('canvas').focus({ preventScroll: true });
   };
 }
-if (isNative)
+if (isNative || isWeb)
   mountDesktopShell({
     leave: returnToLibrary,
     reload: loadCatalog,
@@ -1472,6 +1401,6 @@ if (isNative)
     suspendForAudio,
     previewUi: () => interfaceAudio.play('shell.default'),
   });
-if (isNative) await mountApplicationControls();
+if (isNative || isWeb) await mountApplicationControls();
 document.documentElement.dataset.arkreaderUi = 'ready';
 document.dispatchEvent(new Event('arkreader-ui-ready'));

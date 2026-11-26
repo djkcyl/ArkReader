@@ -16,7 +16,6 @@ import { libraryHeading } from './library-heading';
 import { ReadingPreviews, previewText } from './reading-preview';
 import type { ScriptSource } from '../core/script-preview';
 import { confirmAction } from './action-confirm';
-export { parseShelf, rememberStory } from './reading-state';
 
 type LibraryTab = 'catalog' | 'recent' | 'favorites' | 'cache';
 const tabs: LibraryTab[] = ['catalog', 'recent', 'favorites', 'cache'];
@@ -37,16 +36,15 @@ export class ReadingShelf {
   constructor(
     private open: (id: string, target?: PlaybackTarget) => void,
     private changed: (ledger: ProgressLedger) => void,
-    withCache = false,
-    loadScript: (id: string) => Promise<ScriptSource> = async (id) => {
+  ) {
+    const loadScript = async (id: string): Promise<ScriptSource> => {
       const response = await fetch(
         '/api/story-script/' + id.split('/').map(encodeURIComponent).join('/'),
         { signal: AbortSignal.timeout(10000) },
       );
       if (!response.ok) throw Error('剧情文本暂不可用');
       return response.json();
-    },
-  ) {
+    };
     this.previews = new ReadingPreviews(
       loadScript,
       () => (document.getElementById('nickname') as HTMLInputElement | null)?.value || '博士',
@@ -55,13 +53,12 @@ export class ReadingShelf {
         document.dispatchEvent(new CustomEvent('arkreader-reading-preview', { detail: { id } }));
       },
     );
-    const availableTabs = withCache ? tabs : tabs.filter((tab) => tab !== 'cache');
     try {
       this.data = parseShelf(localStorage.getItem('arkreader.shelf'));
     } catch {}
     try {
       const saved = localStorage.getItem('arkreader.libraryTab');
-      if (availableTabs.includes(saved as LibraryTab)) this.mode = saved as LibraryTab;
+      if (tabs.includes(saved as LibraryTab)) this.mode = saved as LibraryTab;
     } catch {}
     const intro = document.getElementById('intro')!;
     const directory = document.createElement('section');
@@ -73,7 +70,7 @@ export class ReadingShelf {
     this.tablist.className = 'library-tabs';
     this.tablist.setAttribute('role', 'tablist');
     this.tablist.setAttribute('aria-label', '剧情库');
-    for (const [index, tab] of availableTabs.entries()) {
+    for (const [index, tab] of tabs.entries()) {
       const button = document.createElement('button');
       button.type = 'button';
       button.id = `library-tab-${tab}`;
@@ -118,25 +115,20 @@ export class ReadingShelf {
       }
     }
     this.tablist.onkeydown = (event) => {
-      const current = availableTabs.indexOf(this.mode);
+      const current = tabs.indexOf(this.mode);
       let next: number;
-      if (event.key === 'ArrowRight') next = (current + 1) % availableTabs.length;
-      else if (event.key === 'ArrowLeft')
-        next = (current + availableTabs.length - 1) % availableTabs.length;
+      if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+      else if (event.key === 'ArrowLeft') next = (current + tabs.length - 1) % tabs.length;
       else if (event.key === 'Home') next = 0;
-      else if (event.key === 'End') next = availableTabs.length - 1;
+      else if (event.key === 'End') next = tabs.length - 1;
       else return;
       event.preventDefault();
-      this.show(availableTabs[next]);
-      this.tablist
-        .querySelector<HTMLButtonElement>(`[data-shelf="${availableTabs[next]}"]`)!
-        .focus();
+      this.show(tabs[next]);
+      this.tablist.querySelector<HTMLButtonElement>(`[data-shelf="${tabs[next]}"]`)!.focus();
     };
     intro.append(this.tablist, this.root);
     document.addEventListener('arkreader-show-catalog', () => this.show('catalog'));
-    document.addEventListener('arkreader-show-cache', () => {
-      if (withCache) this.show('cache');
-    });
+    document.addEventListener('arkreader-show-cache', () => this.show('cache'));
     this.show(this.mode);
     this.favorite.id = 'favorite-story';
     this.favorite.type = 'button';

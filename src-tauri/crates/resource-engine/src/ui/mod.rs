@@ -140,7 +140,7 @@ pub async fn prepare_core(
         .environment(&files.into_iter().collect::<Vec<_>>(), common.clone())
         .await?;
     let identity = client.identity.clone();
-    tokio::task::spawn_blocking(move || {
+    crate::runtime::blocking(move || {
         let schema = common.schema_with_field(114, "m_Sprite")?;
         for (file, name) in [
             ("native-reader-auto.ttf", "Novecentowide-Medium"),

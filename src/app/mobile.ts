@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { isMobile } from './platform';
+import { isMobile, isNative } from './platform';
 
 let mounted = false;
 export function mountMobilePlatform(): void {
@@ -22,5 +22,6 @@ export function mountMobilePlatform(): void {
   viewport();
   window.visualViewport?.addEventListener('resize', viewport);
   window.addEventListener('resize', viewport);
-  void invoke<Record<string, number>>('app_insets').then(applyInsets).catch(console.warn);
+  if (isNative)
+    void invoke<Record<string, number>>('app_insets').then(applyInsets).catch(console.warn);
 }

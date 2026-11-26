@@ -1,4 +1,4 @@
-import { playerMediaUrl } from './package-source';
+import { playerMediaUrl } from './resource-urls';
 import { NativeSelectableSurface } from './native-selectable';
 import { NativeScrollbar } from './native-scrollbar';
 import { ReaderScroll } from '../core/reader-scroll';

@@ -13,7 +13,7 @@ use crate::{
     music::{self, Music},
     planning,
     progress::{Kind, Phase, Progress},
-    source::{self, Manifest, Platform, Source},
+    source::{self, Manifest, Origin, Source},
     stories::Stories,
     ui,
     unity::Unity,
@@ -129,6 +129,27 @@ impl Engine {
     pub fn is_ready(&self) -> bool {
         self.ready.load(Ordering::Acquire)
     }
+    pub fn source_origin(&self) -> Origin {
+        fs::read(self.data.join("resource-source.json"))
+            .ok()
+            .and_then(|raw| serde_json::from_slice(&raw).ok())
+            .unwrap_or(if cfg!(target_os = "emscripten") {
+                Origin::Prts
+            } else {
+                Origin::Official
+            })
+    }
+    pub fn select_source(&self, origin: Origin) -> Result<()> {
+        #[cfg(target_os = "emscripten")]
+        ensure!(origin == Origin::Prts, "网页版使用 PRTS 资源来源。");
+        ensure!(
+            !self.jobs.busy() && !self.playing.load(Ordering::Acquire),
+            "请先结束播放和资源任务，再切换来源。"
+        );
+        write_json(&self.data.join("resource-source.json"), &origin)?;
+        self.ready.store(false, Ordering::Release);
+        Ok(())
+    }
     pub fn set_playing(&self, value: bool) {
         self.playing.store(value, Ordering::Release);
     }
@@ -189,9 +210,21 @@ impl Engine {
         self.ready.store(false, Ordering::Release);
         job.phase(Phase::Cache, "读取资源缓存…", 0, 1, "");
         let cached = self.cached_index();
-        job.phase(Phase::Connect, "检查官方资源版本…", 0, 0, "");
-        let official =
-            source::official(Platform::Windows, Duration::from_secs(20), &job.cancel).await;
+        let previous = self.cached_manifest();
+        let origin = self.source_origin();
+        job.phase(
+            Phase::Connect,
+            format!("检查{}资源版本…", origin.name()),
+            0,
+            0,
+            "",
+        );
+        let official = match origin {
+            Origin::Official => source::official(Duration::from_secs(20), &job.cancel).await,
+            Origin::Prts => {
+                crate::prts::latest(Duration::from_secs(30), &job.cancel, previous.as_ref()).await
+            }
+        };
         crate::error::checkpoint(&job.cancel)?;
         let checked_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64();
         let mut update = Update {
@@ -211,8 +244,11 @@ impl Engine {
                 (manifest, true)
             }
             Err(error) => {
-                let Some(previous) = self.cached_manifest() else {
-                    return Err(error.context("无法连接官方资源服务器。请检查网络后重试。"));
+                let Some(previous) = previous else {
+                    return Err(error.context(format!(
+                        "无法连接{}资源服务器。请检查网络后重试。",
+                        origin.name()
+                    )));
                 };
                 update.state = "offline".into();
                 update.message = "本次未能检查最新资源，正在使用已缓存的版本。".into();
@@ -235,6 +271,7 @@ impl Engine {
                 .official_client_version
                 .as_deref()
                 .unwrap_or(&version.index.source.client_version),
+            &update.baseline,
         );
         if update.state == "not-checked" {
             update.state = if cached
@@ -246,7 +283,7 @@ impl Engine {
                 "updated"
             }
             .into();
-            update.message = "已检查官方资源，当前为最新版本。".into();
+            update.message = format!("已检查{}资源，当前为该来源最新版本。", origin.name());
         }
         write_json(
             &self.data.join("index.json"),
@@ -258,16 +295,13 @@ impl Engine {
         if online {
             job.phase(Phase::BaseVerify, "清理过期资源…", 0, 1, "");
             let cache = version.source.cache.clone();
-            let platform = version.index.source.platform.cache_name();
             let names = version.index.source.entries.keys().cloned().collect();
             let client = version.client.clone();
             let data = self.data.clone();
             let cancel = job.cancel.clone();
-            tokio::task::spawn_blocking(move || {
-                cache.prune(platform, &names, &cancel)?;
-                let mut names: BTreeSet<_> = client.entries.keys().cloned().collect();
-                names.extend(["source.json", "game_files", "objects.json"].map(String::from));
-                client.cache.prune("Windows", &names, &cancel)?;
+            crate::runtime::blocking(move || {
+                cache.prune(source::BUNDLE_CACHE, &names, &cancel)?;
+                client.prune(&cancel)?;
                 crate::historical::prune(&data, &cancel)?;
                 Ok::<_, anyhow::Error>(())
             })
@@ -294,9 +328,7 @@ impl Engine {
         let source = Source::new(self.data.join("cache"), request, job.cancel.clone())?
             .with_progress(job.clone());
         let same = cached.is_some_and(|index| {
-            index.generator == crate::DECODER_REVISION
-                && index.source.platform == manifest.platform
-                && index.source.entries == manifest.entries
+            index.generator == crate::DECODER_REVISION && index.source.entries == manifest.entries
         });
         job.phase(Phase::Index, "读取剧情索引…", 0, 1, "");
         let mut index = if same {
@@ -323,16 +355,15 @@ impl Engine {
             &index.source.platform,
             &index.source.entries,
             &index.routing.sha256,
-            &client.identity.manifest_md5,
+            &client.identity.manifest_sha256,
         ))?;
         let artifacts = self.artifacts.clone();
         let runtime = self.runtime.clone();
         let lookup = key.clone();
         let cancel = job.cancel.clone();
-        let saved = tokio::task::spawn_blocking(move || {
-            artifacts.restore("base", &lookup, &runtime, &cancel)
-        })
-        .await??;
+        let saved =
+            crate::runtime::blocking(move || artifacts.restore("base", &lookup, &runtime, &cancel))
+                .await??;
         let base = if let Some(saved) = saved {
             job.phase(Phase::BaseVerify, "常用资源已就绪", 1, 1, "界面与目录");
             serde_json::from_value(saved)?
@@ -351,7 +382,7 @@ impl Engine {
             let cancel = job.cancel.clone();
             let metadata = serde_json::to_value(&base)?;
             let key = key.clone();
-            tokio::task::spawn_blocking(move || {
+            crate::runtime::blocking(move || {
                 artifacts.store("base", &key, &runtime, &files, metadata, &cancel)
             })
             .await??;
@@ -423,13 +454,12 @@ impl Engine {
             )
         }));
         source
-            .prefetch(&bundles.iter().cloned().collect::<Vec<_>>(), 4, |_| {})
+            .prefetch(&bundles.iter().cloned().collect::<Vec<_>>(), 4)
             .await?;
-        let common_path = source.bundle("avg/[uc]common.ab", |_| {}).await?;
+        let common_path = source.bundle("avg/[uc]common.ab").await?;
         let cancel = job.cancel.clone();
-        let common = Arc::new(
-            tokio::task::spawn_blocking(move || Unity::open(&[common_path], cancel)).await??,
-        );
+        let common =
+            Arc::new(crate::runtime::blocking(move || Unity::open(&[common_path], cancel)).await??);
         job.phase(Phase::Ui, "准备播放界面…", 0, 6, "字体与播放按钮");
         let mut profile = serde_json::to_value(
             ui::prepare_core(client, self.store.clone(), common.clone()).await?,
@@ -458,10 +488,9 @@ impl Engine {
         let input = common.clone();
         let store = self.store.clone();
         let resource_version = index.source.version.clone();
-        let blocker = tokio::task::spawn_blocking(move || {
-            materials::blocker(&input, &store, &resource_version)
-        })
-        .await??;
+        let blocker =
+            crate::runtime::blocking(move || materials::blocker(&input, &store, &resource_version))
+                .await??;
         let blocker = serde_json::to_value(blocker)?;
         drop(common);
         job.phase(Phase::Ui, "读取主页音乐…", 5, 6, "主页音乐目录");
@@ -469,7 +498,7 @@ impl Engine {
             Self::table(index, source, "display_meta_table"),
             Self::table(index, source, "audio_data")
         )?;
-        let music = tokio::task::spawn_blocking(move || music::parse(&display, &audio)).await??;
+        let music = crate::runtime::blocking(move || music::parse(&display, &audio)).await??;
         job.phase(Phase::BaseDownload, "整理剧情目录…", 0, 0, "章节与干员资料");
         let metadata = Metadata::load(&self.data, index, source).await?;
         let catalog = catalog::build(index, &metadata)?;
@@ -509,7 +538,7 @@ impl Engine {
             )
         }));
         source
-            .prefetch(&bundles.iter().cloned().collect::<Vec<_>>(), 4, |_| {})
+            .prefetch(&bundles.iter().cloned().collect::<Vec<_>>(), 4)
             .await?;
         let total = artwork.values().map(Vec::len).sum();
         let mut done = 0;
@@ -526,7 +555,7 @@ impl Engine {
             let store = self.store.clone();
             let cancel = job.cancel.clone();
             let count = groups.len();
-            let rendered = tokio::task::spawn_blocking(move || {
+            let rendered = crate::runtime::blocking(move || {
                 let mut result = BTreeMap::new();
                 for (id, binding) in groups {
                     crate::error::checkpoint(&cancel)?;
@@ -561,6 +590,7 @@ impl Engine {
             .map(|job| job.snapshot(false))
             .unwrap_or_else(|| json!({"running":false,"message":"","error":null}));
         Ok(json!({
+            "resourceSource":self.source_origin(),
             "version":current.map(|v|v.index.source.version.as_str()),
             "stories":current.map_or(0,|v|v.index.stories.len()),
             "storyPlayerScripts":current.map_or(0,|v|v.base.catalog.stories.len()),
@@ -676,7 +706,7 @@ impl Engine {
                 ) {
                     let root = self.runtime.clone();
                     let cancel = job.cancel.clone();
-                    let valid = tokio::task::spawn_blocking(move || {
+                    let valid = crate::runtime::blocking(move || {
                         receipts.iter().all(|(name, r)| {
                             safe_path(&root.join("media"), name)
                                 .is_ok_and(|p| artifacts::valid(&p, r, &cancel))
@@ -749,9 +779,9 @@ impl Engine {
                     }),
             );
         job.plan(transfers);
-        source.prefetch(&names, 4, |_| {}).await?;
+        source.prefetch(&names, 4).await?;
         for (source, movie) in historical.iter().zip(&plan.historical) {
-            source.bundle(&movie.bundle, |_| {}).await?;
+            source.bundle(&movie.bundle).await?;
         }
         let exporter = Exporter {
             source,
@@ -834,7 +864,7 @@ impl Engine {
         let files = files.into_iter().collect::<BTreeSet<_>>();
         let runtime = self.runtime.clone();
         let cancel = job.cancel.clone();
-        let receipts = tokio::task::spawn_blocking(move || {
+        let receipts = crate::runtime::blocking(move || {
             files
                 .into_iter()
                 .map(|name| {
@@ -909,7 +939,7 @@ impl Engine {
         let signature = artifacts::fingerprint(&(
             crate::DECODER_REVISION,
             version.index.source.platform,
-            &version.client.identity.manifest_md5,
+            &version.client.identity.manifest_sha256,
             track,
             inputs,
         ))?;
@@ -918,7 +948,7 @@ impl Engine {
         let cancel = job.cancel.clone();
         let key = signature.clone();
         if let Some(result) =
-            tokio::task::spawn_blocking(move || artifacts.restore("music", &key, &root, &cancel))
+            crate::runtime::blocking(move || artifacts.restore("music", &key, &root, &cancel))
                 .await??
         {
             let mut files = Vec::new();
@@ -942,7 +972,7 @@ impl Engine {
                 source.manifest.entries[name].total_size,
             )
         }));
-        source.prefetch(&names, 4, |_| {}).await?;
+        source.prefetch(&names, 4).await?;
         let exporter = Exporter {
             source,
             index: version.index.clone(),
@@ -977,7 +1007,7 @@ impl Engine {
         let root = self.runtime.clone();
         let cancel = job.cancel.clone();
         let metadata = result.clone();
-        tokio::task::spawn_blocking(move || {
+        crate::runtime::blocking(move || {
             artifacts.store("music", &signature, &root, &files, metadata, &cancel)
         })
         .await??;
@@ -993,7 +1023,7 @@ impl Engine {
         if scan {
             let data = self.data.clone();
             let runtime = self.runtime.clone();
-            let sizes = tokio::task::spawn_blocking(move || {
+            let sizes = crate::runtime::blocking(move || {
                 let raw = size_of(&data.join("cache"))?;
                 let client = size_of(&data.join("client"))?;
                 let shared = size_of(&data.join("derived-cache"))?;
@@ -1030,7 +1060,7 @@ impl Engine {
             "请先结束播放和资源任务，再清理缓存。"
         );
         let artifacts = self.artifacts.clone();
-        tokio::task::spawn_blocking(move || artifacts.clear()).await??;
+        crate::runtime::blocking(move || artifacts.clear()).await??;
         let mut keep = self
             .current()
             .await
@@ -1088,7 +1118,7 @@ impl Engine {
         if !self.jobs.busy() {
             let session = self.session.lock().unwrap().take();
             if let Some(session) = session {
-                let _ = tokio::task::spawn_blocking(move || session.close()).await;
+                let _ = crate::runtime::blocking(move || session.close()).await;
             }
         }
     }

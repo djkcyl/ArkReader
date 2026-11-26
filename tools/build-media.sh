@@ -2,8 +2,8 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-target="${1:?Specify windows-x64, linux-x64, macos-arm64 or android-ABI}"
-if test "$target" = windows-x64; then root="$(cygpath -u "$root")"; fi
+target="${1:?Specify windows-x64, linux-x64, macos-arm64, android-ABI or web}"
+if command -v cygpath >/dev/null; then root="$(cygpath -u "$root")"; fi
 version=9.0.2
 checksum=8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e
 cache="$root/artifacts/media-build"
@@ -38,6 +38,18 @@ strip_tool=strip
 destination="$root/src-tauri/resources/native"
 notices="$destination"
 case "$target" in
+  web)
+    compiler=emcc
+    options+=(
+      --enable-cross-compile --target-os=none --arch=wasm32
+      --cc=emcc --ar=emar --ranlib=emranlib --nm=emnm
+      --disable-programs --disable-avfilter --disable-pthreads --disable-w32threads --disable-os2threads
+      --disable-stripping --extra-cflags=-O2
+    )
+    destination="$root/src-tauri/resources/web-media"
+    notices="$destination"
+    executable=libarkreader_media.a
+    ;;
   windows-x64)
     export PATH="/ucrt64/bin:/usr/bin:$PATH"
     compiler=gcc
@@ -78,9 +90,15 @@ case "$target" in
 esac
 
 # Source/configuration/compiler changes select a fresh build, never an old binary.
-key="$({ sha256 "$0"; printf '%s\n' "$target" "${options[@]}"; "$compiler" --version; } | sha256 | cut -d ' ' -f 1)"
+key="$({ sha256 "$0"; if test "$target" = web; then sha256 "$root/src-tauri/crates/resource-engine/src/web/media.c"; fi; printf '%s\n' "$target" "${options[@]}"; "$compiler" --version; } | sha256 | cut -d ' ' -f 1)"
 build="$cache/$target-$key"
 mkdir -p "$build" "$destination" "$notices"
+if test "$target" = web && test -f "$build/complete-web.sha256" && (cd "$build" && sha256 --check --status complete-web.sha256); then
+  cp "$build"/lib*.a "$destination/"
+  cp "$build/FFmpeg-LICENSE.txt" "$build/FFmpeg-SOURCE.txt" "$notices/"
+  echo 'Reused verified browser media component'
+  exit 0
+fi
 if test -f "$build/complete.sha256" && test -f "$build/$executable" && test "$(sha256 "$build/$executable" | cut -d ' ' -f 1)" = "$(cat "$build/complete.sha256")"; then
   cp "$build/$executable" "$destination/$executable"
   cp "$build/FFmpeg-LICENSE.txt" "$build/FFmpeg-SOURCE.txt" "$notices/"
@@ -102,6 +120,23 @@ if test -z "$jobs"; then
 fi
 cd "$build"
 "$source_dir/configure" "${options[@]}"
+if test "$target" = web; then
+  make -r -j"$jobs" libavformat/libavformat.a libavcodec/libavcodec.a libavutil/libavutil.a libswresample/libswresample.a
+  emcc -O2 -I"$source_dir" -I"$build" -c "$root/src-tauri/crates/resource-engine/src/web/media.c" -o arkreader_media.o
+  emar rcs libarkreader_media.a arkreader_media.o
+  cp libavformat/libavformat.a libavcodec/libavcodec.a libavutil/libavutil.a libswresample/libswresample.a .
+  cp "$source_dir/COPYING.LGPLv2.1" FFmpeg-LICENSE.txt
+  {
+    printf 'FFmpeg %s\nSource: %s\nSHA-256: %s\nTarget: web\nBuild: tools/build-media.sh\nConfiguration:' "$version" "$url" "$checksum"
+    printf ' %q' "${options[@]}"
+    printf '\n'
+  } > FFmpeg-SOURCE.txt
+  sha256 libarkreader_media.a libavformat.a libavcodec.a libavutil.a libswresample.a > complete-web.sha256
+  cp lib*.a "$destination/"
+  cp FFmpeg-LICENSE.txt FFmpeg-SOURCE.txt "$notices/"
+  echo 'Prepared minimal browser media component'
+  exit 0
+fi
 binary=ffmpeg
 test "$target" != windows-x64 || binary=ffmpeg.exe
 make -r -j"$jobs" "$binary"

@@ -19,10 +19,10 @@ pub async fn prepare(index: &Index, source: &Source, store: Arc<MediaStore>) -> 
     let mut bundles: BTreeSet<_> = BUNDLES.iter().map(|s| s.to_string()).collect();
     bundles.extend(planning::dependencies(index, &bundles));
     for name in bundles {
-        inputs.push((name.clone(), source.bundle(&name, |_| {}).await?));
+        inputs.push((name.clone(), source.bundle(&name).await?));
     }
     let cancel = source.cancellation();
-    tokio::task::spawn_blocking(move || {
+    crate::runtime::blocking(move || {
         let env = Unity::open_named(&inputs, cancel)?;
         let schema = env.schema_with_field(114, "m_Sprite")?;
         let mut graphics = serde_json::Map::new();

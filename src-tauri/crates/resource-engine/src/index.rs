@@ -56,9 +56,9 @@ pub async fn build(data: &Path, source: &Source, progress: impl Fn(&str)) -> Res
     ensure!(names.len() == 1, "Expected one official routing manifest");
     let name = names[0];
     progress(name);
-    let path = source.bundle(name, |_| {}).await?;
+    let path = source.bundle(name).await?;
     let target = data.to_owned();
-    let (routing, digest) = tokio::task::spawn_blocking(move || {
+    let (routing, digest) = crate::runtime::blocking(move || {
         let raw = fs::read(path)?;
         Ok::<_, anyhow::Error>((resource_manifest::parse(&raw)?, cache_table(&target, &raw)?))
     })
@@ -164,7 +164,7 @@ pub async fn build(data: &Path, source: &Source, progress: impl Fn(&str)) -> Res
     let mut names: Vec<_> = metadata.values().map(|r| r.bundle.clone()).collect();
     names.sort();
     names.dedup();
-    source.prefetch(&names, 4, |_| {}).await?;
+    source.prefetch(&names, 4).await?;
     let mut variables = None;
     let mut review = None;
     let mut entries = None;
@@ -172,7 +172,7 @@ pub async fn build(data: &Path, source: &Source, progress: impl Fn(&str)) -> Res
         progress(kind);
         let raw = read_route(source, &route).await?;
         let target = data.to_owned();
-        let (raw, sha256) = tokio::task::spawn_blocking(move || {
+        let (raw, sha256) = crate::runtime::blocking(move || {
             let hash = cache_table(&target, &raw)?;
             Ok::<_, anyhow::Error>((raw, hash))
         })
@@ -212,10 +212,10 @@ pub async fn build(data: &Path, source: &Source, progress: impl Fn(&str)) -> Res
 }
 
 pub async fn read_route(source: &Source, route: &Route) -> Result<Vec<u8>> {
-    let path = source.bundle(&route.bundle, |_| {}).await?;
+    let path = source.bundle(&route.bundle).await?;
     let cancel = source.cancellation();
     let container = route.container.clone().context("Missing table container")?;
-    tokio::task::spawn_blocking(move || Unity::open(&[path], cancel)?.text(&container)).await?
+    crate::runtime::blocking(move || Unity::open(&[path], cancel)?.text(&container)).await?
 }
 
 pub async fn read_table(data: &Path, binding: &Binding, source: &Source) -> Result<Vec<u8>> {
@@ -227,7 +227,7 @@ pub async fn read_table(data: &Path, binding: &Binding, source: &Source) -> Resu
     let path = data.join("table-cache").join(digest);
     let check = path.clone();
     let hash = digest.clone();
-    let cached = tokio::task::spawn_blocking(move || {
+    let cached = crate::runtime::blocking(move || {
         fs::read(check)
             .ok()
             .filter(|raw| format!("{:x}", Sha256::digest(raw)) == hash)
@@ -238,7 +238,7 @@ pub async fn read_table(data: &Path, binding: &Binding, source: &Source) -> Resu
     }
     let raw = read_route(source, &binding.route).await?;
     let hash = digest.clone();
-    tokio::task::spawn_blocking(move || {
+    crate::runtime::blocking(move || {
         ensure!(
             format!("{:x}", Sha256::digest(&raw)) == hash,
             "Table differs from pinned source"

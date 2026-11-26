@@ -1,4 +1,5 @@
-pub use crate::cache::{resource_path, safe_path, write_atomic, write_json};
+use crate::cache::{resource_path, safe_path};
+use crate::net::Client;
 use crate::progress::{Observer, Progress, TransferState};
 use crate::{
     cache::Cache,
@@ -6,7 +7,6 @@ use crate::{
 };
 use anyhow::{ensure, Context, Result};
 use futures_util::{stream, StreamExt};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
@@ -22,29 +22,37 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 const NETWORK_URL: &str = "https://ak-conf.hypergryph.com/config/prod/official/network_config";
+const RESOURCE_PLATFORM: &str = "Android";
+pub(crate) const BUNDLE_CACHE: &str = "bundles";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Platform {
-    Windows,
     Android,
-    #[serde(rename = "iOS")]
-    Ios,
 }
-impl Platform {
-    pub fn cache_name(self) -> &'static str {
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Origin {
+    #[default]
+    Official,
+    Prts,
+}
+impl Origin {
+    pub fn name(self) -> &'static str {
         match self {
-            Self::Windows => "Windows",
-            Self::Android => "Android",
-            Self::Ios => "iOS",
+            Self::Official => "官方",
+            Self::Prts => "PRTS",
         }
     }
-    pub fn server_name(self) -> &'static str {
-        if self == Self::Ios {
-            "IOS"
-        } else {
-            self.cache_name()
-        }
+    fn is_official(&self) -> bool {
+        *self == Self::Official
     }
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Download {
+    pub url: String,
+    // PRTS addresses the extracted bundle, while the HTTP body is its ZIP archive.
+    pub sha256: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -69,18 +77,14 @@ impl Entry {
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
     pub platform: Platform,
+    #[serde(default, skip_serializing_if = "Origin::is_official")]
+    pub origin: Origin,
     pub version: String,
     pub client_version: String,
     pub base_url: String,
     pub entries: BTreeMap<String, Entry>,
-}
-
-#[derive(Debug, Clone)]
-pub struct DownloadProgress<'a> {
-    pub name: &'a str,
-    pub downloaded: u64,
-    pub total: u64,
-    pub cached: bool,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub downloads: BTreeMap<String, Download>,
 }
 
 #[derive(Clone)]
@@ -108,8 +112,8 @@ pub(crate) fn path_lock(path: &Path) -> Result<Arc<AsyncMutex<()>>> {
     Ok(lock)
 }
 
-pub fn https(url: &str) -> Result<reqwest::Url> {
-    let parsed = reqwest::Url::parse(url)?;
+pub fn https(url: &str) -> Result<crate::net::Url> {
+    let parsed = crate::net::Url::parse(url)?;
     ensure!(
         parsed.scheme() == "https"
             && parsed.host_str().is_some()
@@ -120,6 +124,7 @@ pub fn https(url: &str) -> Result<reqwest::Url> {
     Ok(parsed)
 }
 
+#[cfg(not(target_os = "emscripten"))]
 pub(crate) fn client() -> Result<Client> {
     Ok(Client::builder()
         .user_agent(concat!("ArkReader/", env!("CARGO_PKG_VERSION")))
@@ -135,23 +140,24 @@ pub(crate) fn client() -> Result<Client> {
         .build()?)
 }
 
+#[cfg(target_os = "emscripten")]
+pub(crate) fn client() -> Result<Client> {
+    Ok(Client::new())
+}
+
 pub(crate) async fn json(
     client: &Client,
-    url: reqwest::Url,
+    url: crate::net::Url,
     timeout: Duration,
     cancel: &CancellationToken,
 ) -> Result<Value> {
     tokio::select! {biased;
         _=cancel.cancelled()=>Err(Error::Cancelled.into()),
-        result=async {Ok(client.get(url).timeout(timeout).send().await?.error_for_status()?.json().await?)}=>result,
+        result=async {client.get(url).timeout(timeout).send().await?.error_for_status()?.json().await.context("无法读取资源清单。") }=>result,
     }
 }
 
-pub async fn official(
-    platform: Platform,
-    timeout: Duration,
-    cancel: &CancellationToken,
-) -> Result<Manifest> {
+pub async fn official(timeout: Duration, cancel: &CancellationToken) -> Result<Manifest> {
     let client = client()?;
     let response = json(&client, https(NETWORK_URL)?, timeout, cancel).await?;
     let config: Value = serde_json::from_str(
@@ -165,8 +171,8 @@ pub async fn official(
     let version_url = network["hv"]
         .as_str()
         .context("Missing official version endpoint")?
-        .replace("{}", platform.server_name())
-        .replace("{0}", platform.server_name());
+        .replace("{}", RESOURCE_PLATFORM)
+        .replace("{0}", RESOURCE_PLATFORM);
     let version = json(&client, https(&version_url)?, timeout, cancel).await?;
     let resource = version["resVersion"]
         .as_str()
@@ -181,7 +187,7 @@ pub async fn official(
             .as_str()
             .context("Missing official resource endpoint")?
             .trim_end_matches('/'),
-        platform.server_name()
+        RESOURCE_PLATFORM
     );
     let raw = json(
         &client,
@@ -208,7 +214,8 @@ pub async fn official(
     }
     ensure!(!entries.is_empty(), "Empty official resource list");
     Ok(Manifest {
-        platform,
+        platform: Platform::Android,
+        origin: Origin::Official,
         version: resource.into(),
         client_version: version["clientVersion"]
             .as_str()
@@ -216,6 +223,7 @@ pub async fn official(
             .into(),
         base_url: base,
         entries,
+        downloads: BTreeMap::new(),
     })
 }
 
@@ -228,8 +236,25 @@ impl Source {
         if !manifest.base_url.is_empty() {
             https(&manifest.base_url)?;
         }
+        let cache = Arc::new(Cache::new(cache)?);
+        let directory = safe_path(&cache.root, BUNDLE_CACHE)?;
+        if !directory.exists() {
+            // Keep the existing downloaded files when removing the platform
+            // directory level. No per-file copies or parallel cache are needed.
+            for name in ["Windows", "Android", "iOS"] {
+                let previous = safe_path(&cache.root, name)?;
+                if previous.is_dir() {
+                    ensure!(
+                        previous.canonicalize()?.parent() == Some(cache.root.as_path()),
+                        "Cache directory escaped its root"
+                    );
+                    std::fs::rename(previous, &directory)?;
+                    break;
+                }
+            }
+        }
         Ok(Self {
-            cache: Arc::new(Cache::new(cache)?),
+            cache,
             manifest: Arc::new(manifest),
             client: client()?,
             cancelled,
@@ -241,7 +266,7 @@ impl Source {
         self.cancelled.clone()
     }
 
-    pub fn with_cancellation(&self, cancelled: CancellationToken) -> Self {
+    fn with_cancellation(&self, cancelled: CancellationToken) -> Self {
         Self {
             cancelled,
             ..self.clone()
@@ -263,11 +288,7 @@ impl Source {
         }
     }
     pub fn transfer_key(&self, name: &str) -> String {
-        format!(
-            "bundle:{}:{}:{name}",
-            self.manifest.platform.cache_name(),
-            self.manifest.version
-        )
+        format!("bundle:{}:{name}", self.manifest.version)
     }
     fn trace(
         &self,
@@ -291,30 +312,12 @@ impl Source {
         Ok(checkpoint(&self.cancelled)?)
     }
     pub fn cached_path(&self, name: &str) -> Result<PathBuf> {
-        self.cache.path(self.manifest.platform.cache_name(), name)
+        self.cache.path(BUNDLE_CACHE, name)
     }
 
-    pub async fn bundle(
-        &self,
-        name: &str,
-        progress: impl Fn(DownloadProgress<'_>) + Send + Sync,
-    ) -> Result<PathBuf> {
+    pub async fn bundle(&self, name: &str) -> Result<PathBuf> {
         self.trace(name, TransferState::Checking, None, None);
-        let result = self
-            .bundle_inner(name, |value| {
-                self.trace(
-                    name,
-                    if value.cached {
-                        TransferState::Ready
-                    } else {
-                        TransferState::Downloading
-                    },
-                    Some(value.downloaded),
-                    Some(value.cached),
-                );
-                progress(value);
-            })
-            .await;
+        let result = self.bundle_inner(name).await;
         self.trace(
             name,
             if result.is_ok() {
@@ -328,11 +331,7 @@ impl Source {
         result
     }
 
-    async fn bundle_inner(
-        &self,
-        name: &str,
-        progress: impl Fn(DownloadProgress<'_>) + Send + Sync,
-    ) -> Result<PathBuf> {
+    async fn bundle_inner(&self, name: &str) -> Result<PathBuf> {
         self.checkpoint()?;
         let entry = self
             .manifest
@@ -344,22 +343,15 @@ impl Source {
         let guard = tokio::select! {biased;_=self.cancelled.cancelled()=>return Err(Error::Cancelled.into()),guard=lock.lock_owned()=>guard};
         let source = self.clone();
         let entry_copy = entry.clone();
-        let (guard, cached) = tokio::task::spawn_blocking(move || {
-            let result = source.cache.find(
-                source.manifest.platform.cache_name(),
-                &entry_copy,
-                &source.cancelled,
-            );
+        let (guard, cached) = crate::runtime::blocking(move || {
+            let result = source
+                .cache
+                .find(BUNDLE_CACHE, &entry_copy, &source.cancelled);
             (guard, result)
         })
         .await?;
         if let Some(path) = cached? {
-            progress(DownloadProgress {
-                name,
-                downloaded: 0,
-                total: entry.total_size,
-                cached: true,
-            });
+            self.trace(name, TransferState::Ready, Some(0), Some(true));
             return Ok(path);
         }
         self.checkpoint()?;
@@ -382,7 +374,20 @@ impl Source {
                 .rsplit_once('.')
                 .map_or(server_name.as_str(), |(stem, _)| stem)
         );
-        let url = https(&self.manifest.base_url)?.join(&server_name)?;
+        let archived;
+        let download = match self.manifest.downloads.get(name) {
+            Some(row) => Some(row),
+            None if self.manifest.origin == Origin::Prts => {
+                archived =
+                    crate::prts::archived(&self.manifest.version, entry, &self.cancelled).await?;
+                Some(&archived)
+            }
+            None => None,
+        };
+        let url = match download {
+            Some(row) => https(&row.url)?,
+            None => https(&self.manifest.base_url)?.join(&server_name)?,
+        };
         self.trace(name, TransferState::Downloading, Some(0), Some(false));
         let response = tokio::select! {biased;_=self.cancelled.cancelled()=>return Err(Error::Cancelled.into()),response=self.client.get(url).send()=>response?.error_for_status()?};
         let mut stream = response.bytes_stream();
@@ -397,12 +402,12 @@ impl Source {
                 "Resource download exceeds official size"
             );
             archive.write_all(&chunk).await?;
-            progress(DownloadProgress {
+            self.trace(
                 name,
-                downloaded,
-                total: entry.total_size,
-                cached: false,
-            });
+                TransferState::Downloading,
+                Some(downloaded),
+                Some(false),
+            );
         }
         ensure!(
             downloaded == entry.total_size,
@@ -414,12 +419,16 @@ impl Source {
         let source = self.clone();
         let output = destination.clone();
         let entry_copy = entry.clone();
-        tokio::task::spawn_blocking(move || {
+        let expected_sha256 = download.map(|row| row.sha256.clone());
+        crate::runtime::blocking(move || {
             let _guard = guard;
-            let result =
-                source
-                    .cache
-                    .unpack(&archive_path, &output, &entry_copy, &source.cancelled);
+            let result = source.cache.unpack(
+                &archive_path,
+                &output,
+                &entry_copy,
+                &source.cancelled,
+                expected_sha256.as_deref(),
+            );
             drop(staging);
             result
         })
@@ -427,19 +436,13 @@ impl Source {
         Ok(destination)
     }
 
-    pub async fn prefetch(
-        &self,
-        names: &[String],
-        concurrency: usize,
-        progress: impl Fn(DownloadProgress<'_>) + Send + Sync,
-    ) -> Result<Vec<PathBuf>> {
-        let progress = &progress;
+    pub async fn prefetch(&self, names: &[String], concurrency: usize) -> Result<Vec<PathBuf>> {
         let batch = self.with_cancellation(self.cancelled.child_token());
         let source = &batch;
         let results: Vec<Result<(usize, PathBuf)>> =
             stream::iter(names.iter().cloned().enumerate())
                 .map(|(i, name)| async move {
-                    let result = source.bundle(&name, progress).await.map(|path| (i, path));
+                    let result = source.bundle(&name).await.map(|path| (i, path));
                     if result.is_err() {
                         source.cancelled.cancel();
                     }
@@ -475,6 +478,17 @@ impl Source {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cache::write_atomic;
+    #[test]
+    fn resource_metadata_only_accepts_android() {
+        assert_eq!(
+            serde_json::from_str::<Platform>("\"Android\"").unwrap(),
+            Platform::Android
+        );
+        for old in ["Windows", "iOS"] {
+            assert!(serde_json::from_value::<Platform>(old.into()).is_err());
+        }
+    }
     #[tokio::test]
     async fn unchanged_manifest_files_are_reused_without_version_directories() -> Result<()> {
         let temp = tempfile::tempdir()?;
@@ -487,7 +501,9 @@ mod tests {
             extra: BTreeMap::new(),
         };
         let manifest = Manifest {
-            platform: Platform::Windows,
+            platform: Platform::Android,
+            origin: Origin::Official,
+            downloads: BTreeMap::new(),
             version: "one".into(),
             client_version: "1".into(),
             base_url: String::new(),
@@ -499,29 +515,69 @@ mod tests {
         let stamp = std::fs::metadata(&original)?.modified()?;
         let mut latest = manifest.clone();
         latest.version = "two".into();
-        let second = Source::new(temp.path().to_owned(), latest.clone(), cancel.clone())?;
-        let reused = second
-            .bundle(&entry.name, |p| {
-                assert!(p.cached);
-                assert_eq!(p.downloaded, 0);
-            })
-            .await?;
+        let progress = Arc::new(Progress::new(
+            "reuse".into(),
+            crate::progress::Kind::Prepare,
+            false,
+            cancel.clone(),
+        ));
+        let second = Source::new(temp.path().to_owned(), latest.clone(), cancel.clone())?
+            .with_progress(progress.clone());
+        let reused = second.bundle(&entry.name).await?;
+        let transfers = &progress.snapshot(false)["transfers"];
+        assert_eq!(transfers["downloadedBytes"], 0);
+        assert_eq!(transfers["cachedFiles"], 1);
+        assert_eq!(transfers["readyFiles"], 1);
         assert_eq!(original, reused);
         assert_eq!(std::fs::metadata(&reused)?.modified()?, stamp);
-        assert!(!temp.path().join("Windows/one").exists());
-        assert!(!temp.path().join("Windows/two").exists());
+        assert!(!temp.path().join("bundles/one").exists());
+        assert!(!temp.path().join("bundles/two").exists());
+        assert_eq!(std::fs::read(&reused)?, b"abc");
+        assert!(!temp.path().join("Android").exists());
         latest.entries.get_mut(&entry.name).unwrap().md5 =
             "d16fb36f0911f878998c136191af705e".into();
         let changed = Source::new(temp.path().to_owned(), latest, cancel)?;
         assert!(matches!(
             changed
-                .bundle(&entry.name, |_| {})
+                .bundle(&entry.name)
                 .await
                 .unwrap_err()
                 .downcast_ref::<Error>(),
             Some(Error::NotCached(_))
         ));
         assert_eq!(std::fs::read(original)?, b"abc");
+        Ok(())
+    }
+    #[tokio::test]
+    async fn existing_downloads_are_kept_when_flattening_the_cache() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let entry = Entry {
+            name: "avg/a.ab".into(),
+            md5: "900150983cd24fb0d6963f7d28e17f72".into(),
+            ab_size: 3,
+            total_size: 3,
+            extra: BTreeMap::new(),
+        };
+        let previous = temp.path().join("Windows/avg/a.ab");
+        write_atomic(&previous, b"abc")?;
+        let stamp = std::fs::metadata(&previous)?.modified()?;
+        let source = Source::new(
+            temp.path().to_owned(),
+            Manifest {
+                platform: Platform::Android,
+                origin: Origin::Official,
+                downloads: BTreeMap::new(),
+                version: "current".into(),
+                client_version: "1".into(),
+                base_url: String::new(),
+                entries: BTreeMap::from([(entry.name.clone(), entry.clone())]),
+            },
+            CancellationToken::new(),
+        )?;
+        let file = source.bundle(&entry.name).await?;
+        assert_eq!(file, temp.path().canonicalize()?.join("bundles/avg/a.ab"));
+        assert_eq!(std::fs::metadata(file)?.modified()?, stamp);
+        assert!(!temp.path().join("Windows").exists());
         Ok(())
     }
     #[tokio::test]
@@ -539,6 +595,8 @@ mod tests {
             temp.path().to_owned(),
             Manifest {
                 platform: Platform::Android,
+                origin: Origin::Official,
+                downloads: BTreeMap::new(),
                 version: "test".into(),
                 client_version: "1".into(),
                 base_url: String::new(),
@@ -548,7 +606,7 @@ mod tests {
         )?;
         let lock = path_lock(&source.cached_path("a.ab")?)?;
         let guard = lock.lock().await;
-        let task = tokio::spawn(async move { source.bundle("a.ab", |_| {}).await });
+        let task = tokio::spawn(async move { source.bundle("a.ab").await });
         tokio::task::yield_now().await;
         cancel.cancel();
         let error = tokio::time::timeout(Duration::from_secs(1), task)

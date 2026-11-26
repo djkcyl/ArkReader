@@ -1,6 +1,6 @@
 import { skipProfile as L } from './skip-profile';
 import { NativeSelectableSurface } from './native-selectable';
-import { playerMediaUrl } from './package-source';
+import { playerMediaUrl } from './resource-urls';
 import { readingMarkup, readingFont } from '../core/sticker-color';
 import { lineAdvance } from '../core/line-breaking';
 import { layoutDialogText, alignedTextOffset } from './dialog-layout';

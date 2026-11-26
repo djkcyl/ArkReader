@@ -9,7 +9,7 @@ import { PhotoSlotRenderer } from './photo-slot';
 import { readingFont, type ReadingMarkup } from '../core/sticker-color';
 import { alignedTextOffset, layoutDialogText, type DialogLines } from './dialog-layout';
 import { sceneResources } from '../core/scene-resources';
-import { playerMediaUrl, profileUrl } from './package-source';
+import { playerMediaUrl, profileUrl } from './resource-urls';
 import { GridTileRenderer } from './grid-tile-renderer';
 import { StampRenderer } from './stamps';
 import { AnimatedKVRenderer } from './animated-kv';

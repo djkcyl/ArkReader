@@ -526,9 +526,9 @@ pub async fn prepare(
     let client_env = client
         .environment(&[rows[0].file.clone()], common.clone())
         .await?;
-    let settings_path = source.bundle(SETTINGS, |_| {}).await?;
+    let settings_path = source.bundle(SETTINGS).await?;
     let cancel = source.cancellation();
-    tokio::task::spawn_blocking(move || {
+    crate::runtime::blocking(move || {
         let settings_env = Unity::open(&[settings_path], cancel)?;
         let image = common.schema_with_field(114, "m_Sprite")?;
         let text = common.schema_with_field(114, "m_FontData")?;

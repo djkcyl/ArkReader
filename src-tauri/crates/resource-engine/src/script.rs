@@ -1,12 +1,14 @@
 use crate::error::checkpoint;
-use anyhow::{Context as _, Result};
+#[cfg(not(target_os = "emscripten"))]
+use anyhow::Context as _;
+use anyhow::Result;
+#[cfg(not(target_os = "emscripten"))]
 use rquickjs::{Context, Function, Runtime};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
-use std::{
-    collections::BTreeMap,
-    time::{Duration, Instant},
-};
+use std::collections::BTreeMap;
+#[cfg(not(target_os = "emscripten"))]
+use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 
 const PARSER: &str = include_str!(concat!(env!("OUT_DIR"), "/script-parser.js"));
@@ -61,6 +63,7 @@ impl Analyzer {
         use sha2::{Digest, Sha256};
         format!("{:x}", Sha256::digest(PARSER.as_bytes()))
     }
+    #[cfg(not(target_os = "emscripten"))]
     fn run<T: DeserializeOwned>(
         mode: &str,
         script: &str,
@@ -97,6 +100,20 @@ impl Analyzer {
         });
         checkpoint(cancel)?;
         Ok(serde_json::from_str(&result?)?)
+    }
+    #[cfg(target_os = "emscripten")]
+    fn run<T: DeserializeOwned>(
+        mode: &str,
+        script: &str,
+        variables: &BTreeMap<String, Value>,
+        cancel: &CancellationToken,
+    ) -> Result<T> {
+        checkpoint(cancel)?;
+        let payload =
+            serde_json::to_string(&serde_json::json!({"script":script,"variables":variables}))?;
+        let result = crate::web::analyze(mode, &payload)?;
+        checkpoint(cancel)?;
+        Ok(serde_json::from_str(&result)?)
     }
     pub fn references(
         script: &str,

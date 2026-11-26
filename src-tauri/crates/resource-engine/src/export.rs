@@ -27,10 +27,10 @@ impl Exporter {
         let own = BTreeSet::from([bundle.to_owned()]);
         let deps = planning::dependencies(&self.index, &own);
         let names: Vec<_> = std::iter::once(bundle.to_owned()).chain(deps).collect();
-        let paths = self.source.prefetch(&names, 4, |_| {}).await?;
+        let paths = self.source.prefetch(&names, 4).await?;
         let inputs = names.into_iter().zip(paths).collect::<Vec<_>>();
         let cancel = self.source.cancellation();
-        tokio::task::spawn_blocking(move || Unity::open_named(&inputs, cancel)).await?
+        crate::runtime::blocking(move || Unity::open_named(&inputs, cancel)).await?
     }
 
     pub async fn fonts(&self, wanted: &BTreeSet<String>) -> Result<BTreeMap<String, String>> {
@@ -48,7 +48,7 @@ impl Exporter {
             for row in rows {
                 let path = self.client.file(&row.file).await?;
                 let cancel = self.source.cancellation();
-                let bytes = tokio::task::spawn_blocking(move || {
+                let bytes = crate::runtime::blocking(move || {
                     let env = Unity::open(&[path], cancel)?;
                     let id = crate::ui::locate(&env, &row)?;
                     let font = env.object(id)?.read_font(Default::default())?;
@@ -79,7 +79,7 @@ impl Exporter {
         let fonts = if bundle == "avg/[uc]common.ab" {
             let input = env.clone();
             let keys = wanted.clone();
-            let names = tokio::task::spawn_blocking(move || {
+            let names = crate::runtime::blocking(move || {
                 let mut names = BTreeSet::new();
                 for key in keys {
                     names.extend(crate::interlude::font_names(&input, &key)?);
@@ -93,7 +93,7 @@ impl Exporter {
             || bundle.starts_with("avg/spellsticker/")
         {
             let input = env.clone();
-            let names = tokio::task::spawn_blocking(move || stamp::font_names(&input)).await??;
+            let names = crate::runtime::blocking(move || stamp::font_names(&input)).await??;
             self.fonts(&names).await?
         } else {
             BTreeMap::new()
@@ -105,7 +105,7 @@ impl Exporter {
         let index = self.index.clone();
         let source = self.source.clone();
         let cancel = self.source.cancellation();
-        tokio::task::spawn_blocking(move || {
+        crate::runtime::blocking(move || {
             crate::error::checkpoint(&cancel)?;
             if bundle.starts_with("avg/characters/") {
                 return character::export(&env, &store, &wanted);

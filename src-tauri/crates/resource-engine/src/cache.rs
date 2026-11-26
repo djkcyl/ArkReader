@@ -131,12 +131,12 @@ impl Cache {
             verified: Mutex::new(HashMap::new()),
         })
     }
-    pub fn path(&self, platform: &str, name: &str) -> Result<PathBuf> {
+    pub fn path(&self, namespace: &str, name: &str) -> Result<PathBuf> {
         ensure!(
-            resource_path(platform)?.components().count() == 1,
-            "Invalid cache platform"
+            resource_path(namespace)?.components().count() == 1,
+            "Invalid cache namespace"
         );
-        safe_path(&safe_path(&self.root, platform)?, name)
+        safe_path(&safe_path(&self.root, namespace)?, name)
     }
     pub fn verify(
         &self,
@@ -209,12 +209,12 @@ impl Cache {
 
     pub fn find(
         &self,
-        platform: &str,
+        namespace: &str,
         entry: &Entry,
         cancel: &CancellationToken,
     ) -> Result<Option<PathBuf>> {
         checkpoint(cancel)?;
-        let destination = self.path(platform, &entry.name)?;
+        let destination = self.path(namespace, &entry.name)?;
         if !destination.is_file() {
             return Ok(None);
         }
@@ -262,7 +262,7 @@ impl Cache {
     /// an unchecked directory. Validation completes before any file is removed.
     pub fn prune(
         &self,
-        platform: &str,
+        namespace: &str,
         names: &BTreeSet<String>,
         cancel: &CancellationToken,
     ) -> Result<usize> {
@@ -273,11 +273,11 @@ impl Cache {
         );
         let mut keep = BTreeSet::new();
         for name in names {
-            let path = self.path(platform, name)?;
+            let path = self.path(namespace, name)?;
             keep.insert(receipt_path(&path));
             keep.insert(path);
         }
-        let root = safe_path(&self.root, platform)?;
+        let root = safe_path(&self.root, namespace)?;
         if !root.is_dir() {
             return Ok(0);
         }
@@ -349,6 +349,7 @@ impl Cache {
         destination: &Path,
         entry: &Entry,
         cancel: &CancellationToken,
+        expected_sha256: Option<&str>,
     ) -> Result<()> {
         checkpoint(cancel)?;
         let mut zip = zip::ZipArchive::new(File::open(archive)?)?;
@@ -393,7 +394,7 @@ impl Cache {
             output.write_all(&buffer[..n])?;
         }
         output.as_file().sync_all()?;
-        let hash = self.verify(output.path(), entry, cancel, None)?;
+        let hash = self.verify(output.path(), entry, cancel, expected_sha256)?;
         checkpoint(cancel)?;
         output.persist(destination).map_err(|error| error.error)?;
         self.receipt(destination, entry, &hash)
@@ -451,22 +452,22 @@ mod tests {
         let cache = Cache::new(temp.path().to_owned())?;
         let cancel = CancellationToken::new();
         let value = entry(b"abc", "eb8a");
-        let path = cache.path("Windows", &value.name)?;
+        let path = cache.path("bundles", &value.name)?;
         write_atomic(&path, b"abc")?;
-        assert!(cache.find("Windows", &value, &cancel)?.is_none());
+        assert!(cache.find("bundles", &value, &cancel)?.is_none());
         let digest = cache.verify(&path, &value, &cancel, None)?;
         cache.receipt(&path, &value, &digest)?;
-        assert!(cache.find("Windows", &value, &cancel)?.is_some());
+        assert!(cache.find("bundles", &value, &cancel)?.is_some());
         let mut changed = value.clone();
         changed.md5 = "beef".into();
-        assert!(cache.find("Windows", &changed, &cancel)?.is_none());
+        assert!(cache.find("bundles", &changed, &cancel)?.is_none());
         changed = value.clone();
         changed
             .extra
             .insert("hash".into(), "changed publisher identity".into());
-        assert!(cache.find("Windows", &changed, &cancel)?.is_none());
+        assert!(cache.find("bundles", &changed, &cancel)?.is_none());
         write_atomic(&path, b"xyz")?;
-        assert!(cache.find("Windows", &value, &cancel)?.is_none());
+        assert!(cache.find("bundles", &value, &cancel)?.is_none());
         Ok(())
     }
 
@@ -476,15 +477,15 @@ mod tests {
         let cache = Cache::new(temp.path().to_owned())?;
         let cancel = CancellationToken::new();
         let value = entry(b"abc", "900150983cd24fb0d6963f7d28e17f72");
-        let old = cache.path("Android", &value.name)?;
+        let old = cache.path("bundles", &value.name)?;
         write_atomic(&old, b"abc")?;
         let new = cache
-            .find("Android", &value, &cancel)?
+            .find("bundles", &value, &cancel)?
             .context("Verified original was not reused")?;
         assert_eq!(new, old);
         assert_eq!(fs::read(&new)?, b"abc");
         let changed = entry(b"xyz", "d16fb36f0911f878998c136191af705e");
-        assert!(cache.find("Android", &changed, &cancel)?.is_none());
+        assert!(cache.find("bundles", &changed, &cancel)?.is_none());
         assert_eq!(fs::read(&old)?, b"abc");
         let archive = temp.path().join("download.zip");
         let make_archive = |bytes: &[u8]| -> Result<()> {
@@ -495,17 +496,25 @@ mod tests {
             Ok(())
         };
         make_archive(b"bad")?;
-        assert!(cache.unpack(&archive, &old, &changed, &cancel).is_err());
+        assert!(cache
+            .unpack(&archive, &old, &changed, &cancel, None)
+            .is_err());
         assert_eq!(fs::read(&old)?, b"abc");
         make_archive(b"xyz")?;
+        assert!(cache
+            .unpack(&archive, &old, &changed, &cancel, Some(&"0".repeat(64)))
+            .is_err());
+        assert_eq!(fs::read(&old)?, b"abc");
         let cancelled = CancellationToken::new();
         cancelled.cancel();
-        assert!(cache.unpack(&archive, &old, &changed, &cancelled).is_err());
+        assert!(cache
+            .unpack(&archive, &old, &changed, &cancelled, None)
+            .is_err());
         assert_eq!(fs::read(&old)?, b"abc");
-        cache.unpack(&archive, &old, &changed, &cancel)?;
-        assert_eq!(cache.find("Android", &changed, &cancel)?, Some(old.clone()));
+        cache.unpack(&archive, &old, &changed, &cancel, None)?;
+        assert_eq!(cache.find("bundles", &changed, &cancel)?, Some(old.clone()));
         assert_eq!(fs::read(&old)?, b"xyz");
-        assert!(cache.find("Android", &value, &cancel)?.is_none());
+        assert!(cache.find("bundles", &value, &cancel)?.is_none());
         Ok(())
     }
 
@@ -514,21 +523,21 @@ mod tests {
         let data = tempfile::tempdir()?;
         let cache = Cache::new(data.path().join("cache"))?;
         let cancel = CancellationToken::new();
-        let keep = cache.path("Windows", "avg/keep.ab")?;
+        let keep = cache.path("bundles", "avg/keep.ab")?;
         write_atomic(&keep, b"keep")?;
         write_atomic(&receipt_path(&keep), b"receipt")?;
-        let removed = cache.path("Windows", "avg/removed.ab")?;
+        let removed = cache.path("bundles", "avg/removed.ab")?;
         write_atomic(&removed, b"obsolete")?;
         write_atomic(&receipt_path(&removed), b"receipt")?;
-        let previous = cache.path("Windows", "old-version/avg/file.ab")?;
+        let previous = cache.path("bundles", "old-version/avg/file.ab")?;
         write_atomic(&previous, b"obsolete directory")?;
-        let other = cache.path("Android", "avg/other.ab")?;
-        write_atomic(&other, b"other platform")?;
+        let other = cache.path("historical-movies", "avg/other.ab")?;
+        write_atomic(&other, b"historical movie")?;
         write_atomic(&data.path().join("settings.json"), b"user settings")?;
-        assert!(cache.prune("Windows", &BTreeSet::new(), &cancel).is_err());
+        assert!(cache.prune("bundles", &BTreeSet::new(), &cancel).is_err());
         assert!(cache
             .prune(
-                "Windows",
+                "bundles",
                 &BTreeSet::from(["avg/keep.ab".into(), "../outside".into()]),
                 &cancel
             )
@@ -537,13 +546,13 @@ mod tests {
         let names = BTreeSet::from(["avg/keep.ab".into()]);
         let cancelled = CancellationToken::new();
         cancelled.cancel();
-        assert!(cache.prune("Windows", &names, &cancelled).is_err());
+        assert!(cache.prune("bundles", &names, &cancelled).is_err());
         assert!(removed.is_file());
-        assert_eq!(cache.prune("Windows", &names, &cancel)?, 3);
+        assert_eq!(cache.prune("bundles", &names, &cancel)?, 3);
         assert!(keep.is_file() && receipt_path(&keep).is_file());
         assert!(!removed.exists() && !previous.exists());
-        assert!(!cache.root.join("Windows/old-version").exists());
-        assert_eq!(fs::read(other)?, b"other platform");
+        assert!(!cache.root.join("bundles/old-version").exists());
+        assert_eq!(fs::read(other)?, b"historical movie");
         assert_eq!(
             fs::read(data.path().join("settings.json"))?,
             b"user settings"
@@ -557,12 +566,12 @@ mod tests {
         let data = tempfile::tempdir()?;
         let outside = tempfile::tempdir()?;
         let cache = Cache::new(data.path().to_owned())?;
-        fs::create_dir_all(cache.root.join("Windows"))?;
+        fs::create_dir_all(cache.root.join("bundles"))?;
         write_atomic(&outside.path().join("important"), b"keep")?;
-        std::os::unix::fs::symlink(outside.path(), cache.root.join("Windows/link"))?;
+        std::os::unix::fs::symlink(outside.path(), cache.root.join("bundles/link"))?;
         assert!(cache
             .prune(
-                "Windows",
+                "bundles",
                 &BTreeSet::from(["avg/keep.ab".into()]),
                 &CancellationToken::new()
             )

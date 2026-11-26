@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>ArkReader</title>
+    <link rel="icon" type="image/png" href="./brand-icon.png" />
+    <link id="startup-style" rel="stylesheet" href="startup.css" />
+  </head>
+  <body class="startup-page" data-state="loading">
+    <div id="startup-root">
+      <header class="startup-titlebar">
+        <span>ARKREADER</span><span class="startup-caption">明日方舟 · 剧情档案</span>
+      </header>
+      <main>
+        <section class="startup-brand" aria-label="ArkReader">
+          <div class="brand-rule"></div>
+          <div class="brand-word">ARK<span>READER</span></div>
+          <p class="brand-chinese">明 日 方 舟 · 剧 情 档 案</p>
+          <p class="startup-edition">STORY ARCHIVE</p>
+        </section>
+        <section class="startup-loading" aria-labelledby="startup-heading">
+          <div class="startup-heading-row">
+            <div>
+              <p class="startup-kicker">INITIALIZING</p>
+              <h1 id="startup-heading">正在准备剧情档案</h1>
+            </div>
+            <span class="startup-symbol" aria-hidden="true"></span>
+          </div>
+          <ol id="startup-steps">
+            <li>剧情索引</li>
+            <li>基础资源</li>
+            <li>播放界面</li>
+            <li>目录封面</li>
+            <li>主页音乐</li>
+            <li>进入档案</li>
+          </ol>
+          <div class="startup-status-row">
+            <p id="status" role="status">正在启动…</p>
+            <strong id="percent">0%</strong>
+          </div>
+          <progress id="startup-progress" max="1" value="0" aria-label="总启动进度"></progress>
+          <p id="current-resource"></p>
+          <div class="startup-transfer-row">
+            <span id="transfer-detail"></span><span id="transfer-speed"></span
+            ><span id="elapsed"></span>
+          </div>
+          <details id="startup-details" hidden>
+            <summary>查看错误详情</summary>
+            <pre id="startup-error"></pre>
+          </details>
+          <div class="startup-bottom">
+            <p>准备完成后自动进入剧情库。</p>
+            <div class="startup-actions">
+              <button id="retry" hidden>重试</button><button id="cancel" hidden>取消准备</button
+              ><button id="skip-music" hidden>关闭音乐并继续</button><button id="quit">退出</button>
+            </div>
+          </div>
+        </section>
+      </main>
+      <footer>ARKREADER · WEB <span>非官方剧情播放器</span></footer>
+    </div>
+    <script src="./ui-watchdog.js"></script>
+    <script type="module" src="/src/web/entry.ts"></script>
+  </body>
+</html>

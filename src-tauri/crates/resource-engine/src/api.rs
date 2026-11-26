@@ -37,11 +37,11 @@ pub fn router(engine: Arc<Engine>) -> Router {
             get(|| async { Json(json!({"ready":true,"native":true})) }),
         )
         .route("/api/status", get(status))
+        .route("/api/resource-source", post(select_source))
         .route("/api/storage", get(storage))
         .route("/api/import", post(initialize))
         .route("/api/cache/clear", post(clear))
         .route("/api/catalog", get(catalog))
-        .route("/api/playable-stories", get(catalog))
         .route("/api/profile", get(profile))
         .route("/api/filter-profile", get(filters))
         .route("/api/blocker-profile", get(blocker))
@@ -64,6 +64,17 @@ pub fn router(engine: Arc<Engine>) -> Router {
 async fn status(State(engine): Shared) -> Result<Json<Value>> {
     Ok(Json(engine.status().await?))
 }
+#[derive(Deserialize)]
+struct SelectSource {
+    source: crate::source::Origin,
+}
+async fn select_source(
+    State(engine): Shared,
+    Json(body): Json<SelectSource>,
+) -> Result<Json<Value>> {
+    engine.select_source(body.source)?;
+    Ok(Json(json!({"source": body.source})))
+}
 async fn storage(
     State(engine): Shared,
     Query(query): Query<BTreeMap<String, String>>,
@@ -83,9 +94,16 @@ async fn clear(State(engine): Shared) -> Result<Json<Value>> {
 }
 async fn catalog(State(engine): Shared) -> Result<Json<Value>> {
     let current = engine.current().await?;
-    Ok(Json(
-        serde_json::to_value(&current.base.catalog).map_err(anyhow::Error::from)?,
-    ))
+    let mut value = serde_json::to_value(&current.base.catalog).map_err(anyhow::Error::from)?;
+    if let Some(groups) = value["groups"].as_array_mut() {
+        for group in groups {
+            let available = group["id"]
+                .as_str()
+                .is_some_and(|id| current.base.covers.contains_key(id));
+            group["hasCover"] = available.into();
+        }
+    }
+    Ok(Json(value))
 }
 async fn profile(State(engine): Shared) -> Result<Json<Value>> {
     Ok(Json(engine.current().await?.base.profile.clone()))

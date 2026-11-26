@@ -353,7 +353,7 @@ impl Engine {
             self.cache_item(&job, &id, "downloading", None)?;
             let result: Result<Vec<PathBuf>> = async {
                 let mut files = source
-                    .prefetch(&own.into_iter().collect::<Vec<_>>(), 4, |_| {})
+                    .prefetch(&own.into_iter().collect::<Vec<_>>(), 4)
                     .await?;
                 for movie in &plan.historical {
                     let historical = Source::new(
@@ -362,7 +362,7 @@ impl Engine {
                         job.cancel.clone(),
                     )?
                     .with_progress(job.clone());
-                    files.push(historical.bundle(&movie.bundle, |_| {}).await?);
+                    files.push(historical.bundle(&movie.bundle).await?);
                 }
                 let mut fonts = BTreeSet::new();
                 for (bundle, keys) in &plan.wanted {
@@ -375,7 +375,7 @@ impl Engine {
                         let keys = keys.clone();
                         let common = bundle == "avg/[uc]common.ab";
                         fonts.extend(
-                            tokio::task::spawn_blocking(move || {
+                            crate::runtime::blocking(move || {
                                 if common {
                                     let mut names = BTreeSet::new();
                                     for key in keys {

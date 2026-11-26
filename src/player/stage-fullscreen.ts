@@ -1,8 +1,11 @@
 import { setControlLabel } from './control-label';
+import { isWeb, isMobile } from '../app/platform';
 /** Browser display mode, separate from the story's authored camera/viewport. */
 export class StageFullscreen {
   private pending = false;
   private revision = 0;
+  private orientationLocked = false;
+  private systemFullscreen = false;
   constructor(
     private surface: HTMLElement,
     private button: HTMLButtonElement,
@@ -25,6 +28,7 @@ export class StageFullscreen {
       }
     });
     document.addEventListener('fullscreenchange', () => this.sync());
+    document.body.classList.toggle('web-system-fullscreen', isWeb && isMobile && this.supported());
     this.sync();
   }
   get active(): boolean {
@@ -43,6 +47,15 @@ export class StageFullscreen {
     document.body.classList.toggle('window-filled', value);
   }
   private sync(): void {
+    const full = document.fullscreenElement === this.surface;
+    if (this.systemFullscreen && !full) {
+      if (this.orientationLocked) {
+        screen.orientation.unlock();
+        this.orientationLocked = false;
+      }
+      if (isWeb && isMobile && document.body.classList.contains('playing')) this.fillWindow(true);
+    }
+    this.systemFullscreen = full;
     const filled = this.surface.classList.contains('window-filled');
     setControlLabel(
       this.button,
@@ -68,8 +81,20 @@ export class StageFullscreen {
     this.pending = true;
     this.sync();
     try {
-      if (this.supported()) await this.surface.requestFullscreen();
-      else this.fillWindow(true);
+      if (this.supported()) {
+        await this.surface.requestFullscreen();
+        const orientation = screen.orientation as ScreenOrientation & {
+          lock?: (mode: string) => Promise<void>;
+        };
+        if (isWeb && isMobile && orientation?.lock) {
+          await orientation
+            .lock('landscape')
+            .then(() => {
+              this.orientationLocked = true;
+            })
+            .catch(() => {});
+        }
+      } else this.fillWindow(true);
     } catch {
       // Permission denial or an unsupported implementation must not break play.
       if (revision === this.revision) this.fillWindow(true);
@@ -99,6 +124,10 @@ export class StageFullscreen {
   async exit(): Promise<void> {
     ++this.revision;
     this.fillWindow(false);
+    if (this.orientationLocked) {
+      screen.orientation.unlock();
+      this.orientationLocked = false;
+    }
     try {
       if (document.fullscreenElement === this.surface) await document.exitFullscreen();
     } catch {

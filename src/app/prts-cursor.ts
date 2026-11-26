@@ -1,4 +1,4 @@
-import { playerMediaUrl } from '../player/package-source';
+import { playerMediaUrl } from '../player/resource-urls';
 import { sampleKeys, type CurveKey } from '../player/particle-math';
 import { topNativeDialog } from '../player/native-dialogs';
 import './prts-cursor.css';

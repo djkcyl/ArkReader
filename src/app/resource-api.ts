@@ -1,6 +1,6 @@
 import { ScriptCompatibilityError, type ScriptCompatibility } from '../core/script-compatibility';
 import { invoke } from '@tauri-apps/api/core';
-import { isMobile } from './platform';
+import { isMobile, isNative } from './platform';
 export interface OperationStatus<T = unknown> {
   id: string;
   kind: 'import' | 'prepare' | 'cache' | 'home-music';
@@ -45,7 +45,7 @@ export async function resourceRequest<T>(
   body?: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
-  if (isMobile && body !== undefined) {
+  if (isNative && isMobile && body !== undefined) {
     signal?.throwIfAborted();
     // Android WebView's custom protocol cannot forward POST bodies.
     const response = await invoke<{ status: number; body: T & { detail?: string } }>(

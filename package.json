@@ -1,6 +1,6 @@
 {
   "name": "arkreader",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,6 +9,8 @@
     "desktop:build": "node tools/build-desktop.mjs",
     "desktop:build:windows": "node tools/build-desktop.mjs",
     "desktop:portable": "node tools/build-desktop.mjs --portable-only",
+    "web:build": "node tools/build-web.mjs",
+    "web:build:hosted": "bash tools/build-web-hosted.sh",
     "desktop:build:macos": "node tools/build-desktop.mjs",
     "desktop:build:linux": "node tools/build-desktop.mjs",
     "dev": "vite --host 127.0.0.1",
@@ -21,6 +23,7 @@
     "test": "cargo test --manifest-path src-tauri/Cargo.toml --workspace"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.1",
     "@tauri-apps/cli": "2.12.6",
     "@types/node": "^26.6.6",
     "esbuild": "0.28.2",

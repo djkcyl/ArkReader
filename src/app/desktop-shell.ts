@@ -1,4 +1,4 @@
-import { desktop, isMobile } from './platform';
+import { desktop, isMobile, isWeb } from './platform';
 import { resourceRequest, type OperationStatus } from './resource-api';
 import './desktop-shell.css';
 import './qol.css';
@@ -8,6 +8,7 @@ import { HomeMusic } from './home-music';
 import type { PreparedStartupMusic } from './home-music-boot';
 import { AudioPage } from './audio-page';
 import { confirmAction } from './action-confirm';
+import { mountResourceSource } from './resource-source';
 interface Status {
   version: string | null;
   stories: number;
@@ -66,7 +67,9 @@ export function mountDesktopShell(options: {
       ><button data-page="audio" title="声音设置">${icon('audio')}<span>声音</span></button
       ><button data-page="about" title="应用信息">${icon('info')}<span>应用</span></button>
     </nav>
-    <span class="desktop-rail-foot">DESKTOP<br /><span id="rail-version"></span></span>`;
+    <span class="desktop-rail-foot"
+      >${isWeb ? 'WEB' : 'DESKTOP'}<br /><span id="rail-version"></span
+    ></span>`;
   document.body.prepend(rail);
   const header = document.querySelector<HTMLElement>('.brand')!;
   header.querySelector('.subtitle')!.textContent = '明日方舟 · 剧情档案';
@@ -77,7 +80,7 @@ export function mountDesktopShell(options: {
   };
   const badge = document.createElement('span');
   badge.className = 'desktop-badge';
-  badge.textContent = '桌面版';
+  badge.textContent = isWeb ? '网页版' : '桌面版';
   titleLink.after(badge);
   mountWindowChrome(header);
   const homeMusic = new HomeMusic(header, options.music);
@@ -172,6 +175,11 @@ export function mountDesktopShell(options: {
   header.after(resources, audioPage.root, about);
   document.getElementById('app')!.append(notice);
   const versions = new VersionNotice(resources, () => show('resources'));
+  mountResourceSource(
+    resources
+      .querySelector('.desktop-page-heading')!
+      .insertAdjacentElement('afterend', document.createElement('div'))!,
+  );
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   let busy = false,
     poll: ReturnType<typeof setTimeout> | undefined,
@@ -294,8 +302,11 @@ export function mountDesktopShell(options: {
   $('resource-refresh').onclick = () => void scan();
   $('resource-open').onclick = () =>
     void desktop.openLibrary().catch((error) => message(String(error), true));
-  if (isMobile) $('resource-open').closest('article')?.setAttribute('hidden', '');
+  if (isMobile || isWeb) $('resource-open').closest('article')?.setAttribute('hidden', '');
   document.addEventListener('arkreader-cache-finished', () => void scan());
+  document.addEventListener('arkreader-storage-error', (event) =>
+    message(String((event as CustomEvent).detail), true),
+  );
   $('resource-clear').onclick = () =>
     void action(async () => {
       if (

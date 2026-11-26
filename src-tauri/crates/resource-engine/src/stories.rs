@@ -70,15 +70,14 @@ impl Stories {
         let record = receipt.clone();
         let root = blob_root.clone();
         let cached =
-            tokio::task::spawn_blocking(move || read_text_cache(&record, &root, &expected))
-                .await??;
+            crate::runtime::blocking(move || read_text_cache(&record, &root, &expected)).await??;
         if let Some(text) = cached {
             return Ok(text);
         }
         let raw = index::read_route(&self.source, route).await?;
         let text = String::from_utf8(raw).context("Official story script is not valid UTF-8")?;
         let bytes = text.as_bytes().to_vec();
-        tokio::task::spawn_blocking(move || {
+        crate::runtime::blocking(move || {
             let sha256 = format!("{:x}", Sha256::digest(&bytes));
             write_atomic(&blob_root.join(&sha256), &bytes)?;
             write_json(&receipt, &TextReceipt { identity, sha256 })
@@ -104,7 +103,7 @@ impl Stories {
         let script = script.to_owned();
         let index = self.index.clone();
         let cancel = self.source.cancellation();
-        tokio::task::spawn_blocking(move || {
+        crate::runtime::blocking(move || {
             if let Ok(raw) = fs::read(&path) {
                 if let Ok(saved) = serde_json::from_slice::<InspectionReceipt>(&raw) {
                     if saved.identity == identity {

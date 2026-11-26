@@ -1,5 +1,5 @@
 import { loadWidgetProfile, type Graphic, type WidgetProfile } from '../player/native-widgets';
-import { playerMediaUrl } from '../player/package-source';
+import { playerMediaUrl } from '../player/resource-urls';
 import './native-controls.css';
 import './native-application.css';
 

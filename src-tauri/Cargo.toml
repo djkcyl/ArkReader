@@ -1,6 +1,6 @@
 [package]
 name = "arkreader-desktop"
-version = "1.1.2"
+version = "1.2.0"
 description = "ArkReader desktop and Android application"
 edition = "2021"
 publish = false
@@ -42,3 +42,8 @@ windows = { version = "0.62", features = [
 strip = true
 lto = "thin"
 codegen-units = 1
+
+[profile.web]
+inherits = "release"
+opt-level = 2
+panic = "abort"

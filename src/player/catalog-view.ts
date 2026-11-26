@@ -29,6 +29,7 @@ interface CatalogGroup {
   category: string;
   stories: CatalogStory[];
   cover?: string;
+  hasCover?: boolean;
   subtitle?: string;
   theme?: string;
   operator?: CatalogStory['operator'];
@@ -47,7 +48,6 @@ const ENGLISH: Record<string, string> = {
   roguelike: 'INTEGRATED STRATEGIES',
   sandbox: 'RECLAMATION ALGORITHM',
   other: 'SPECIAL RECORDS',
-  offline: 'LOCAL ARCHIVE',
 };
 const el = <K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -338,6 +338,7 @@ export class CatalogView {
       ),
     );
     frame.append(el('span', 'cover-lines'));
+    frame.append(el('strong', 'cover-fallback-title', group.name));
     const url = group.cover ?? group.stories[0]?.cover;
     if (url) {
       const img = el('img');

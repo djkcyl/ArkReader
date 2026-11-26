@@ -10,7 +10,7 @@ export interface ResourceUpdate {
   error?: string;
   warning?: string;
   checkedAt?: number;
-  baseline: { resourceVersion: string; clientVersion: string };
+  baseline: { platform: string; resourceVersion: string; clientVersion: string };
 }
 const el = (tag: string, text = '', cls = '') => {
   const node = document.createElement(tag);
@@ -56,9 +56,9 @@ export class VersionNotice {
     for (const [label, value] of [
       ['当前资源', current],
       ['当前客户端', update.clientVersion ?? '—'],
-      ['官方最新资源', official],
-      ['官方最新客户端', update.officialClientVersion ?? '本次未取得'],
-      ['已适配资源', b.resourceVersion],
+      ['来源最新资源', official],
+      ['来源最新客户端', update.officialClientVersion ?? '本次未取得'],
+      [`已适配资源（${b.platform}）`, b.resourceVersion],
       ['已适配客户端', b.clientVersion],
     ]) {
       const row = el('div');
@@ -76,14 +76,13 @@ export class VersionNotice {
       details.append(el('summary', '查看更新详情'), el('p', update.error));
       card.append(details);
     }
-    const message =
-      update.warning || (['offline', 'fallback'].includes(update.state) ? update.message : '');
+    const message = update.warning || (update.state === 'offline' ? update.message : '');
     this.content.replaceChildren(
       el('strong', update.warning ? '资源版本适配提醒' : '本次使用缓存资源'),
       el('p', message ?? ''),
     );
     if (update.warning)
-      this.content.append(el('small', `已适配 ${b.resourceVersion} · 当前 ${current}`));
+      this.content.append(el('small', `资源平台 ${b.platform} · 适配基线 ${b.resourceVersion}`));
     this.banner.hidden = !message || this.dismissed;
   }
 }

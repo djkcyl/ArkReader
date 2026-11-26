@@ -1,0 +1,70 @@
+name: Web
+on:
+  workflow_call:
+    inputs:
+      source_ref:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  package:
+    name: Static
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      WEB_TEST_CHANNEL: chrome
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source_ref }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Select browser toolchain paths
+        run: |
+          echo "EMSDK=$RUNNER_TEMP/arkreader-emsdk" >> "$GITHUB_ENV"
+          echo "EM_CONFIG=$RUNNER_TEMP/arkreader-emsdk/.emscripten" >> "$GITHUB_ENV"
+      - run: rustup toolchain install 1.100.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-emscripten && rustup default 1.100.0
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        id: emsdk
+        with:
+          path: ${{ env.EMSDK }}
+          key: emsdk-${{ runner.os }}-${{ runner.arch }}-7.0.1-a7c808831a666cc903fedb906c171a718cd97341
+      - run: echo "$EMSDK/upstream/emscripten" >> "$GITHUB_PATH"
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: artifacts/media-build
+          key: media-web-${{ runner.os }}-${{ runner.arch }}-emscripten-7.0.1-${{ hashFiles('tools/build-media.sh', 'src-tauri/crates/resource-engine/src/web/media.c') }}
+          restore-keys: media-web-${{ runner.os }}-${{ runner.arch }}-emscripten-7.0.1-
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          workspaces: src-tauri
+          shared-key: web-emscripten-7.0.1-rust-1.100.0
+          cache-on-failure: true
+          env-vars: CARGO CC CFLAGS CXX CMAKE LD LDFLAGS RUST EMSDK EM_CONFIG
+      - run: npm ci
+      - run: npm run format:check
+      - name: Build using the static hosting entry point
+        run: npm run web:build:hosted
+      - name: Resource engine checks
+        run: |
+          cargo test --locked --manifest-path src-tauri/Cargo.toml -p arkreader-resource-engine --lib
+          cargo clippy --locked --manifest-path src-tauri/Cargo.toml -p arkreader-resource-engine --features web --bin arkreader-web --target wasm32-unknown-emscripten -- -D warnings
+      - run: npx playwright install --with-deps chrome
+      - name: Static deployment, real playback and offline cache
+        run: node tools/verify-web.mjs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: verification-web
+          path: artifacts/web-verification/
+          retention-days: 7
+      - run: node tools/release-assets.mjs --web
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: release-web
+          path: release/*
+          if-no-files-found: error
+          retention-days: 7

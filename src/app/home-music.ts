@@ -3,7 +3,7 @@ import { resourceRequest } from './resource-api';
 import { transferSpeed } from './transfer-labels';
 import './home-music.css';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { isDesktop } from './platform';
+import { isDesktop, isWeb } from './platform';
 import { audioLevels } from './audio-levels';
 import { syncApplicationControl } from './native-controls';
 
@@ -100,6 +100,21 @@ export class HomeMusic {
       this.reconcile();
     });
     document.addEventListener('visibilitychange', () => this.reconcile());
+    if (isWeb) {
+      const unlock = () => {
+        if (this.wanted && this.current?.audio.context.state === 'suspended')
+          void this.current.audio
+            .unlock()
+            .then(() => this.render())
+            .catch(console.warn);
+      };
+      document.addEventListener('pointerdown', unlock, { passive: true });
+      document.addEventListener('keydown', unlock);
+      this.unlisten.push(
+        () => document.removeEventListener('pointerdown', unlock),
+        () => document.removeEventListener('keydown', unlock),
+      );
+    }
     window.addEventListener('arkreader-native-background', () => {
       this.backgrounded = true;
       this.reconcile();
@@ -325,13 +340,15 @@ export class HomeMusic {
     this.el('home-music-volume-value').textContent = Math.round(this.volume * 100) + '%';
     const name = this.catalog?.tracks.find((t) => t.id === this.selected)?.name;
     this.el('home-music-status').textContent =
-      this.state === 'playing'
-        ? `正在播放 · ${name}`
-        : this.state === 'off'
-          ? '音乐已关闭'
-          : this.state === 'paused'
-            ? '音乐已暂停'
-            : this.detail;
+      isWeb && this.wanted && this.current?.audio.context.state === 'suspended'
+        ? '点击页面启用音乐'
+        : this.state === 'playing'
+          ? `正在播放 · ${name}`
+          : this.state === 'off'
+            ? '音乐已关闭'
+            : this.state === 'paused'
+              ? '音乐已暂停'
+              : this.detail;
     this.el('home-music-progress').hidden = this.state !== 'loading' || !this.pending;
     this.el('home-music-retry').hidden = this.state !== 'error';
     this.button.title = name ? `主页音乐 · ${name}` : '主页音乐';

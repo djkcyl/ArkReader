@@ -1,3 +1,5 @@
+mod layout;
+
 use crate::{
     effects::{
         native,
@@ -191,20 +193,32 @@ impl Builder<'_> {
             "Unsupported animated UI stencil"
         );
         let state = &form["m_SubShaders"][0]["m_Passes"][0];
-        let names = materials::pairs(&state["m_NameIndices"])?
-            .into_iter()
-            .map(|(name, index)| {
-                Ok((
-                    integer(&index)?,
-                    name.as_str()
-                        .context("Shader parameter name missing")?
-                        .to_owned(),
-                ))
-            })
-            .collect::<Result<BTreeMap<_, _>>>()?;
-        let parameters = &state["progFragment"]["m_CommonParameters"];
+        let layout = layout::get(family)?;
         let mut bindings = BTreeMap::new();
-        let mut values = floats.clone();
+        let mut values = BTreeMap::new();
+        for property in array(&form["m_PropInfo"]["m_Props"])? {
+            let name = property["m_Name"]
+                .as_str()
+                .context("Shader property name missing")?;
+            match property["m_Type"].as_i64() {
+                Some(0 | 1) => {
+                    values.insert(
+                        name.to_owned(),
+                        json!((0..4)
+                            .map(|i| property[format!("m_DefValue[{i}]")].clone())
+                            .collect::<Vec<_>>()),
+                    );
+                }
+                Some(2 | 3) => {
+                    values.insert(name.to_owned(), property["m_DefValue[0]"].clone());
+                }
+                Some(4) => {
+                    values.insert(format!("{name}_ST"), json!([1.0, 1.0, 0.0, 0.0]));
+                }
+                _ => {}
+            }
+        }
+        values.extend(floats.clone());
         for (name, value) in &colors {
             values.insert(name.clone(), json!(value));
         }
@@ -231,30 +245,9 @@ impl Builder<'_> {
                     .or_insert(json!([0.0, 0.0, 0.0, 0.0]));
             }
         }
-        let buffers = array(&parameters["m_ConstantBuffers"])?;
-        let mut constant_params = if buffers.is_empty() {
-            Vec::new()
-        } else {
-            array(&buffers[0]["m_VectorParams"])?.clone()
-        };
-        if family == "customDisturb" {
-            constant_params.extend(
-                array(
-                    &state["progVertex"]["m_CommonParameters"]["m_ConstantBuffers"][0]
-                        ["m_VectorParams"],
-                )?
-                .iter()
-                .cloned(),
-            );
-        }
         let mut constants = vec![0.0; 84];
         let mut locations = BTreeMap::new();
-        for p in constant_params {
-            let prop = names
-                .get(&integer(&p["m_NameIndex"])?)
-                .context("Shader constant name missing")?;
-            let offset = usize::try_from(integer(&p["m_Index"])?)? / 4;
-            let size = usize::try_from(integer(&p["m_Dim"])?)?;
+        for &(prop, offset, size) in layout.constants {
             ensure!(
                 offset + size <= constants.len(),
                 "UI material constant exceeds supported layout"
@@ -273,21 +266,16 @@ impl Builder<'_> {
             for i in 0..size {
                 constants[offset + i] = number(&values[i])?;
             }
-            locations.insert(prop.clone(), json!({"offset":offset,"size":size}));
+            locations.insert(prop, json!({"offset":offset,"size":size}));
         }
         let mut slots = Vec::new();
-        let mut texture_params = array(&parameters["m_TextureParams"])?.clone();
-        texture_params.sort_by_key(|p| p["m_Index"].as_i64());
-        for p in texture_params {
-            let prop = names
-                .get(&integer(&p["m_NameIndex"])?)
-                .context("Shader texture name missing")?;
+        for &(prop, sampler) in layout.textures {
             let default = array(&form["m_PropInfo"]["m_Props"])?
                 .iter()
                 .find(|p| p["m_Name"].as_str() == Some(prop))
                 .map(|p| p["m_DefTexture"]["m_DefaultName"].clone())
                 .unwrap_or(json!("white"));
-            slots.push(json!({"name":prop,"key":bindings.get(prop).map(|b|b["key"].clone()).unwrap_or(Value::Null),"sampler":p["m_SamplerIndex"],"default":default}));
+            slots.push(json!({"name":prop,"key":bindings.get(prop).map(|b|b["key"].clone()).unwrap_or(Value::Null),"sampler":sampler,"default":default}));
         }
         let blend = &state["m_State"]["rtBlend0"]["destBlend"];
         let blend_name = blend["name"].as_str().context("UI blend name missing")?;

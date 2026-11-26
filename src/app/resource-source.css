@@ -1,0 +1,35 @@
+.resource-source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+}
+.resource-source label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.resource-source select {
+  min-width: 120px;
+  min-height: 36px;
+}
+.resource-source > span {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: #b45d40;
+}
+.resource-source > span:empty {
+  display: none;
+}
+.startup-page .resource-source {
+  font-size: 12px;
+  margin-top: 24px;
+}
+.startup-page .resource-source select,
+.startup-page .resource-source button {
+  background: #252b30;
+  color: #e7edef;
+  border: 1px solid #637078;
+  padding: 7px 12px;
+}

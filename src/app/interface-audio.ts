@@ -1,4 +1,4 @@
-import { playerMediaUrl } from '../player/package-source';
+import { playerMediaUrl } from '../player/resource-urls';
 import { audioLevels } from './audio-levels';
 
 interface Cue {

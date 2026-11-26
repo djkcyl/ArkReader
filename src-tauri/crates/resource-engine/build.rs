@@ -20,11 +20,26 @@ fn main() {
         .join("../../..")
         .canonicalize()
         .unwrap();
+    if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("emscripten") {
+        let media = root.join("src-tauri/resources/web-media");
+        println!("cargo:rerun-if-changed={}", media.display());
+        println!("cargo:rustc-link-search=native={}", media.display());
+        for name in [
+            "arkreader_media",
+            "avformat",
+            "avcodec",
+            "swresample",
+            "avutil",
+        ] {
+            println!("cargo:rustc-link-lib=static={name}");
+        }
+    }
     for path in [
         "src/core",
         "tools/desktop-parser.ts",
         "tools/resource_refs.ts",
         "tools/build-native-parser.mjs",
+        "tools/web-library.js",
         "package-lock.json",
     ] {
         println!("cargo:rerun-if-changed={}", root.join(path).display());

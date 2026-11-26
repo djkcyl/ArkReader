@@ -6,7 +6,7 @@ import { NativeScrollbar } from './native-scrollbar';
 import { readerVisibleRange } from './reader-layout';
 import { layoutDialogText, alignedTextOffset, textCanvasPixelHeight } from './dialog-layout';
 import { readingMarkup, readingFont } from '../core/sticker-color';
-import { playerMediaUrl } from './package-source';
+import { playerMediaUrl } from './resource-urls';
 import './history-view.css';
 import { NativeSelectableSurface } from './native-selectable';
 import { bindReviewJump } from './review-jump';

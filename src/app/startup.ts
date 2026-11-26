@@ -1,4 +1,5 @@
-import { invoke } from '@tauri-apps/api/core';
+import { appInvoke as invoke } from './platform';
+import { mountResourceSource } from './resource-source';
 import { mountWindowChrome } from './window-chrome';
 import { resourceLabel, transferSpeed } from './transfer-labels';
 import type { TransferSummary } from './resource-api';
@@ -6,12 +7,13 @@ import { prtsCursor } from './prts-cursor';
 import { musicSettings, saveMusicSettings, prepareStartupMusic } from './home-music-source';
 import { preloadStartupMusic, clearStartupMusic } from './home-music-boot';
 import { mountMobilePlatform } from './mobile';
-import { isMobile } from './platform';
+import { isMobile, isWeb } from './platform';
 import './mobile.css';
 
 mountMobilePlatform();
+mountResourceSource(document.querySelector('.startup-loading')!);
 const footerLabel = document.querySelector('#startup-root > footer')?.firstChild;
-if (isMobile && footerLabel) footerLabel.textContent = 'ARKREADER · ANDROID ';
+if (isMobile && !isWeb && footerLabel) footerLabel.textContent = 'ARKREADER · ANDROID ';
 
 declare global {
   interface Window {
@@ -223,6 +225,8 @@ async function retryStartup() {
   }
 }
 $('retry').onclick = () => void retryStartup();
+const sourceChanged = () => void retryStartup();
+document.addEventListener('arkreader-resource-source-changed', sourceChanged);
 $('skip-music').onclick = () => {
   saveMusicSettings({ ...musicSettings(), enabled: false });
   void retryStartup();
@@ -246,6 +250,7 @@ window.addEventListener('pagehide', () => {
   clearStartupMusic();
 });
 document.addEventListener('arkreader-startup-finished', () => {
+  document.removeEventListener('arkreader-resource-source-changed', sourceChanged);
   clearTimeout(timer);
   musicAbort = undefined;
   disposeChrome();
@@ -257,7 +262,12 @@ window.addEventListener('arkreader-open-main', (event) => {
   if (opening) return;
   opening = true;
   const { epoch, version } = (event as CustomEvent<{ epoch: number; version: string }>).detail;
-  history.replaceState(null, '', `/?boot=${epoch}&v=${encodeURIComponent(version)}`);
+  if (isWeb) {
+    const url = new URL(location.href);
+    url.searchParams.set('boot', String(epoch));
+    url.searchParams.set('v', version);
+    history.replaceState(history.state, '', url);
+  } else history.replaceState(null, '', `/?boot=${epoch}&v=${encodeURIComponent(version)}`);
   document.dispatchEvent(new CustomEvent('arkreader-main-loading', { detail: { epoch } }));
   void import('../main').catch((error) => {
     clearStartupMusic();

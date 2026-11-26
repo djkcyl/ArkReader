@@ -9,7 +9,7 @@ import {
   readerVisibleRange,
   READER_LAYOUT as L,
 } from './reader-layout';
-import { playerMediaUrl } from './package-source';
+import { playerMediaUrl } from './resource-urls';
 import { ReaderScroll } from '../core/reader-scroll';
 import { NativeScrollbar } from './native-scrollbar';
 import { NativeSelectableSurface } from './native-selectable';

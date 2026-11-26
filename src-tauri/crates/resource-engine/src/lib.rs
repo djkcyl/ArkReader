@@ -6,6 +6,8 @@ pub mod artifacts;
 
 pub mod animated_ui;
 pub mod api;
+#[cfg(not(target_os = "emscripten"))]
+mod apk;
 pub mod artwork;
 pub mod cache;
 pub mod catalog;
@@ -22,13 +24,17 @@ pub mod interlude;
 pub mod jobs;
 pub mod materials;
 pub mod media;
+#[cfg(not(target_os = "emscripten"))]
 pub mod media_stream;
 pub mod model;
 pub mod music;
+mod net;
 pub mod planning;
 pub mod prefab;
 pub mod progress;
+mod prts;
 pub mod resource_manifest;
+mod runtime;
 pub mod scope;
 pub mod script;
 mod session;
@@ -43,3 +49,5 @@ pub mod unity;
 pub mod unity_bundle;
 pub mod updates;
 pub mod video;
+#[cfg(target_os = "emscripten")]
+pub mod web;

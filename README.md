@@ -3,26 +3,26 @@
 <img src="docs/images/hero.png" width="640" alt="ArkReader" />
 
 <p><strong>明日方舟剧情播放器</strong></p>
-<p>Windows · macOS · Linux · Android<br />无需安装游戏或登录账号。</p>
+<p>Windows · macOS · Linux · Android · Web<br />无需安装游戏或登录账号。</p>
 
 [![Release](https://img.shields.io/github/v/release/djkcyl/ArkReader?style=flat-square&color=008caf)](https://github.com/djkcyl/ArkReader/releases/latest)
 
-[下载](#下载) · [功能](#功能) · [源码构建](#源码构建) · [反馈与贡献](#反馈与贡献)
+[下载](#下载) · [功能](#功能) · [网页部署](#网页部署) · [源码构建](#源码构建) · [反馈与贡献](#反馈与贡献)
 
 </div>
 
 ## 下载
 
-当前正式版 **1.1.2**。更新说明见 [Releases](https://github.com/djkcyl/ArkReader/releases/latest)。
+当前正式版 **1.2.0**。更新说明见 [Releases](https://github.com/djkcyl/ArkReader/releases/latest)。
 
 | 平台            | 架构          | 安装版                                                                                                           | 免安装版                                                                                                          |
 | --------------- | ------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Windows 10 / 11 | x64           | [EXE 安装器](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-windows-x64-setup.exe) | [便携 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-windows-x64-portable.zip) |
-| macOS 12+       | Apple Silicon | [DMG](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-macos-arm64.dmg)              | [应用 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-macos-arm64-app.zip)      |
-| Linux           | x64           | [DEB](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-linux-x64.deb)                | [AppImage](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-linux-x64.AppImage)       |
-| Android 7+      | ARM64         | [APK](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-android-arm64.apk)            | —                                                                                                                 |
+| Windows 10 / 11 | x64           | [EXE 安装器](https://github.com/djkcyl/ArkReader/releases/download/v1.2.0/ArkReader-1.2.0-windows-x64-setup.exe) | [便携 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.0/ArkReader-1.2.0-windows-x64-portable.zip) |
+| macOS 12+       | Apple Silicon | [DMG](https://github.com/djkcyl/ArkReader/releases/download/v1.2.0/ArkReader-1.2.0-macos-arm64.dmg)              | [应用 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.0/ArkReader-1.2.0-macos-arm64-app.zip)      |
+| Linux           | x64           | [DEB](https://github.com/djkcyl/ArkReader/releases/download/v1.2.0/ArkReader-1.2.0-linux-x64.deb)                | [AppImage](https://github.com/djkcyl/ArkReader/releases/download/v1.2.0/ArkReader-1.2.0-linux-x64.AppImage)       |
+| Android 7+      | ARM64         | [APK](https://github.com/djkcyl/ArkReader/releases/download/v1.2.0/ArkReader-1.2.0-android-arm64.apk)            | —                                                                                                                 |
 
-[SHA-256 校验清单](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/SHA256SUMS.txt) · [历史版本](https://github.com/djkcyl/ArkReader/releases)
+[Web 静态 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.0/ArkReader-1.2.0-web.zip) · [SHA-256 校验清单](https://github.com/djkcyl/ArkReader/releases/download/v1.2.0/SHA256SUMS.txt) · [历史版本](https://github.com/djkcyl/ArkReader/releases)
 
 Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需要在系统设置中允许运行。Linux DEB 使用 WebKitGTK 4.1。暂不提供 Intel Mac 和 iOS 版本。
 
@@ -69,6 +69,12 @@ Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需
   <img src="docs/images/android.png" width="360" alt="Android 剧情库" />
 </p>
 
+### 网页版
+
+直接在浏览器中下载、解析和播放剧情，也支持手机触屏。收藏、阅读进度和缓存保存在当前浏览器中；已缓存的剧情可离线阅读。首次播放声音需要点击页面。
+
+网页版使用 PRTS 资源源；桌面和 Android 可在「资源」页选择官方或 PRTS，相同资源会复用。切换浏览器或清除网站数据不会保留原来的阅读记录和缓存。
+
 ### 音乐与音量
 
 主页音乐可以选择游戏内的主界面曲目。界面音效、主页音乐和剧情播放器分别调节音量；进入剧情时，主页音乐暂停。
@@ -87,7 +93,7 @@ Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需
 
 ## 数据目录
 
-游戏资源从官方在线来源下载，不读取本地游戏安装目录。资料库保存在系统用户目录，桌面安装版与便携版共用数据。
+游戏资源从官方或 PRTS 在线来源下载，不读取本地游戏安装目录。资料库保存在系统用户目录，桌面安装版与便携版共用数据。
 
 | 平台    | 资料库位置                                                      |
 | ------- | --------------------------------------------------------------- |
@@ -95,6 +101,7 @@ Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需
 | macOS   | `~/Library/Application Support/io.arkreader.desktop/library`    |
 | Linux   | `${XDG_DATA_HOME:-~/.local/share}/io.arkreader.desktop/library` |
 | Android | 应用专属数据目录                                                |
+| Web     | 当前站点的浏览器存储                                            |
 
 ## 已知问题
 
@@ -102,9 +109,26 @@ Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需
 - 部分 Windows 环境下偶发 WebView2 启动异常，重新打开通常可恢复，仍在排查。
 - 本项目只提供剧情回放，不包含战斗、基建等游戏玩法。
 
+## 网页部署
+
+Release 中的 **Web ZIP** 是完整静态站点。解压后将文件原样上传到支持 HTTPS 的静态托管服务即可，不需要后端或转发服务器。也可以部署到网站子目录。
+
+腾讯云 Makers（原 EdgeOne Pages）可直接连接本仓库，从 `main` 构建。仓库中的 [edgeone.json](edgeone.json) 已配置构建参数；手动填写时使用：
+
+| 项目     | 值                         |
+| -------- | -------------------------- |
+| 框架     | Other                      |
+| 根目录   | `./`                       |
+| 安装命令 | `npm ci`                   |
+| 构建命令 | `npm run web:build:hosted` |
+| 输出目录 | `web-dist`                 |
+| Node.js  | `24.11.0`                  |
+
+构建脚本会准备 Rust 和 Emscripten，编译浏览器资源引擎及精简影片组件。其他 Linux 静态构建平台也可使用同一命令，需要提供 Git、Python 3、C 编译器和 GNU Make。部署后的站点不需要这些工具。
+
 ## 源码构建
 
-使用 Tauri 2、Rust、TypeScript 和 Vite，桌面与 Android 共用资源引擎。
+使用 Tauri 2、Rust、TypeScript 和 Vite，桌面、Android 与 Web 共用剧情播放器和资源引擎。
 
 需要 Node.js 24、Rust stable 和 [Tauri 的平台依赖](https://v2.tauri.app/start/prerequisites/)。Windows 需要 C++ 构建工具和 WebView2，macOS 需要 Xcode Command Line Tools。
 
@@ -117,16 +141,18 @@ npm ci
 npm start
 ```
 
-| 命令                       | 用途                               |
-| -------------------------- | ---------------------------------- |
-| `npm start`                | 启动桌面开发模式                   |
-| `npm run desktop:build`    | 构建当前桌面平台的安装包与免安装包 |
-| `npm run desktop:portable` | 仅构建 Windows 便携版              |
-| `npm run build`            | TypeScript 检查与前端构建          |
-| `npm run format:check`     | 格式检查                           |
-| `npm test`                 | Rust 工作区测试                    |
+| 命令                       | 用途                                      |
+| -------------------------- | ----------------------------------------- |
+| `npm start`                | 启动桌面开发模式                          |
+| `npm run desktop:build`    | 构建当前桌面平台的安装包与免安装包        |
+| `npm run desktop:portable` | 仅构建 Windows 便携版                     |
+| `npm run web:build`        | 使用已配置的 Emscripten 构建静态站点      |
+| `npm run web:build:hosted` | 在 Linux 构建平台准备工具链并构建静态站点 |
+| `npm run build`            | TypeScript 检查与前端构建                 |
+| `npm run format:check`     | 格式检查                                  |
+| `npm test`                 | Rust 工作区测试                           |
 
-[发行工作流](.github/workflows/release.yml)统一构建、验证 Windows、macOS、Linux 和 Android，全部通过后生成同一份草稿与校验清单。Android 的 SDK、NDK 和签名配置见 [移动端工作流](.github/workflows/mobile.yml)。
+[发行工作流](.github/workflows/release.yml)按 Desktop、Mobile、Web 分组构建和验证。全部通过后，在同一个 Release 发布安装包、免安装包、APK、静态 Web ZIP 和校验清单。Android 的 SDK、NDK 和签名配置见 [移动端工作流](.github/workflows/mobile.yml)。
 
 ## 反馈与贡献
 

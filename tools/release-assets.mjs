@@ -2,8 +2,55 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { zipSync } from 'fflate';
 
 const { version } = JSON.parse(await fs.readFile('package.json', 'utf8'));
+const sourceCommit = spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
+if (!/^\d+\.\d+\.\d+$/.test(version) || !/^[a-f0-9]{40}$/.test(sourceCommit))
+  throw Error('Invalid release identity');
+async function manifest(id, files) {
+  await fs.writeFile(
+    `release/build-${id}.json`,
+    JSON.stringify({ format: 1, id, version, sourceCommit, files }, null, 2) + '\n',
+  );
+}
+if (process.argv.includes('--web')) {
+  const root = path.resolve('web-dist'),
+    files = {};
+  const build = JSON.parse(await fs.readFile(path.join(root, 'build.json'), 'utf8'));
+  if (build.version !== version || build.sourceCommit !== sourceCommit)
+    throw Error('Web build does not match release source');
+  async function collect(folder) {
+    for (const item of await fs.readdir(folder, { withFileTypes: true })) {
+      const file = path.join(folder, item.name);
+      if (item.isDirectory()) await collect(file);
+      else if (item.isFile())
+        files[path.relative(root, file).replaceAll('\\', '/')] = new Uint8Array(
+          await fs.readFile(file),
+        );
+      else throw Error('Unexpected web deployment entry');
+    }
+  }
+  await collect(root);
+  for (const name of [
+    'index.html',
+    'sw.js',
+    'engine/arkreader_web.wasm',
+    'licenses/FFmpeg-LICENSE.txt',
+    'licenses/FFmpeg-SOURCE.txt',
+    '.nojekyll',
+  ])
+    if (!files[name]) throw Error('Incomplete web deployment: ' + name);
+  const name = `ArkReader-${version}-web.zip`,
+    bytes = zipSync(files, { level: 6 });
+  await fs.mkdir('release', { recursive: true });
+  await fs.writeFile(path.join('release', name), bytes);
+  const hash = createHash('sha256').update(bytes).digest('hex');
+  await fs.writeFile('release/SHA256SUMS-web.txt', `${hash}  ${name}\n`);
+  await manifest('web', { [name]: hash });
+  console.log(`${hash}  ${name}`);
+  process.exit(0);
+}
 const platform = process.argv.includes('--android')
   ? 'android'
   : { win32: 'windows', darwin: 'macos', linux: 'linux' }[process.platform];
@@ -71,4 +118,13 @@ for (const [directory, extension, suffix] of formats) {
   checksums.push(`${createHash('sha256').update(bytes).digest('hex')}  ${name}`);
 }
 await fs.writeFile(`release/SHA256SUMS-${platform}-${arch}.txt`, checksums.join('\n') + '\n');
+await manifest(
+  `${platform}-${arch}`,
+  Object.fromEntries(
+    checksums.map((line) => {
+      const [hash, file] = line.split('  ');
+      return [file, hash];
+    }),
+  ),
+);
 console.log(checksums.join('\n'));

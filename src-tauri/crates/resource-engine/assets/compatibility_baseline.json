@@ -1,6 +1,7 @@
 {
-  "schema": 1,
-  "resourceVersion": "26-11-13-06-34-18-84612175",
+  "schema": 3,
+  "platform": "Android",
   "clientVersion": "2.7.91",
+  "resourceVersion": "26-11-13-06-37-23-89286612",
   "meaning": "Development adaptation baseline; not a claim of exhaustive story/branch validation."
 }

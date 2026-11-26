@@ -1,9 +1,17 @@
 [package]
 name = "arkreader-resource-engine"
-version = "1.1.2"
+version = "1.2.0"
 edition = "2021"
 description = "Native, cross-platform resource engine for ArkReader"
 publish = false
+
+[features]
+web = []
+
+[[bin]]
+name = "arkreader-web"
+path = "src/web/main.rs"
+required-features = ["web"]
 
 [build-dependencies]
 sha2 = "0.10"
@@ -19,24 +27,31 @@ sha2 = "0.10"
 unity-rs-core = "=0.6.3"
 image = { version = "0.25", default-features = false, features = ["png", "webp"] }
 md-5 = "0.10"
-reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "gzip", "brotli", "deflate"] }
 tempfile = "3"
 zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
-tokio = { version = "1", features = ["fs", "io-util", "macros", "rt-multi-thread", "sync", "time", "process", "net"] }
-tokio-util = { version = "0.7", features = ["rt"] }
+tokio = { version = "1", features = ["fs", "io-util", "macros", "rt", "sync", "time"] }
+tokio-util = { version = "0.7", features = ["rt", "io"] }
 futures-util = "0.3"
 thiserror = "2"
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 regex = "1"
-aes = "0.8"
-cbc = { version = "0.1", features = ["alloc"] }
+flate2 = "1"
 hex = "0.4"
 getrandom = "0.4"
-rquickjs = "0.14"
 crc32fast = "1"
-axum = "0.8"
-http-body-util = "0.1"
-tower = { version = "0.5", features = ["util"] }
+axum = { version = "0.8", default-features = false, features = ["json", "query"] }
+
+[target.'cfg(not(target_os = "emscripten"))'.dependencies]
+rquickjs = "0.14"
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "gzip", "brotli", "deflate"] }
+tokio = { version = "1", features = ["rt-multi-thread", "process", "net"] }
+axum = { version = "0.8", features = ["http1"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 rquickjs = { version = "0.14", features = ["bindgen"] }
+
+[target.'cfg(target_os = "emscripten")'.dependencies]
+http = "1"
+url = "2"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"

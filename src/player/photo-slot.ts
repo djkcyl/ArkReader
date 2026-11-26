@@ -1,4 +1,4 @@
-import { playerMediaUrl } from './package-source';
+import { playerMediaUrl } from './resource-urls';
 import { loadImage } from './asset-load';
 /** The photo prefab anchors a 9-sliced frame 32 reference units beyond each
  * side of the sprite's native rect. Each Image inherits CanvasGroup.alpha. */

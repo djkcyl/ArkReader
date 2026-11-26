@@ -1,7 +1,7 @@
 import { normalSettingsProfile } from './normal-settings-profile';
 import { dialogPresets } from '../core/dialog-presets';
 import { readerSettingsProfile } from './reader-settings-profile';
-import { playerMediaUrl } from './package-source';
+import { playerMediaUrl } from './resource-urls';
 import { NativeSelectableSurface } from './native-selectable';
 import { navigationProfile } from './navigation-profile';
 type State = {

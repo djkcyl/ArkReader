@@ -1,51 +1,104 @@
-use crate::progress::{Observer, Progress, TransferState};
+#[cfg(not(target_os = "emscripten"))]
+use crate::apk::{Archive, Member, DATA};
+#[cfg(not(target_os = "emscripten"))]
+use crate::cache::{resource_path, safe_path};
+use crate::net::Client;
 use crate::{
-    cache::{resource_path, write_atomic, write_json, Cache},
+    artifacts,
+    cache::{write_json, Cache},
     error::{checkpoint, Error},
+    progress::{Observer, Progress, TransferState},
     source::{self, Entry},
     unity,
 };
 use anyhow::{ensure, Context, Result};
-use cbc::cipher::{block_padding::Pkcs7, BlockDecryptMut, KeyIvInit};
 use futures_util::{StreamExt, TryStreamExt};
-use md5::{Digest, Md5};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
+#[cfg(not(target_os = "emscripten"))]
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
     sync::Arc,
-    time::Duration,
 };
 use tokio::{io::AsyncWriteExt, sync::Semaphore};
 use tokio_util::sync::CancellationToken;
 
-const APP_CODE: &str = "GzD1CpaWgmSq1wew";
-const LAUNCHER_API: &str = "https://launcher.hypergryph.com/api/game/get_latest";
-const MANIFEST_KEY: &str = "c0f30e1ce763bbc21cc355a34303ac50399444bff68c4a22af398c0a166ee143";
-const MANIFEST_IV: &str = "33467861192750649501937264608400";
+const FILES: &str = "files";
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct FileEntry {
-    pub size: u64,
-    pub md5: String,
+#[derive(Clone, Debug)]
+struct FileEntry {
+    size: u64,
+    compressed: u64,
+    content_key: String,
+    #[cfg(not(target_os = "emscripten"))]
+    parts: Vec<Member>,
+    #[cfg(target_os = "emscripten")]
+    download: String,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Package {
-    pub file_path: String,
-    pub game_files_md5: String,
+
+#[cfg(not(target_os = "emscripten"))]
+fn files(archive: &Archive) -> Result<BTreeMap<String, FileEntry>> {
+    let mut groups: BTreeMap<String, BTreeMap<usize, Member>> = BTreeMap::new();
+    let mut direct = BTreeSet::new();
+    for entry in archive.members.values() {
+        let Some(name) = entry.name.strip_prefix(DATA) else {
+            continue;
+        };
+        let (name, part) = match name.rsplit_once(".split") {
+            Some((name, suffix))
+                if !suffix.is_empty() && suffix.bytes().all(|b| b.is_ascii_digit()) =>
+            {
+                (name, suffix.parse::<usize>()?)
+            }
+            _ => {
+                direct.insert(name.to_owned());
+                (name, 0)
+            }
+        };
+        resource_path(name)?;
+        ensure!(
+            groups
+                .entry(name.to_owned())
+                .or_default()
+                .insert(part, entry.clone())
+                .is_none(),
+            "Duplicate Android resource part"
+        );
+    }
+    let mut files = BTreeMap::new();
+    for (name, parts) in groups {
+        ensure!(
+            parts.keys().copied().eq(0..parts.len())
+                && (!direct.contains(&name) || parts.len() == 1),
+            "Android resource parts are incomplete: {name}"
+        );
+        let parts = parts.into_values().collect::<Vec<_>>();
+        let content_key =
+            artifacts::fingerprint(&parts.iter().map(|p| (p.size, p.crc)).collect::<Vec<_>>())?;
+        files.insert(
+            name,
+            FileEntry {
+                size: parts.iter().map(|p| p.size).sum(),
+                compressed: parts.iter().map(|p| p.compressed).sum(),
+                content_key,
+                parts,
+            },
+        );
+    }
+    ensure!(
+        files.contains_key("globalgamemanagers.assets"),
+        "Android builtin resources missing"
+    );
+    Ok(files)
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ClientRecord {
-    pub client_version: String,
-    pub pkg: Package,
-}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientIdentity {
     pub client_version: String,
-    pub manifest_md5: String,
+    pub manifest_sha256: String,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Location {
@@ -56,84 +109,21 @@ pub struct Location {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct FileObjects {
-    md5: String,
+    content_key: String,
     objects: Vec<Location>,
 }
 #[derive(Default, Serialize, Deserialize)]
 struct ObjectIndex {
-    manifest_md5: String,
     files: BTreeMap<String, FileObjects>,
-}
-
-fn full_hash(value: &str) -> bool {
-    value.len() == 32 && value.bytes().all(|b| b.is_ascii_hexdigit())
-}
-fn base(record: &ClientRecord, version: &str) -> Result<String> {
-    ensure!(
-        record.client_version == version,
-        "Official client manifest belongs to another version"
-    );
-    let base = record.pkg.file_path.trim_end_matches('/');
-    let url = source::https(base)?;
-    ensure!(
-        url.host_str() == Some("ak.hycdn.cn")
-            && url.path().starts_with(&format!("/{APP_CODE}/"))
-            && url.path().ends_with("/files")
-            && url.query().is_none()
-            && url.fragment().is_none()
-            && full_hash(&record.pkg.game_files_md5),
-        "Invalid official client source"
-    );
-    Ok(format!("{base}/"))
-}
-
-pub fn parse_manifest(raw: &[u8], expected: &str) -> Result<BTreeMap<String, FileEntry>> {
-    ensure!(
-        full_hash(expected) && format!("{:x}", Md5::digest(raw)).eq_ignore_ascii_case(expected),
-        "Official client manifest checksum mismatch"
-    );
-    ensure!(
-        !raw.is_empty() && raw.len().is_multiple_of(16),
-        "Invalid official client manifest envelope"
-    );
-    let key = hex::decode(MANIFEST_KEY)?;
-    let iv = hex::decode(MANIFEST_IV)?;
-    let plain = cbc::Decryptor::<aes::Aes256>::new_from_slices(&key, &iv)?
-        .decrypt_padded_vec_mut::<Pkcs7>(raw)
-        .map_err(|_| anyhow::anyhow!("Invalid official manifest padding"))?;
-    let mut entries = BTreeMap::new();
-    #[derive(Deserialize)]
-    struct Row {
-        path: String,
-        #[serde(flatten)]
-        entry: FileEntry,
-    }
-    for line in std::str::from_utf8(&plain)?
-        .trim_start_matches('\u{feff}')
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-    {
-        let row: Row = serde_json::from_str(line)?;
-        resource_path(&row.path)?;
-        ensure!(
-            full_hash(&row.entry.md5),
-            "Invalid official client file checksum"
-        );
-        ensure!(
-            entries.insert(row.path, row.entry).is_none(),
-            "Duplicate official client file"
-        );
-    }
-    ensure!(!entries.is_empty(), "Empty official client manifest");
-    Ok(entries)
 }
 
 #[derive(Clone)]
 pub struct ClientAssets {
-    pub cache: Arc<Cache>,
+    cache: Arc<Cache>,
     pub identity: ClientIdentity,
-    pub entries: Arc<BTreeMap<String, FileEntry>>,
-    base: String,
+    entries: Arc<BTreeMap<String, FileEntry>>,
+    #[cfg(not(target_os = "emscripten"))]
+    archive: Arc<Archive>,
     client: Client,
     cancel: CancellationToken,
     slots: Arc<Semaphore>,
@@ -165,15 +155,9 @@ impl ClientAssets {
         if let (Some(observer), Some(entry)) = (&self.observer, self.entries.get(name)) {
             let key = format!(
                 "client:{}:{}:{name}",
-                self.identity.client_version, self.identity.manifest_md5
+                self.identity.client_version, self.identity.manifest_sha256
             );
-            observer.transfer(&key, name, entry.size, state, downloaded, cached);
-        }
-    }
-    pub fn with_cancellation(&self, cancel: CancellationToken) -> Self {
-        Self {
-            cancel,
-            ..self.clone()
+            observer.transfer(&key, name, entry.compressed, state, downloaded, cached);
         }
     }
     pub async fn environment(
@@ -182,7 +166,7 @@ impl ClientAssets {
         reference: Arc<unity::Unity>,
     ) -> Result<unity::Unity> {
         let mut names: BTreeSet<String> = files.iter().cloned().collect();
-        names.insert("Arknights_Data/globalgamemanagers.assets".into());
+        names.insert("globalgamemanagers.assets".into());
         let mut paths: Vec<PathBuf> = futures_util::stream::iter(names)
             .map(|name| async move { self.file(&name).await })
             .buffer_unordered(4)
@@ -191,7 +175,7 @@ impl ClientAssets {
         let inputs = paths.clone();
         let schemas = reference.clone();
         let cancel = self.cancel.clone();
-        let streams = tokio::task::spawn_blocking(move || {
+        let streams = crate::runtime::blocking(move || {
             let mut env = unity::Unity::open(&inputs, cancel)?;
             env.bind_schemas(&schemas)?;
             let mut streams = BTreeSet::new();
@@ -209,7 +193,7 @@ impl ClientAssets {
                         .unwrap_or_default()
                         .to_owned();
                     ensure!(!filename.is_empty(), "Invalid official texture stream path");
-                    streams.insert(format!("Arknights_Data/{filename}"));
+                    streams.insert(filename);
                 }
             }
             Ok::<_, anyhow::Error>(streams)
@@ -222,81 +206,66 @@ impl ClientAssets {
             .await?;
         paths.extend(streams);
         let cancel = self.cancel.clone();
-        tokio::task::spawn_blocking(move || {
+        crate::runtime::blocking(move || {
             let mut env = unity::Unity::open(&paths, cancel)?;
             env.bind_schemas(&reference)?;
             Ok(env)
         })
         .await?
     }
-    pub async fn open(data: &Path, version: &str, cancel: CancellationToken) -> Result<Self> {
-        Self::open_mode(data, version, cancel, true).await
-    }
+
+    #[cfg(not(target_os = "emscripten"))]
     pub async fn open_mode(
         data: &Path,
         version: &str,
         cancel: CancellationToken,
         allow_network: bool,
     ) -> Result<Self> {
-        ensure!(
-            !version.is_empty()
-                && version.len() <= 101
-                && version
-                    .bytes()
-                    .all(|c| c.is_ascii_alphanumeric() || b"._-".contains(&c)),
-            "Invalid official client version"
-        );
         let cache = Arc::new(Cache::new(data.join("client"))?);
-        let directory = cache.path("Windows", "source.json")?;
-        let lock = source::path_lock(&directory)?;
-        let _guard = tokio::select! {biased;_=cancel.cancelled()=>return Err(Error::Cancelled.into()),guard=lock.lock()=>guard};
-        let client = source::client()?;
-        let saved = tokio::fs::read(&directory)
+        let directory = safe_path(&cache.root, FILES)?;
+        let old = safe_path(&cache.root, "Windows")?;
+        if !directory.exists() && old.is_dir() {
+            ensure!(
+                old.canonicalize()?.parent() == Some(cache.root.as_path()),
+                "Client cache escaped its root"
+            );
+            fs::rename(old, &directory)?;
+        }
+        let record = cache.path(FILES, "source.json")?;
+        let lock = source::path_lock(&record)?;
+        let _guard = tokio::select! {biased;_=cancel.cancelled()=>return Err(crate::error::Error::Cancelled.into()),g=lock.lock()=>g};
+        let saved = tokio::fs::read(&record)
             .await
             .ok()
-            .and_then(|raw| serde_json::from_slice::<ClientRecord>(&raw).ok())
-            .filter(|record| base(record, version).is_ok());
-        let record = if let Some(record) = saved {
-            record
+            .and_then(|raw| serde_json::from_slice::<(String, Archive)>(&raw).ok())
+            .filter(|(sha, a)| {
+                a.client_version == version && artifacts::fingerprint(a).ok().as_ref() == Some(sha)
+            })
+            .map(|(_, a)| a);
+        let client = source::client()?;
+        let archive = if allow_network {
+            match Archive::discover(&client, version, saved.as_ref(), &cancel).await {
+                Ok(archive) => {
+                    write_json(&record, &(artifacts::fingerprint(&archive)?, &archive))?;
+                    archive
+                }
+                Err(error) => {
+                    checkpoint(&cancel)?;
+                    saved.ok_or(error)?
+                }
+            }
         } else {
-            ensure!(allow_network, "缺少客户端资源清单，请联网后重试。");
-            let mut url = source::https(LAUNCHER_API)?;
-            url.query_pairs_mut().extend_pairs([
-                ("appcode", APP_CODE),
-                ("channel", "1"),
-                ("sub_channel", "1"),
-                ("version", ""),
-                ("platform", "Windows"),
-            ]);
-            let record: ClientRecord = serde_json::from_value(
-                source::json(&client, url, Duration::from_secs(40), &cancel).await?,
-            )?;
-            base(&record, version)?;
-            write_json(&directory, &record)?;
-            record
+            saved.context("缺少 Android 客户端资源索引，请联网后重试。")?
         };
-        let base = base(&record, version)?;
-        let manifest = cache.path("Windows", "game_files")?;
-        let raw = tokio::fs::read(&manifest).await.unwrap_or_default();
-        let parsed = parse_manifest(&raw, &record.pkg.game_files_md5);
-        let entries = if let Ok(entries) = parsed {
-            entries
-        } else {
-            ensure!(allow_network, "客户端资源清单需要联网修复。");
-            let response = tokio::select! {biased;_=cancel.cancelled()=>return Err(Error::Cancelled.into()),response=client.get(source::https(&base)?.join("game_files")?).send()=>response?.error_for_status()?};
-            let bytes = tokio::select! {biased;_=cancel.cancelled()=>return Err(Error::Cancelled.into()),bytes=response.bytes()=>bytes?};
-            let entries = parse_manifest(&bytes, &record.pkg.game_files_md5)?;
-            write_atomic(&manifest, &bytes)?;
-            entries
-        };
+        let entries = Arc::new(files(&archive)?);
         Ok(Self {
             cache,
             identity: ClientIdentity {
                 client_version: version.into(),
-                manifest_md5: record.pkg.game_files_md5.to_lowercase(),
+                manifest_sha256: archive.directory_sha256.clone(),
             },
-            entries: Arc::new(entries),
-            base,
+            entries,
+            archive: Arc::new(archive),
             client,
             cancel,
             slots: Arc::new(Semaphore::new(4)),
@@ -304,11 +273,60 @@ impl ClientAssets {
             allow_network,
         })
     }
-
-    pub fn cached_path(&self, name: &str) -> Result<PathBuf> {
-        self.cache.path("Windows", name)
+    #[cfg(target_os = "emscripten")]
+    pub async fn open_mode(
+        data: &Path,
+        version: &str,
+        cancel: CancellationToken,
+        allow_network: bool,
+    ) -> Result<Self> {
+        let cache = Arc::new(Cache::new(data.join("client"))?);
+        let archive = crate::web::client::load(
+            &cache.path(FILES, "source.json")?,
+            version,
+            allow_network,
+            &cancel,
+        )
+        .await?;
+        let identity = ClientIdentity {
+            client_version: version.into(),
+            manifest_sha256: artifacts::fingerprint(&archive.files)?,
+        };
+        let entries = archive
+            .files
+            .into_iter()
+            .map(|(name, row)| {
+                (
+                    name,
+                    FileEntry {
+                        size: row.size,
+                        compressed: row.size,
+                        content_key: row.sha256,
+                        download: row.url,
+                    },
+                )
+            })
+            .collect();
+        Ok(Self {
+            cache,
+            identity,
+            entries: Arc::new(entries),
+            client: source::client()?,
+            cancel,
+            slots: Arc::new(Semaphore::new(4)),
+            observer: None,
+            allow_network,
+        })
     }
-
+    fn cached_path(&self, name: &str) -> Result<PathBuf> {
+        self.cache.path(FILES, name)
+    }
+    pub fn prune(&self, cancel: &CancellationToken) -> Result<()> {
+        let mut names: BTreeSet<_> = self.entries.keys().cloned().collect();
+        names.extend(["source.json", "objects.json"].map(String::from));
+        self.cache.prune(FILES, &names, cancel)?;
+        Ok(())
+    }
     pub async fn file(&self, name: &str) -> Result<PathBuf> {
         self.trace(name, TransferState::Checking, None, None);
         let result = self.file_inner(name).await;
@@ -329,68 +347,91 @@ impl ClientAssets {
         let meta = self
             .entries
             .get(name)
-            .ok_or_else(|| Error::ResourceNotFound(name.into()))?;
+            .context("Android builtin resource is absent")?;
+        // CRC/size identities describe the APK members; the receipt records the
+        // reconstructed file's SHA-256. Repacking offsets do not invalidate it.
         let entry = Entry {
             name: name.into(),
-            md5: meta.md5.clone(),
+            md5: String::new(),
             ab_size: meta.size,
             total_size: meta.size,
-            extra: BTreeMap::new(),
+            extra: BTreeMap::from([("apkEntry".into(), meta.content_key.clone().into())]),
         };
         let destination = self.cached_path(name)?;
         let lock = source::path_lock(&destination)?;
-        let guard = tokio::select! {biased;_=self.cancel.cancelled()=>return Err(Error::Cancelled.into()),guard=lock.lock_owned()=>guard};
+        let _guard = tokio::select! {biased;_=self.cancel.cancelled()=>return Err(crate::error::Error::Cancelled.into()),g=lock.lock()=>g};
         let this = self.clone();
         let item = entry.clone();
-        let (guard, cached) = tokio::task::spawn_blocking(move || {
-            let result = this.cache.find("Windows", &item, &this.cancel);
-            (guard, result)
-        })
-        .await?;
-        if let Some(path) = cached? {
+        if let Some(path) =
+            crate::runtime::blocking(move || this.cache.find(FILES, &item, &this.cancel)).await??
+        {
             self.trace(name, TransferState::Ready, Some(0), Some(true));
             return Ok(path);
         }
-        ensure!(self.allow_network, "缺少已缓存的客户端资源：{name}");
-        let _slot = tokio::select! {biased;_=self.cancel.cancelled()=>return Err(Error::Cancelled.into()),slot=self.slots.acquire()=>slot?};
+        ensure!(
+            self.allow_network,
+            "缺少已缓存的 Android 客户端资源：{name}"
+        );
         let parent = destination
             .parent()
-            .context("Invalid client resource location")?;
+            .context("Client output has no parent")?;
         tokio::fs::create_dir_all(parent).await?;
         let staging = tempfile::Builder::new()
             .prefix(".client-")
             .tempdir_in(parent)?;
         let payload = staging.path().join("payload");
+        let mut file = tokio::fs::File::create(&payload).await?;
         self.trace(name, TransferState::Downloading, Some(0), Some(false));
-        let response = tokio::select! {biased;_=self.cancel.cancelled()=>return Err(Error::Cancelled.into()),response=self.client.get(source::https(&self.base)?.join(name)?).send()=>response?.error_for_status()?};
-        ensure!(
-            response.status() == reqwest::StatusCode::OK,
-            "Incomplete official client response"
-        );
-        let mut chunks = response.bytes_stream();
-        let mut output = tokio::fs::File::create(&payload).await?;
-        let mut size = 0u64;
-        while let Some(chunk) = tokio::select! {biased;_=self.cancel.cancelled()=>return Err(Error::Cancelled.into()),chunk=chunks.next()=>chunk}
+        #[cfg(not(target_os = "emscripten"))]
         {
-            let chunk = chunk?;
-            size += chunk.len() as u64;
-            ensure!(
-                size <= entry.ab_size,
-                "Client resource exceeds official size"
-            );
-            output.write_all(&chunk).await?;
-            self.trace(name, TransferState::Downloading, Some(size), Some(false));
+            let done = Arc::new(AtomicU64::new(0));
+            let mut parts = futures_util::stream::iter(meta.parts.clone()).map(|part| {
+            let this = self.clone();
+            let done = done.clone();
+            let name = name.to_owned();
+            async move {
+                let _slot=tokio::select!{biased;_=this.cancel.cancelled()=>return Err(anyhow::Error::from(Error::Cancelled)),s=this.slots.clone().acquire_owned()=>s?};
+                let bytes=this.archive.read_member(&this.client,&part,&this.cancel).await?;
+                let total=done.fetch_add(part.compressed,Ordering::Relaxed)+part.compressed;
+                this.trace(&name,TransferState::Downloading,Some(total),Some(false));
+                Ok::<_,anyhow::Error>(bytes)
+            }
+        }).buffered(4);
+            while let Some(bytes) = parts.next().await {
+                file.write_all(&bytes?).await?;
+            }
         }
-        output.sync_all().await?;
-        drop(output);
+        #[cfg(target_os = "emscripten")]
+        {
+            let _slot = tokio::select! {biased;_=self.cancel.cancelled()=>return Err(Error::Cancelled.into()),s=self.slots.acquire()=>s?};
+            let response = tokio::select! {biased;_=self.cancel.cancelled()=>return Err(Error::Cancelled.into()),r=self.client.get(source::https(&meta.download)?).send()=>r?.error_for_status()?};
+            let mut stream = response.bytes_stream();
+            let mut count = 0u64;
+            while let Some(chunk) = tokio::select! {biased;_=self.cancel.cancelled()=>return Err(Error::Cancelled.into()),r=stream.next()=>r}
+            {
+                let bytes = chunk?;
+                count += bytes.len() as u64;
+                ensure!(count <= meta.size, "PRTS builtin exceeds declared size");
+                file.write_all(&bytes).await?;
+                self.trace(name, TransferState::Downloading, Some(count), Some(false));
+            }
+            ensure!(count == meta.size, "Incomplete PRTS builtin file");
+        }
+        file.sync_all().await?;
+        drop(file);
         self.trace(name, TransferState::Verifying, None, None);
         let this = self.clone();
         let target = destination.clone();
-        tokio::task::spawn_blocking(move || {
-            let _guard = guard;
-            let hash = this.cache.verify(&payload, &entry, &this.cancel, None)?;
+        #[cfg(target_os = "emscripten")]
+        let expected = Some(meta.content_key.clone());
+        #[cfg(not(target_os = "emscripten"))]
+        let expected: Option<String> = None;
+        crate::runtime::blocking(move || {
+            let hash = this
+                .cache
+                .verify(&payload, &entry, &this.cancel, expected.as_deref())?;
             checkpoint(&this.cancel)?;
-            fs::rename(payload, &target)?;
+            fs::rename(&payload, &target)?;
             this.cache.receipt(&target, &entry, &hash)?;
             drop(staging);
             Ok::<_, anyhow::Error>(())
@@ -398,7 +439,6 @@ impl ClientAssets {
         .await??;
         Ok(destination)
     }
-
     pub async fn locate(
         &self,
         wanted: &[(i32, String)],
@@ -410,12 +450,12 @@ impl ClientAssets {
             .await
             .ok()
             .and_then(|v| serde_json::from_slice(&v).ok())
-            .filter(|v: &ObjectIndex| v.manifest_md5 == self.identity.manifest_md5)
             .unwrap_or_default();
-        saved.manifest_md5 = self.identity.manifest_md5.clone();
-        let pattern = regex::Regex::new(
-            r"^Arknights_Data/(sharedassets\d+|resources|globalgamemanagers)\.assets$",
-        )?;
+        saved
+            .files
+            .retain(|name, _| self.entries.contains_key(name));
+        let pattern =
+            regex::Regex::new(r"^(sharedassets\d+|resources|globalgamemanagers)\.assets$")?;
         let mut files: Vec<_> = self
             .entries
             .keys()
@@ -423,7 +463,7 @@ impl ClientAssets {
             .collect();
         files.sort_by_key(|name| {
             let number = name
-                .trim_start_matches("Arknights_Data/sharedassets")
+                .trim_start_matches("sharedassets")
                 .trim_end_matches(".assets")
                 .parse::<u32>()
                 .unwrap_or(999);
@@ -440,11 +480,11 @@ impl ClientAssets {
             if !saved
                 .files
                 .get(name)
-                .is_some_and(|file| file.md5 == entry.md5)
+                .is_some_and(|file| file.content_key == entry.content_key)
             {
                 let path = self.file(name).await?;
                 let label = name.clone();
-                let objects = tokio::task::spawn_blocking(move || {
+                let objects = crate::runtime::blocking(move || {
                     let env = unity::open(&path)?;
                     Ok::<_, anyhow::Error>(
                         env.objects()
@@ -462,7 +502,7 @@ impl ClientAssets {
                 saved.files.insert(
                     name.clone(),
                     FileObjects {
-                        md5: entry.md5.clone(),
+                        content_key: entry.content_key.clone(),
                         objects,
                     },
                 );
@@ -483,5 +523,69 @@ impl ClientAssets {
             .map(|((_, name), _)| name.as_str())
             .collect();
         anyhow::bail!("Missing official client assets: {}", missing.join(", "))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn archive(parts: &[usize]) -> Archive {
+        let mut members = BTreeMap::new();
+        for &n in parts {
+            let name = format!("{DATA}globalgamemanagers.assets.split{n}");
+            members.insert(
+                name.clone(),
+                Member {
+                    name,
+                    offset: n as u64 * 100,
+                    compressed: 3,
+                    size: 5,
+                    crc: n as u32,
+                    method: 8,
+                    flags: 0,
+                },
+            );
+        }
+        Archive {
+            client_version: "test".into(),
+            url: String::new(),
+            size: 0,
+            etag: None,
+            directory_sha256: String::new(),
+            directory_offset: 0,
+            members,
+        }
+    }
+    #[test]
+    fn joins_numeric_parts_without_repacking_cache_misses() -> Result<()> {
+        let a = archive(&(0..12).collect::<Vec<_>>());
+        let entries = files(&a)?;
+        let file = &entries["globalgamemanagers.assets"];
+        assert_eq!(
+            file.parts[2].name,
+            format!("{DATA}globalgamemanagers.assets.split2")
+        );
+        assert_eq!(file.size, 60);
+        let mut b = a.clone();
+        for part in b.members.values_mut() {
+            part.offset += 1234;
+            part.compressed += 1;
+            part.method = 0;
+        }
+        assert_eq!(
+            files(&b)?["globalgamemanagers.assets"].content_key,
+            file.content_key
+        );
+        b.members.values_mut().next().unwrap().crc ^= 1;
+        assert_ne!(
+            files(&b)?["globalgamemanagers.assets"].content_key,
+            file.content_key
+        );
+        Ok(())
+    }
+    #[test]
+    fn incomplete_parts_are_not_silently_assembled() {
+        assert!(files(&archive(&[0, 2])).is_err());
+        assert!(files(&archive(&[1])).is_err());
     }
 }

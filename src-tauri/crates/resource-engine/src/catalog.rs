@@ -155,7 +155,7 @@ impl Metadata {
         }
         let review = index::read_table(data, &index.review, source).await?;
         let entries = index::read_table(data, &index.entries, source).await?;
-        tokio::task::spawn_blocking(move || {
+        crate::runtime::blocking(move || {
             Ok(Self {
                 review: tables::review(&review)?,
                 entries: tables::story_entries(&entries)?,

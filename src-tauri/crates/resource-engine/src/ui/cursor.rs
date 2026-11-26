@@ -365,9 +365,9 @@ pub async fn prepare(index: &Index, source: &Source, store: Arc<MediaStore>) -> 
         .container
         .clone()
         .context("Official cursor container missing")?;
-    let path = source.bundle(&route.bundle, |_| {}).await?;
+    let path = source.bundle(&route.bundle).await?;
     let cancel = source.cancellation();
-    tokio::task::spawn_blocking(move || {
+    crate::runtime::blocking(move || {
         let env = Unity::open(&[path], cancel)?;
         let cursor = extract(&env, &container, &store)?;
         store.named("native-cursor.json", &serde_json::to_vec(&cursor)?)

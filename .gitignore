@@ -3,6 +3,8 @@ __pycache__/
 .pytest_cache/
 node_modules/
 dist/
+web-dist/
+.cache/
 data/
 *.log
 artifacts/
@@ -15,6 +17,7 @@ exports/
 src-tauri/target/
 src-tauri/resources/service/
 src-tauri/resources/native/
+src-tauri/resources/web-media/
 src-tauri/gen/*
 !src-tauri/gen/android/
 src-tauri/gen/android/**/build/
@@ -80,6 +83,9 @@ desktop.ini
 /src-tauri/crates/resource-engine/examples/
 /tools/*
 !/tools/build-desktop.mjs
+!/tools/build-web.mjs
+!/tools/build-web-hosted.sh
+!/tools/web-library.js
 !/tools/build-native-parser.mjs
 !/tools/prepare-native.mjs
 !/tools/build-portable.mjs
@@ -90,5 +96,7 @@ desktop.ini
 !/tools/desktop-parser.ts
 !/tools/resource_refs.ts
 !/tools/release-assets.mjs
+!/tools/publish-release.mjs
 !/tools/verify-release.mjs
+!/tools/verify-web.mjs
 !/tools/verify-native-media.js

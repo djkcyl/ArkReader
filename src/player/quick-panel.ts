@@ -1,5 +1,5 @@
 import { quickPanelProfile as profile } from './quick-panel-profile';
-import { playerMediaUrl } from './package-source';
+import { playerMediaUrl } from './resource-urls';
 
 const unit = (n: number) => `${n / 12.8}cqw`;
 function rect(element: HTMLElement, box: readonly number[]): void {

@@ -9,7 +9,7 @@ export function resourceLabel(name: string): string {
         ? '剧情图片'
         : name.startsWith('avg/effects/')
           ? '演出特效'
-          : name.startsWith('Arknights_Data/')
+          : /^(sharedassets\d+|globalgamemanagers|resources)\.assets$/.test(filename)
             ? '界面资源'
             : name.startsWith('anon/')
               ? '公共资源'

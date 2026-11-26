@@ -51,6 +51,7 @@ impl Session {
             .write(true)
             .create_new(true)
             .open(directory.path().join(".lease"))?;
+        #[cfg(not(target_os = "emscripten"))]
         lease.try_lock()?;
         write_json(
             &directory.path().join(".arkreader-session"),

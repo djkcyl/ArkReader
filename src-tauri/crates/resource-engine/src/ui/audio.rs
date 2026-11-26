@@ -200,12 +200,12 @@ pub async fn prepare(
     let client_env = client
         .environment(&files.into_iter().collect::<Vec<_>>(), common.clone())
         .await?;
-    let settings = source.bundle(super::widgets::SETTINGS, |_| {}).await?;
+    let settings = source.bundle(super::widgets::SETTINGS).await?;
     let names: Vec<_> = plan.bundles.keys().cloned().collect();
-    let paths = source.prefetch(&names, 4, |_| {}).await?;
+    let paths = source.prefetch(&names, 4).await?;
     let paths: BTreeMap<_, _> = names.into_iter().zip(paths).collect();
     let cancel = source.cancellation();
-    tokio::task::spawn_blocking(move || {
+    crate::runtime::blocking(move || {
         let schemas = BTreeMap::from([
             (
                 "AudioClickPlayer",

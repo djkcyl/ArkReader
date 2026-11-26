@@ -9,10 +9,11 @@ use std::{
     fs,
     io::{Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
-    process::Stdio,
-    time::Duration,
 };
 use tokio_util::sync::CancellationToken;
+
+#[cfg(not(target_os = "emscripten"))]
+use std::{process::Stdio, time::Duration};
 
 #[derive(Clone)]
 pub struct Decoder {
@@ -32,6 +33,29 @@ fn copy(input: &mut impl Read, output: &mut impl Write, cancel: &CancellationTok
     Ok(())
 }
 
+// Some published movies reserve zero-filled space between aligned chunks and
+// after the final samples. A zero header is padding, not an end-of-stream marker.
+fn skip_zero_padding(input: &mut (impl Read + Seek), cancel: &CancellationToken) -> Result<bool> {
+    let mut buffer = [0u8; 65536];
+    loop {
+        crate::error::checkpoint(cancel)?;
+        let start = input.stream_position()?;
+        let count = input.read(&mut buffer)?;
+        if count == 0 {
+            return Ok(false);
+        }
+        if let Some(offset) = buffer[..count].iter().position(|&byte| byte != 0) {
+            let next = start + offset as u64;
+            ensure!(
+                next.is_multiple_of(32),
+                "Unaligned movie chunk after padding"
+            );
+            input.seek(SeekFrom::Start(next))?;
+            return Ok(true);
+        }
+    }
+}
+
 pub fn demux(path: &Path, video: &Path, audio: &Path, cancel: &CancellationToken) -> Result<()> {
     let mut input = fs::File::open(path)?;
     let length = input.metadata()?.len();
@@ -43,11 +67,27 @@ pub fn demux(path: &Path, video: &Path, audio: &Path, cancel: &CancellationToken
         crate::error::checkpoint(cancel)?;
         let start = input.stream_position()?;
         let mut header = [0u8; 32];
+        if length - start < header.len() as u64 {
+            let remaining = (length - start) as usize;
+            input.read_exact(&mut header[..remaining])?;
+            ensure!(
+                seen_video && seen_audio && header[..remaining].iter().all(|&b| b == 0),
+                "Incomplete movie chunk header"
+            );
+            break;
+        }
         input.read_exact(&mut header)?;
         ensure!(
             start != 0 || &header[..4] == b"CRID",
             "Invalid Sofdec header"
         );
+        if header.iter().all(|&b| b == 0) {
+            ensure!(seen_video && seen_audio, "Movie padding before its tracks");
+            if !skip_zero_padding(&mut input, cancel)? {
+                break;
+            }
+            continue;
+        }
         let size = u32::from_be_bytes(header[4..8].try_into()?) as u64;
         let offset = header[9] as u64;
         let padding = u16::from_be_bytes(header[10..12].try_into()?) as u64;
@@ -107,6 +147,70 @@ pub fn demux(path: &Path, video: &Path, audio: &Path, cancel: &CancellationToken
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn chunk(tag: &[u8; 4], data: &[u8], kind: u8) -> Vec<u8> {
+        let padding = (32 - data.len() % 32) % 32;
+        let mut bytes = vec![0; 32];
+        bytes[..4].copy_from_slice(tag);
+        bytes[4..8].copy_from_slice(&((24 + data.len() + padding) as u32).to_be_bytes());
+        bytes[9] = 24;
+        bytes[10..12].copy_from_slice(&(padding as u16).to_be_bytes());
+        bytes[15] = kind;
+        bytes.extend(data);
+        bytes.resize(bytes.len() + padding, 0);
+        bytes
+    }
+
+    fn movie() -> Vec<u8> {
+        let mut bytes = chunk(b"CRID", &[], 1);
+        bytes.extend(chunk(b"@SFV", b"DKIF\0\0\0\0VP90first-picture", 0));
+        bytes.extend(chunk(b"@SFA", b"\x80\x00adx-header00first-audio", 0));
+        bytes
+    }
+
+    fn run(bytes: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
+        let directory = tempfile::tempdir()?;
+        let input = directory.path().join("input.usm");
+        let video = directory.path().join("movie.ivf");
+        let audio = directory.path().join("movie.adx");
+        fs::write(&input, bytes)?;
+        demux(&input, &video, &audio, &CancellationToken::new())?;
+        Ok((fs::read(video)?, fs::read(audio)?))
+    }
+
+    #[test]
+    fn preserves_both_tracks_after_zero_filled_gaps() -> Result<()> {
+        let mut bytes = movie();
+        bytes.extend(vec![0; 2560]);
+        bytes.extend(chunk(b"@SFV", b"last-picture", 0));
+        bytes.extend(chunk(b"@SFA", b"last-audio", 0));
+        bytes.extend(vec![0; 131079]);
+        let (video, audio) = run(&bytes)?;
+        assert_eq!(video, b"DKIF\0\0\0\0VP90first-picturelast-picture");
+        assert_eq!(audio, b"\x80\x00adx-header00first-audiolast-audio");
+        Ok(())
+    }
+
+    #[test]
+    fn padding_does_not_hide_corrupt_or_truncated_chunks() {
+        let mut bytes = movie();
+        bytes.extend(vec![0; 64]);
+        bytes.extend(chunk(b"@SFV", b"last", 0));
+        bytes.pop();
+        assert!(run(&bytes).is_err());
+        let mut bytes = movie();
+        bytes.extend(vec![0; 65]);
+        bytes.extend(chunk(b"@SFV", b"misaligned", 0));
+        assert!(run(&bytes).is_err());
+        let mut bytes = movie();
+        bytes.extend(b"bad-tail");
+        assert!(run(&bytes).is_err());
+    }
+}
+
 impl Decoder {
     pub async fn export(&self, source: &Source, bundle: &str, store: &MediaStore) -> Result<Asset> {
         let entry = source
@@ -144,14 +248,14 @@ impl Decoder {
                     sha256: asset.sha256.clone(),
                 };
                 let cancel = source.cancellation();
-                if tokio::task::spawn_blocking(move || artifacts::valid(&path, &expected, &cancel))
+                if crate::runtime::blocking(move || artifacts::valid(&path, &expected, &cancel))
                     .await?
                 {
                     return Ok(Asset::Video(asset));
                 }
             }
         }
-        let original = source.bundle(bundle, |_| {}).await?;
+        let original = source.bundle(bundle).await?;
         let staging = tempfile::Builder::new()
             .prefix(".movie-")
             .tempdir_in(&store.directory)?;
@@ -160,7 +264,7 @@ impl Decoder {
         if native_mp4 {
             let target = output.clone();
             let token = cancel.clone();
-            tokio::task::spawn_blocking(move || {
+            crate::runtime::blocking(move || {
                 let mut input = fs::File::open(&original)?;
                 let mut header = [0u8; 12];
                 input.read_exact(&mut header)?;
@@ -180,72 +284,77 @@ impl Decoder {
             let video_path = video.clone();
             let audio_path = audio.clone();
             let token = cancel.clone();
-            tokio::task::spawn_blocking(move || demux(&original, &video_path, &audio_path, &token))
+            crate::runtime::blocking(move || demux(&original, &video_path, &audio_path, &token))
                 .await??;
-            let log = staging.path().join("decoder.log");
-            let mut command = tokio::process::Command::new(&self.executable);
-            command
-                .kill_on_drop(true)
-                .args([
-                    "-nostdin",
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-protocol_whitelist",
-                    "file,pipe",
-                    "-i",
-                ])
-                .arg(&video)
-                .args(["-protocol_whitelist", "file,pipe", "-i"])
-                .arg(&audio)
-                .args(["-map", "0:v:0", "-map", "1:a:0"]);
-            command.args(["-c:v", "copy", "-c:a", "flac", "-strict", "experimental"]);
-            command
-                .args(["-movflags", "+faststart"])
-                .arg(&output)
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(fs::File::create(&log)?);
-            #[cfg(windows)]
+            #[cfg(target_os = "emscripten")]
+            crate::web::remux(&video, &audio, &output, &cancel).await?;
+            #[cfg(not(target_os = "emscripten"))]
             {
-                use std::os::windows::process::CommandExt;
-                command.as_std_mut().creation_flags(0x08000000);
-            }
-            let mut child = command
-                .spawn()
-                .context("影片组件无法启动，请使用完整的 ArkReader 程序包。")?;
-            let status = tokio::select! {
-                biased;
-                _ = cancel.cancelled() => {
-                    child.kill().await?;
-                    let _ = child.wait().await;
-                    return Err(crate::error::Error::Cancelled.into());
+                let log = staging.path().join("decoder.log");
+                let mut command = tokio::process::Command::new(&self.executable);
+                command
+                    .kill_on_drop(true)
+                    .args([
+                        "-nostdin",
+                        "-hide_banner",
+                        "-loglevel",
+                        "error",
+                        "-protocol_whitelist",
+                        "file,pipe",
+                        "-i",
+                    ])
+                    .arg(&video)
+                    .args(["-protocol_whitelist", "file,pipe", "-i"])
+                    .arg(&audio)
+                    .args(["-map", "0:v:0", "-map", "1:a:0"]);
+                command.args(["-c:v", "copy", "-c:a", "flac", "-strict", "experimental"]);
+                command
+                    .args(["-movflags", "+faststart"])
+                    .arg(&output)
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(fs::File::create(&log)?);
+                #[cfg(windows)]
+                {
+                    use std::os::windows::process::CommandExt;
+                    command.as_std_mut().creation_flags(0x08000000);
                 }
-                status = tokio::time::timeout(Duration::from_secs(300), child.wait()) => {
-                    match status {
-                        Ok(result) => result?,
-                        Err(_) => {
-                            child.kill().await?;
-                            let _ = child.wait().await;
-                            anyhow::bail!("影片准备超时，请重试。");
+                let mut child = command
+                    .spawn()
+                    .context("影片组件无法启动，请使用完整的 ArkReader 程序包。")?;
+                let status = tokio::select! {
+                    biased;
+                    _ = cancel.cancelled() => {
+                        child.kill().await?;
+                        let _ = child.wait().await;
+                        return Err(crate::error::Error::Cancelled.into());
+                    }
+                    status = tokio::time::timeout(Duration::from_secs(300), child.wait()) => {
+                        match status {
+                            Ok(result) => result?,
+                            Err(_) => {
+                                child.kill().await?;
+                                let _ = child.wait().await;
+                                anyhow::bail!("影片准备超时，请重试。");
+                            }
                         }
                     }
+                };
+                if !status.success() {
+                    let mut file = fs::File::open(log)?;
+                    let size = file.metadata()?.len().min(2000);
+                    file.seek(SeekFrom::End(-(size as i64)))?;
+                    let mut bytes = Vec::new();
+                    file.read_to_end(&mut bytes)?;
+                    anyhow::bail!("影片封装失败：{}", String::from_utf8_lossy(&bytes));
                 }
-            };
-            if !status.success() {
-                let mut file = fs::File::open(log)?;
-                let size = file.metadata()?.len().min(2000);
-                file.seek(SeekFrom::End(-(size as i64)))?;
-                let mut bytes = Vec::new();
-                file.read_to_end(&mut bytes)?;
-                anyhow::bail!("影片封装失败：{}", String::from_utf8_lossy(&bytes));
             }
         }
         crate::error::checkpoint(&cancel)?;
         let target = output.clone();
         let token = cancel.clone();
         let receipt =
-            tokio::task::spawn_blocking(move || artifacts::receipt(&target, &token)).await??;
+            crate::runtime::blocking(move || artifacts::receipt(&target, &token)).await??;
         let name = format!("{}.mp4", receipt.sha256);
         let destination = store.directory.join(&name);
         if !destination.exists() {

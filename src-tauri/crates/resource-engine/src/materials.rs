@@ -79,10 +79,10 @@ pub async fn filters(
     common: Arc<Unity>,
     store: Arc<MediaStore>,
 ) -> Result<FilterProfile> {
-    let path = source.bundle("arts/avg_shader_profile.ab", |_| {}).await?;
+    let path = source.bundle("arts/avg_shader_profile.ab").await?;
     let cancel = source.cancellation();
     let version = source.manifest.version.clone();
-    tokio::task::spawn_blocking(move || {
+    crate::runtime::blocking(move || {
         let shaders = Unity::open(&[path], cancel)?;
         let names = BTreeSet::from([
             "mat_grayscale",

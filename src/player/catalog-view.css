@@ -209,7 +209,8 @@ body:not(.playing) footer {
 .archive-cover.has-art:before,
 .archive-cover.has-art:after,
 .archive-cover.has-art .cover-mark,
-.archive-cover.has-art .cover-lines {
+.archive-cover.has-art .cover-lines,
+.archive-cover.has-art .cover-fallback-title {
   display: none;
 }
 .archive-cover img {
@@ -224,7 +225,16 @@ body:not(.playing) footer {
   font: 600 clamp(35px, 5vw, 80px)/1 Arial;
   letter-spacing: -3px;
   transform: rotate(-90deg);
-  opacity: 0.65;
+  opacity: 0.12;
+}
+.cover-fallback-title {
+  position: absolute;
+  width: 78%;
+  text-align: center;
+  font-size: clamp(18px, 1.7vw, 26px);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  color: #e8edf0;
 }
 .cover-lines {
   position: absolute;
@@ -775,33 +785,6 @@ body:not(.playing) footer {
     width: 130px;
   }
 }
-#intro .browser-offline {
-  margin: 28px 0 0 212px;
-}
-#intro .browser-offline button {
-  background: #25343f;
-  color: #eef5f8;
-  border-color: #6d8593;
-}
-#intro .browser-offline button:hover {
-  background: #365362;
-}
-#intro .browser-offline p {
-  font-size: 12px;
-  color: #526775;
-  line-height: 1.8;
-}
-@media (max-width: 1000px) {
-  #intro .browser-offline {
-    margin-left: 160px;
-  }
-}
-@media (max-width: 700px) {
-  #intro .browser-offline {
-    margin-left: 0;
-  }
-}
-
 /* Native topic entry illustrations and the April Fool collection's tall covers. */
 .card-subtitle {
   font-size: 11px;
