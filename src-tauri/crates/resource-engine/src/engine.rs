@@ -84,7 +84,6 @@ impl Engine {
             render_root,
             crate::video::Decoder {
                 executable: PathBuf::from("ffmpeg"),
-                h264: cfg!(target_os = "macos"),
             },
         )
     }

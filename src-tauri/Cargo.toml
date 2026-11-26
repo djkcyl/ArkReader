@@ -1,6 +1,6 @@
 [package]
 name = "arkreader-desktop"
-version = "1.1.1"
+version = "1.1.2"
 description = "ArkReader desktop and Android application"
 edition = "2021"
 publish = false

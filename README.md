@@ -13,16 +13,16 @@
 
 ## 下载
 
-当前正式版 **1.1.1**。更新说明见 [Releases](https://github.com/djkcyl/ArkReader/releases/latest)。
+当前正式版 **1.1.2**。更新说明见 [Releases](https://github.com/djkcyl/ArkReader/releases/latest)。
 
 | 平台            | 架构          | 安装版                                                                                                           | 免安装版                                                                                                          |
 | --------------- | ------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Windows 10 / 11 | x64           | [EXE 安装器](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-windows-x64-setup.exe) | [便携 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-windows-x64-portable.zip) |
-| macOS 12+       | Apple Silicon | [DMG](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-macos-arm64.dmg)              | [应用 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-macos-arm64-app.zip)      |
-| Linux           | x64           | [DEB](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-linux-x64.deb)                | [AppImage](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-linux-x64.AppImage)       |
-| Android 7+      | ARM64         | [APK](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/ArkReader-1.1.1-android-arm64.apk)            | —                                                                                                                 |
+| Windows 10 / 11 | x64           | [EXE 安装器](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-windows-x64-setup.exe) | [便携 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-windows-x64-portable.zip) |
+| macOS 12+       | Apple Silicon | [DMG](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-macos-arm64.dmg)              | [应用 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-macos-arm64-app.zip)      |
+| Linux           | x64           | [DEB](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-linux-x64.deb)                | [AppImage](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-linux-x64.AppImage)       |
+| Android 7+      | ARM64         | [APK](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/ArkReader-1.1.2-android-arm64.apk)            | —                                                                                                                 |
 
-[SHA-256 校验清单](https://github.com/djkcyl/ArkReader/releases/download/v1.1.1/SHA256SUMS.txt) · [历史版本](https://github.com/djkcyl/ArkReader/releases)
+[SHA-256 校验清单](https://github.com/djkcyl/ArkReader/releases/download/v1.1.2/SHA256SUMS.txt) · [历史版本](https://github.com/djkcyl/ArkReader/releases)
 
 Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需要在系统设置中允许运行。Linux DEB 使用 WebKitGTK 4.1。暂不提供 Intel Mac 和 iOS 版本。
 
@@ -107,6 +107,8 @@ Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需
 使用 Tauri 2、Rust、TypeScript 和 Vite，桌面与 Android 共用资源引擎。
 
 需要 Node.js 24、Rust stable 和 [Tauri 的平台依赖](https://v2.tauri.app/start/prerequisites/)。Windows 需要 C++ 构建工具和 WebView2，macOS 需要 Xcode Command Line Tools。
+
+媒体组件从源码按需编译。Windows 另需 MSYS2 的 `make`、`diffutils` 和 `mingw-w64-ucrt-x86_64-gcc`；非默认安装位置通过 `MSYS2_ROOT` 指定。macOS 和 Linux 需要 C 编译器与 GNU Make。已编译的组件会复用。
 
 ```bash
 git clone https://github.com/djkcyl/ArkReader.git

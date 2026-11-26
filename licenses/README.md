@@ -4,7 +4,7 @@ ArkReader uses [Tauri](https://github.com/tauri-apps/tauri) (MIT/Apache-2.0), [u
 
 The Arknights UnityFS block decoder in `src-tauri/crates/resource-engine/src/unity_bundle.rs` is derived from [Ark-Unpacker](https://github.com/isHarryh/Ark-Unpacker)'s compatibility algorithm. Copyright (c) 2022–2026 Harry Huang, BSD-3-Clause. [Full license](Ark-Unpacker.txt). Upstream credits Kengxxiao and MooncellWiki/UnityPy.
 
-Desktop packages include only the native FFmpeg executable from [imageio-ffmpeg](https://github.com/imageio/imageio-ffmpeg). Android builds compile FFmpeg from the official release source. Each package includes the corresponding FFmpeg license, source URL and build configuration. FFmpeg runs as a separate media conversion executable. No Python interpreter is included.
+Desktop and Android packages compile a minimal FFmpeg executable from the same official release source using `tools/build-media.sh`. Each package includes the corresponding license, source URL and build configuration. FFmpeg runs as a separate media conversion executable. No Python interpreter is included.
 
 Spine 3.8 runtime code in `src/vendor/spine38/` retains the [Spine Runtimes License Agreement](Spine-Runtimes.txt), including its editor-license conditions.
 

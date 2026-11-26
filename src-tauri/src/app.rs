@@ -195,15 +195,8 @@ fn launch(app: tauri::AppHandle) {
                             "ffmpeg"
                         }),
                 );
-            let native = Engine::with_decoder(
-                data,
-                render_root,
-                Decoder {
-                    executable,
-                    h264: cfg!(target_os = "macos"),
-                },
-            )
-            .map_err(|e| e.to_string())?;
+            let native = Engine::with_decoder(data, render_root, Decoder { executable })
+                .map_err(|e| e.to_string())?;
             let router = arkreader_resource_engine::api::router(native.clone());
             *app.state::<AppState>().router.lock().unwrap() = Some(router);
             *app.state::<AppState>().engine.lock().unwrap() = Some(native.clone());
@@ -462,6 +455,20 @@ fn app_ui_ready(app: tauri::AppHandle, epoch: Option<u64>) {
     if std::env::var_os("ARKREADER_VERIFY_HIDDEN").is_some()
         && std::env::var_os("ARKREADER_VERIFY_EXIT_READY").is_some()
     {
+        if let Some(path) = std::env::var_os("ARKREADER_VERIFY_SCRIPT") {
+            let result = fs::read_to_string(path)
+                .map_err(|error| error.to_string())
+                .and_then(|script| {
+                    app.get_webview_window("main")
+                        .ok_or_else(|| "Verification window missing".to_owned())?
+                        .eval(&script)
+                        .map_err(|error| error.to_string())
+                });
+            match result {
+                Ok(()) => return,
+                Err(error) => diagnostic(&app, "verification_failed", &error),
+            }
+        }
         app_quit(app);
     }
 }

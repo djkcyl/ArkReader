@@ -84,9 +84,11 @@ desktop.ini
 !/tools/prepare-native.mjs
 !/tools/build-portable.mjs
 !/tools/build-android-media.sh
+!/tools/build-media.sh
 !/tools/android.mjs
 !/tools/verify-android.mjs
 !/tools/desktop-parser.ts
 !/tools/resource_refs.ts
 !/tools/release-assets.mjs
 !/tools/verify-release.mjs
+!/tools/verify-native-media.js

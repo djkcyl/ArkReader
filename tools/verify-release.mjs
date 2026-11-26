@@ -19,6 +19,7 @@ try {
     ARKREADER_DATA: path.join(directory, 'library'),
     ARKREADER_VERIFY_HIDDEN: '1',
     ARKREADER_VERIFY_EXIT_READY: '1',
+    ARKREADER_VERIFY_SCRIPT: path.join(root, 'tools/verify-native-media.js'),
     WEBVIEW2_USER_DATA_FOLDER: path.join(directory, 'webview'),
     APPIMAGE_EXTRACT_AND_RUN: '1',
   };
@@ -41,7 +42,9 @@ try {
   await fs.writeFile(path.join(root, 'artifacts/native-startup.log'), output);
   assert.equal(code, 0, output);
   assert(output.includes('ARKREADER_DIAGNOSTIC main_ui_ready'), output);
-  console.log('Native resource initialization and main window startup passed.');
+  assert(output.includes('ARKREADER_MEDIA_VERIFIED'), output);
+  assert(!output.includes('ARKREADER_MEDIA_FAILED'), output);
+  console.log('Native startup, movie picture/audio and seeking passed.');
 } finally {
   await log.close().catch(() => {});
   const resolved = await fs.realpath(directory);

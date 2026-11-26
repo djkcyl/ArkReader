@@ -17,7 +17,6 @@ use tokio_util::sync::CancellationToken;
 #[derive(Clone)]
 pub struct Decoder {
     pub executable: PathBuf,
-    pub h264: bool,
 }
 
 fn copy(input: &mut impl Read, output: &mut impl Write, cancel: &CancellationToken) -> Result<()> {
@@ -118,8 +117,6 @@ impl Decoder {
         let native_mp4 = bundle.ends_with(".mp4");
         let encoding = if native_mp4 {
             "original-mp4-1"
-        } else if self.h264 {
-            "h264-aac-1"
         } else {
             "vp9-flac-1"
         };
@@ -202,14 +199,7 @@ impl Decoder {
                 .args(["-protocol_whitelist", "file,pipe", "-i"])
                 .arg(&audio)
                 .args(["-map", "0:v:0", "-map", "1:a:0"]);
-            if self.h264 {
-                command.args([
-                    "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-pix_fmt", "yuv420p",
-                    "-c:a", "aac", "-b:a", "192k",
-                ]);
-            } else {
-                command.args(["-c:v", "copy", "-c:a", "flac", "-strict", "experimental"]);
-            }
+            command.args(["-c:v", "copy", "-c:a", "flac", "-strict", "experimental"]);
             command
                 .args(["-movflags", "+faststart"])
                 .arg(&output)
@@ -265,12 +255,7 @@ impl Decoder {
             url: format!("/media/{name}"),
             sha256: receipt.sha256,
             size: receipt.size,
-            codecs: if native_mp4 || self.h264 {
-                "h264,aac"
-            } else {
-                "vp9,flac"
-            }
-            .into(),
+            codecs: if native_mp4 { "h264,aac" } else { "vp9,flac" }.into(),
             bundle: bundle.into(),
             md5: entry.md5.clone(),
             source: None,
