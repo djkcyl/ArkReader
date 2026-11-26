@@ -69,6 +69,7 @@ run(process.execPath, ['node_modules/typescript/bin/tsc', '--noEmit']);
 run(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--mode', 'web']);
 const output = path.join(root, 'web-dist');
 await fs.rename(path.join(output, 'web.html'), path.join(output, 'index.html'));
+await fs.cp(path.join(root, 'src/web/public'), output, { recursive: true });
 await fs.mkdir(path.join(output, 'engine'), { recursive: true });
 const engine = path.join(root, 'src-tauri/target/wasm32-unknown-emscripten/web');
 for (const name of ['arkreader-web.js', 'arkreader_web.wasm'])

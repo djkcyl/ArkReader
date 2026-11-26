@@ -1,0 +1,248 @@
+:root {
+  color-scheme: light;
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  color: #30363c;
+  background: #e1e4e6;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: linear-gradient(118deg, #edeef0, #d6d8d9 64%, #c5c8ca);
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    137deg,
+    transparent 0 340px,
+    #74777a 341px 342px,
+    transparent 343px 570px
+  );
+  opacity: 0.07;
+}
+.download-header {
+  position: relative;
+  min-height: 64px;
+  padding: 10px max(24px, calc((100vw - 1120px) / 2));
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  background: #202124;
+  color: #e1e9ec;
+}
+.download-brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 750;
+  letter-spacing: 4px;
+  text-decoration: none;
+  color: inherit;
+}
+.download-brand span {
+  font-weight: 400;
+  color: #95a7b0;
+}
+.download-header nav {
+  margin-left: auto;
+  display: flex;
+  gap: 24px;
+}
+.download-header nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 13px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.download-header nav a:hover {
+  color: #52cef0;
+}
+.downloads {
+  position: relative;
+  width: min(1184px, 100%);
+  margin: 0 auto;
+  padding: 48px 32px 32px;
+}
+.download-intro {
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  align-items: end;
+  border-bottom: 1px solid #a8b2b9;
+  padding-bottom: 24px;
+  margin-bottom: 28px;
+}
+.download-eyebrow {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #71838c;
+}
+h1 {
+  margin: 10px 0 0;
+  color: #242b30;
+  font-size: clamp(28px, 4vw, 36px);
+  line-height: 1.3;
+}
+.download-version {
+  padding: 6px 10px;
+  border: 1px solid #8fa1ab;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.download-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 18px;
+}
+.download-card {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  padding: 26px 22px 22px;
+  background: #f4f6f7c9;
+  border-top: 3px solid #343e45;
+}
+.download-card.current-platform {
+  border-top-color: #00abe1;
+  background: #27333b;
+  color: #e5edf1;
+}
+.platform-current {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 5px 10px;
+  background: #00abe1;
+  color: white;
+  font-size: 11px;
+}
+.platform-code {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #778b96;
+  margin-bottom: 12px;
+}
+.current-platform .platform-code {
+  color: #9acbd8;
+}
+h2 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 600;
+}
+.platform-requirements {
+  font-size: 13px;
+  color: #687a86;
+  line-height: 1.7;
+  margin: 0 0 24px;
+  min-height: 44px;
+}
+.current-platform .platform-requirements {
+  color: #b4c6cf;
+}
+.download-actions {
+  margin-top: auto;
+  width: 100%;
+  display: grid;
+  gap: 10px;
+}
+.download-actions a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 13px;
+  color: white;
+  background: #343638;
+  border: 1px solid #f1f3f4;
+  box-shadow: 0 4px 7px #0002;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.current-platform .download-actions a:first-child {
+  background: #008bb5;
+  border-color: #b9efff;
+}
+.download-actions a:hover {
+  filter: brightness(1.12);
+}
+.download-actions a span {
+  font-size: 11px;
+  opacity: 0.8;
+}
+a:focus-visible {
+  outline: 2px solid #00abe1;
+  outline-offset: 4px;
+}
+.download-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 28px 0 20px;
+}
+.download-links a {
+  font-size: 13px;
+  color: #3a626f;
+  text-underline-offset: 4px;
+}
+.download-note {
+  color: #647985;
+  font-size: 13px;
+  line-height: 1.8;
+}
+#ios-notice {
+  margin: 0 0 22px;
+  padding: 14px 18px;
+  border-left: 3px solid #00abe1;
+  background: #f6f9fa99;
+  line-height: 1.7;
+}
+#ios-notice a {
+  color: #156b81;
+}
+[hidden] {
+  display: none !important;
+}
+@media (max-width: 600px) {
+  .download-header {
+    padding: 10px 16px;
+    gap: 12px;
+  }
+  .download-header nav {
+    gap: 14px;
+  }
+  .download-header nav a {
+    font-size: 12px;
+  }
+  .download-brand {
+    font-size: 14px;
+    letter-spacing: 2px;
+  }
+  .downloads {
+    padding: 28px 18px;
+  }
+  .download-intro {
+    gap: 12px;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
+  .download-card {
+    padding: 22px 22px 20px;
+  }
+  .platform-requirements {
+    min-height: 0;
+    margin-bottom: 20px;
+  }
+}

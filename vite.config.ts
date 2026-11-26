@@ -1,17 +1,27 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type UserConfig } from 'vite';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
-export default defineConfig(({ mode }) => ({
+const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
+export default defineConfig(({ mode }): UserConfig => ({
   base: './',
+  plugins: [
+    {
+      name: 'app-version-html',
+      transformIndexHtml: {
+        order: 'pre',
+        handler: (html) => html.replaceAll('%APP_VERSION%', version),
+      },
+    },
+  ],
   define: {
-    __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync('package.json', 'utf8')).version),
+    __APP_VERSION__: JSON.stringify(version),
   },
   build: {
     outDir: mode === 'web' ? 'web-dist' : 'dist',
     rollupOptions: {
       input:
         mode === 'web'
-          ? resolve('web.html')
+          ? { web: resolve('web.html'), download: resolve('download.html') }
           : { main: resolve('index.html'), startup: resolve('startup.html') },
     },
   },

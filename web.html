@@ -3,14 +3,77 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-    <title>ArkReader</title>
+    <script>
+      document.addEventListener('contextmenu', (event) => event.preventDefault(), {
+        capture: true,
+      });
+    </script>
+    <title>ArkReader · 明日方舟剧情播放器</title>
+    <meta
+      name="description"
+      content="在线阅读明日方舟剧情，支持剧情回放、分支选择、阅读记录、收藏与离线缓存。也可下载 Windows、macOS、Linux 和 Android 客户端。"
+    />
+    <meta name="theme-color" content="#202124" />
+    <link rel="canonical" href="https://ar.aunly.cn/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:site_name" content="ArkReader" />
+    <meta property="og:title" content="ArkReader · 明日方舟剧情播放器" />
+    <meta
+      property="og:description"
+      content="在线阅读明日方舟剧情，回放演出、选择分支、记录进度，也可下载桌面和 Android 客户端。"
+    />
+    <meta property="og:url" content="https://ar.aunly.cn/" />
+    <meta property="og:image" content="https://ar.aunly.cn/social-preview.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="ArkReader 明日方舟剧情档案，支持 Web、Windows、macOS、Linux 和 Android"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ArkReader · 明日方舟剧情播放器" />
+    <meta
+      name="twitter:description"
+      content="在线阅读明日方舟剧情，回放演出、选择分支、记录进度，也可下载桌面和 Android 客户端。"
+    />
+    <meta name="twitter:image" content="https://ar.aunly.cn/social-preview.png" />
+    <meta name="twitter:image:alt" content="ArkReader 明日方舟剧情档案" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://ar.aunly.cn/#website",
+            "name": "ArkReader",
+            "url": "https://ar.aunly.cn/",
+            "inLanguage": "zh-CN"
+          },
+          {
+            "@type": "WebApplication",
+            "name": "ArkReader",
+            "url": "https://ar.aunly.cn/",
+            "description": "明日方舟剧情播放器，支持剧情回放、分支选择、阅读记录、收藏和离线缓存。",
+            "applicationCategory": "EntertainmentApplication",
+            "operatingSystem": "Web",
+            "softwareVersion": "%APP_VERSION%",
+            "isAccessibleForFree": true,
+            "image": "https://ar.aunly.cn/social-preview.png"
+          }
+        ]
+      }
+    </script>
     <link rel="icon" type="image/png" href="./brand-icon.png" />
+    <link rel="apple-touch-icon" href="./brand-icon.png" />
+    <meta name="application-name" content="ArkReader" />
     <link id="startup-style" rel="stylesheet" href="startup.css" />
   </head>
-  <body class="startup-page" data-state="loading">
+  <body class="startup-page web-app" data-state="loading">
     <div id="startup-root">
       <header class="startup-titlebar">
         <span>ARKREADER</span><span class="startup-caption">明日方舟 · 剧情档案</span>
+        <a class="startup-download" href="./download.html">下载客户端 ↗</a>
       </header>
       <main>
         <section class="startup-brand" aria-label="ArkReader">
@@ -53,13 +116,36 @@
             <p>准备完成后自动进入剧情库。</p>
             <div class="startup-actions">
               <button id="retry" hidden>重试</button><button id="cancel" hidden>取消准备</button
-              ><button id="skip-music" hidden>关闭音乐并继续</button><button id="quit">退出</button>
+              ><button id="skip-music" hidden>关闭音乐并继续</button
+              ><button id="quit" hidden>退出</button>
             </div>
           </div>
         </section>
       </main>
       <footer>ARKREADER · WEB <span>非官方剧情播放器</span></footer>
     </div>
+    <noscript>
+      <style>
+        #startup-root {
+          display: none;
+        }
+        .no-script-intro {
+          position: relative;
+          max-width: 720px;
+          margin: 10vh auto;
+          padding: 28px;
+          line-height: 1.8;
+        }
+      </style>
+      <main class="no-script-intro">
+        <h1>ArkReader · 明日方舟剧情播放器</h1>
+        <p>
+          阅读主题曲、活动故事、干员密录等明日方舟剧情，回放演出、选择分支，保存阅读记录与收藏。
+        </p>
+        <p>启用 JavaScript 后即可在线阅读，也可以下载客户端使用。</p>
+        <a href="./download.html">下载 Windows、macOS、Linux 和 Android 客户端</a>
+      </main>
+    </noscript>
     <script src="./ui-watchdog.js"></script>
     <script type="module" src="/src/web/entry.ts"></script>
   </body>

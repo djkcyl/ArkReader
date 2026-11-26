@@ -31,6 +31,7 @@ const icons = {
   storage: '<path d="M3 7h18v13H3zM3 7l3-4h12l3 4M8 12h8M10 16h4"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 10v7M12 7h.01"/>',
   audio: '<path d="M3 9h4l5-4v14l-5-4H3zM16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/>',
+  download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
 };
 const icon = (name: keyof typeof icons) =>
   `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[name]}</svg>`;
@@ -65,7 +66,12 @@ export function mountDesktopShell(options: {
         ${icon('library')}<span>剧情库</span></button
       ><button data-page="resources" title="资源管理">${icon('storage')}<span>资源</span></button
       ><button data-page="audio" title="声音设置">${icon('audio')}<span>声音</span></button
-      ><button data-page="about" title="应用信息">${icon('info')}<span>应用</span></button>
+      >${isWeb ? `<button data-page="downloads" title="下载客户端">${icon('download')}<span>客户端</span></button>` : ''}<button
+        data-page="about"
+        title="应用信息"
+      >
+        ${icon('info')}<span>应用</span>
+      </button>
     </nav>
     <span class="desktop-rail-foot"
       >${isWeb ? 'WEB' : 'DESKTOP'}<br /><span id="rail-version"></span
@@ -199,7 +205,14 @@ export function mountDesktopShell(options: {
       button.disabled = busy || jobRunning;
     $<HTMLButtonElement>('resource-refresh').disabled = scanBusy;
   }
-  function show(page: 'library' | 'resources' | 'audio' | 'about') {
+  function show(page: 'library' | 'resources' | 'audio' | 'about' | 'downloads') {
+    if (page === 'downloads') {
+      if (isWeb) {
+        if (document.body.matches('.playing,.resource-loading')) options.leave();
+        location.assign(new URL('download.html', location.href));
+      }
+      return;
+    }
     const previous = document.body.dataset.desktopPage;
     if (page === previous) {
       if (page === 'library' && document.body.matches('.playing,.resource-loading'))
@@ -230,7 +243,8 @@ export function mountDesktopShell(options: {
   }
   document.addEventListener('arkreader-show-library', () => show('library'));
   for (const button of rail.querySelectorAll<HTMLButtonElement>('button[data-page]'))
-    button.onclick = () => show(button.dataset.page as 'library' | 'resources' | 'audio' | 'about');
+    button.onclick = () =>
+      show(button.dataset.page as 'library' | 'resources' | 'audio' | 'about' | 'downloads');
   function displayStatus(data: Status) {
     versions.update(data.resourceUpdate);
     $('storage-stories').textContent = data.storyPlayerScripts.toLocaleString();

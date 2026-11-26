@@ -83,9 +83,10 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     (async () => {
       const cache = await caches.open(cacheName);
+      const path = url.pathname.slice(new URL(self.registration.scope).pathname.length);
       const key =
         event.request.mode === 'navigate'
-          ? new URL('index.html', self.registration.scope).href
+          ? new URL(PRECACHE.includes(path) ? path : 'index.html', self.registration.scope).href
           : event.request;
       const saved = await cache.match(key);
       if (saved) return saved;

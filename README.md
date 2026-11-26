@@ -7,7 +7,7 @@
 
 [![Release](https://img.shields.io/github/v/release/djkcyl/ArkReader?style=flat-square&color=008caf)](https://github.com/djkcyl/ArkReader/releases/latest)
 
-[下载](#下载) · [功能](#功能) · [网页部署](#网页部署) · [源码构建](#源码构建) · [反馈与贡献](#反馈与贡献)
+[在线阅读](https://ar.aunly.cn/) · [下载客户端](https://ar.aunly.cn/download.html) · [功能](#功能) · [网页部署](#网页部署) · [源码构建](#源码构建) · [反馈与贡献](#反馈与贡献)
 
 </div>
 

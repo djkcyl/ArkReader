@@ -38,6 +38,10 @@ body.desktop-app {
   gap: 8px;
   padding: 8px;
 }
+body.web-app:not(.mobile-app) .desktop-rail nav {
+  min-height: 0;
+  overflow-y: auto;
+}
 .desktop-rail button {
   border: 0;
   background: none;
