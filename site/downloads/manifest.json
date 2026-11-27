@@ -1,0 +1,132 @@
+{
+  "schema": 1,
+  "version": "1.2.8",
+  "packages": [
+    {
+      "id": "windows-x64-portable.zip",
+      "name": "ArkReader-1.2.8-windows-x64-portable.zip",
+      "size": 10595836,
+      "sha256": "cdb574c409db77a22a3c61a66014b16d127e164bf52f3904039e1857fae38a63",
+      "parts": [
+        {
+          "path": "cdb574c409db77a22a3c61a66014b16d127e164bf52f3904039e1857fae38a63/000.bin",
+          "size": 10595836,
+          "sha256": "cdb574c409db77a22a3c61a66014b16d127e164bf52f3904039e1857fae38a63"
+        }
+      ]
+    },
+    {
+      "id": "windows-x64-setup.exe",
+      "name": "ArkReader-1.2.8-windows-x64-setup.exe",
+      "size": 7785559,
+      "sha256": "2a788ea58d60e861e32605ef514a3c965720f0da276cba237234072324d7ab0d",
+      "parts": [
+        {
+          "path": "2a788ea58d60e861e32605ef514a3c965720f0da276cba237234072324d7ab0d/000.bin",
+          "size": 7785559,
+          "sha256": "2a788ea58d60e861e32605ef514a3c965720f0da276cba237234072324d7ab0d"
+        }
+      ]
+    },
+    {
+      "id": "macos-arm64-app.zip",
+      "name": "ArkReader-1.2.8-macos-arm64-app.zip",
+      "size": 8939178,
+      "sha256": "e35ba91bf86c77f5eee9a501632b119da067be48ef848951069539b721eec6cc",
+      "parts": [
+        {
+          "path": "e35ba91bf86c77f5eee9a501632b119da067be48ef848951069539b721eec6cc/000.bin",
+          "size": 8939178,
+          "sha256": "e35ba91bf86c77f5eee9a501632b119da067be48ef848951069539b721eec6cc"
+        }
+      ]
+    },
+    {
+      "id": "macos-arm64.dmg",
+      "name": "ArkReader-1.2.8-macos-arm64.dmg",
+      "size": 8972029,
+      "sha256": "1c11344545f45b5f8ccabc6df7947d7552389b5c3f974fe1bf23532eef201e44",
+      "parts": [
+        {
+          "path": "1c11344545f45b5f8ccabc6df7947d7552389b5c3f974fe1bf23532eef201e44/000.bin",
+          "size": 8972029,
+          "sha256": "1c11344545f45b5f8ccabc6df7947d7552389b5c3f974fe1bf23532eef201e44"
+        }
+      ]
+    },
+    {
+      "id": "linux-x64.AppImage",
+      "name": "ArkReader-1.2.8-linux-x64.AppImage",
+      "size": 157592056,
+      "sha256": "0fb8a921fbc8440cb926cdef3c012a1781aae54673afa3f2b9188824c3099602",
+      "parts": [
+        {
+          "path": "0fb8a921fbc8440cb926cdef3c012a1781aae54673afa3f2b9188824c3099602/000.bin",
+          "size": 20000000,
+          "sha256": "71b3c4ba65a536a89351ce1512d03d517d2dd6c908146631dbacc080a5958df9"
+        },
+        {
+          "path": "0fb8a921fbc8440cb926cdef3c012a1781aae54673afa3f2b9188824c3099602/001.bin",
+          "size": 20000000,
+          "sha256": "1814fc1ee33128b48d62b214984d553a92345bef39571c9d635e9123620e0e43"
+        },
+        {
+          "path": "0fb8a921fbc8440cb926cdef3c012a1781aae54673afa3f2b9188824c3099602/002.bin",
+          "size": 20000000,
+          "sha256": "efe1b6dc61d1a6970fa62b94e37d2daf8597cfd62e49cae6fd00df90a561c268"
+        },
+        {
+          "path": "0fb8a921fbc8440cb926cdef3c012a1781aae54673afa3f2b9188824c3099602/003.bin",
+          "size": 20000000,
+          "sha256": "863c2bf503e8e834f029e3c0af034e2eeadb1c862b860d3d9d007d271301a104"
+        },
+        {
+          "path": "0fb8a921fbc8440cb926cdef3c012a1781aae54673afa3f2b9188824c3099602/004.bin",
+          "size": 20000000,
+          "sha256": "e902cf68c280c064ef97300781d798b644d3f93d39ff6230be5e607aed7c96ab"
+        },
+        {
+          "path": "0fb8a921fbc8440cb926cdef3c012a1781aae54673afa3f2b9188824c3099602/005.bin",
+          "size": 20000000,
+          "sha256": "57cb9e3256814e00fccba833cf97b24b17cd1f814e9d6c952f34750348661995"
+        },
+        {
+          "path": "0fb8a921fbc8440cb926cdef3c012a1781aae54673afa3f2b9188824c3099602/006.bin",
+          "size": 20000000,
+          "sha256": "e4b75d075a7cd3507f46d4fa89047d5d4f26d79491063b89d441f170e5697cda"
+        },
+        {
+          "path": "0fb8a921fbc8440cb926cdef3c012a1781aae54673afa3f2b9188824c3099602/007.bin",
+          "size": 17592056,
+          "sha256": "e140fe1ae239ceda3b545222806780aa80171ea7344d000bf9bd66829b8cdbbc"
+        }
+      ]
+    },
+    {
+      "id": "linux-x64.deb",
+      "name": "ArkReader-1.2.8-linux-x64.deb",
+      "size": 11347914,
+      "sha256": "d75fcc7ad8cd406357fdd970dd24c0dc764bb72de43ee94a0c6b8ffe1e4f0eca",
+      "parts": [
+        {
+          "path": "d75fcc7ad8cd406357fdd970dd24c0dc764bb72de43ee94a0c6b8ffe1e4f0eca/000.bin",
+          "size": 11347914,
+          "sha256": "d75fcc7ad8cd406357fdd970dd24c0dc764bb72de43ee94a0c6b8ffe1e4f0eca"
+        }
+      ]
+    },
+    {
+      "id": "android-arm64.apk",
+      "name": "ArkReader-1.2.8-android-arm64.apk",
+      "size": 10255598,
+      "sha256": "c6d8934030e0fc07ee3ac434c9b4b99f9c2e2ec7fc2802ce7fd5bf18cc3e8fd9",
+      "parts": [
+        {
+          "path": "c6d8934030e0fc07ee3ac434c9b4b99f9c2e2ec7fc2802ce7fd5bf18cc3e8fd9/000.bin",
+          "size": 10255598,
+          "sha256": "c6d8934030e0fc07ee3ac434c9b4b99f9c2e2ec7fc2802ce7fd5bf18cc3e8fd9"
+        }
+      ]
+    }
+  ]
+}

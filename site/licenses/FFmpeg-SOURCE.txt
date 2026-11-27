@@ -1,0 +1,6 @@
+FFmpeg 9.0.2
+Source: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz
+SHA-256: 8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e
+Target: web
+Build: tools/build-media.sh
+Configuration: --disable-everything --disable-autodetect --disable-doc --disable-debug --disable-network --disable-shared --enable-static --enable-pic --disable-asm --disable-ffplay --disable-ffprobe --enable-ffmpeg --disable-avdevice --disable-swscale --enable-avcodec --enable-avformat --enable-avfilter --enable-swresample --enable-protocol=file\,pipe --enable-demuxer=ivf\,adx\,mov --enable-muxer=mp4 --enable-decoder=adpcm_adx\,vp9 --enable-encoder=flac --enable-parser=vp9 --enable-bsf=vp9_superframe\,extract_extradata --enable-filter=aresample\,aformat\,anull\,abuffer\,abuffersink\,null\,buffer\,buffersink --enable-muxer=webm\,wav --disable-encoder=flac --enable-encoder=pcm_s16le --enable-cross-compile --target-os=none --arch=wasm32 --cc=emcc --ar=emar --ranlib=emranlib --nm=emnm --disable-programs --disable-avfilter --disable-pthreads --disable-w32threads --disable-os2threads --disable-stripping --extra-cflags=-O2

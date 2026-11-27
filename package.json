@@ -1,0 +1,8 @@
+{
+  "name": "arkreader-web-deploy",
+  "version": "1.2.8",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}

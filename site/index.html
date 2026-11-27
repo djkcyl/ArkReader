@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <script>
+      if (new URLSearchParams(location.search).get('page') === 'downloads')
+        document.documentElement.dataset.downloadEntry = '';
+      document.addEventListener('contextmenu', (event) => event.preventDefault(), {
+        capture: true,
+      });
+    </script>
+    <style>
+      html[data-download-entry] #startup-root {
+        visibility: hidden;
+      }
+    </style>
+    <title>ArkReader · 明日方舟剧情播放器</title>
+    <meta
+      name="description"
+      content="在线阅读明日方舟剧情，支持剧情回放、分支选择、阅读记录、收藏与离线缓存。也可下载 Windows、macOS、Linux 和 Android 客户端。"
+    />
+    <meta name="theme-color" content="#202124" />
+    <link rel="canonical" href="https://ar.aunly.cn/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:site_name" content="ArkReader" />
+    <meta property="og:title" content="ArkReader · 明日方舟剧情播放器" />
+    <meta
+      property="og:description"
+      content="在线阅读明日方舟剧情，回放演出、选择分支、记录进度，也可下载桌面和 Android 客户端。"
+    />
+    <meta property="og:url" content="https://ar.aunly.cn/" />
+    <meta property="og:image" content="https://ar.aunly.cn/social-preview.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="ArkReader 明日方舟剧情档案，支持 Web、Windows、macOS、Linux 和 Android"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ArkReader · 明日方舟剧情播放器" />
+    <meta
+      name="twitter:description"
+      content="在线阅读明日方舟剧情，回放演出、选择分支、记录进度，也可下载桌面和 Android 客户端。"
+    />
+    <meta name="twitter:image" content="https://ar.aunly.cn/social-preview.png" />
+    <meta name="twitter:image:alt" content="ArkReader 明日方舟剧情档案" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://ar.aunly.cn/#website",
+            "name": "ArkReader",
+            "url": "https://ar.aunly.cn/",
+            "inLanguage": "zh-CN"
+          },
+          {
+            "@type": "WebApplication",
+            "name": "ArkReader",
+            "url": "https://ar.aunly.cn/",
+            "description": "明日方舟剧情播放器，支持剧情回放、分支选择、阅读记录、收藏和离线缓存。",
+            "applicationCategory": "EntertainmentApplication",
+            "operatingSystem": "Web",
+            "softwareVersion": "1.2.8",
+            "isAccessibleForFree": true,
+            "image": "https://ar.aunly.cn/social-preview.png"
+          }
+        ]
+      }
+    </script>
+    <link rel="icon" type="image/png" href="./brand-icon.png" />
+    <link rel="apple-touch-icon" href="./brand-icon.png" />
+    <meta name="application-name" content="ArkReader" />
+    <link id="startup-style" rel="stylesheet" href="startup.css" />
+    <script type="module" crossorigin src="./assets/web-Bc2EH7G2.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/web-C4KhudmJ.css">
+    <meta name="arkreader-build" content="4b52cddf4497e1f749f3358e" />
+  </head>
+  <body class="startup-page web-app" data-state="loading">
+    <div id="startup-root">
+      <header class="startup-titlebar">
+        <span>ARKREADER</span><span class="startup-caption">明日方舟 · 剧情档案</span>
+        <a class="startup-download" href="./?page=downloads">下载客户端</a>
+      </header>
+      <main>
+        <section class="startup-brand" aria-label="ArkReader">
+          <div class="brand-rule"></div>
+          <div class="brand-word">ARK<span>READER</span></div>
+          <p class="brand-chinese">明 日 方 舟 · 剧 情 档 案</p>
+          <p class="startup-edition">STORY ARCHIVE</p>
+        </section>
+        <section class="startup-loading" aria-labelledby="startup-heading">
+          <div class="startup-heading-row">
+            <div>
+              <p class="startup-kicker">INITIALIZING</p>
+              <h1 id="startup-heading">正在准备剧情档案</h1>
+            </div>
+            <span class="startup-symbol" aria-hidden="true"></span>
+          </div>
+          <ol id="startup-steps">
+            <li>剧情索引</li>
+            <li>基础资源</li>
+            <li>播放界面</li>
+            <li>目录封面</li>
+            <li>主页音乐</li>
+            <li>进入档案</li>
+          </ol>
+          <div class="startup-status-row">
+            <p id="status" role="status">正在启动…</p>
+            <strong id="percent">0%</strong>
+          </div>
+          <progress id="startup-progress" max="1" value="0" aria-label="总启动进度"></progress>
+          <p id="current-resource"></p>
+          <div class="startup-transfer-row">
+            <span id="transfer-detail"></span><span id="transfer-speed"></span
+            ><span id="elapsed"></span>
+          </div>
+          <details id="startup-details" hidden>
+            <summary>查看错误详情</summary>
+            <pre id="startup-error"></pre>
+          </details>
+          <div class="startup-bottom">
+            <p>准备完成后自动进入剧情库。</p>
+            <div class="startup-actions">
+              <button id="retry" hidden>重试</button><button id="cancel" hidden>取消准备</button
+              ><button id="skip-music" hidden>关闭音乐并继续</button
+              ><button id="quit" hidden>退出</button>
+            </div>
+          </div>
+        </section>
+      </main>
+      <footer>ARKREADER · WEB <span>非官方剧情播放器</span></footer>
+    </div>
+    <noscript>
+      <style>
+        #startup-root {
+          display: none;
+        }
+        .no-script-intro {
+          position: relative;
+          max-width: 720px;
+          margin: 10vh auto;
+          padding: 28px;
+          line-height: 1.8;
+        }
+      </style>
+      <main class="no-script-intro">
+        <h1>ArkReader · 明日方舟剧情播放器</h1>
+        <p>
+          阅读主题曲、活动故事、干员密录等明日方舟剧情，回放演出、选择分支，保存阅读记录与收藏。
+        </p>
+        <p>启用 JavaScript 后即可在线阅读，也可以下载客户端使用。</p>
+        <section class="downloads" id="downloads-fallback"><div class="desktop-page-heading download-intro">
+  <div>
+    <h1>下载客户端</h1>
+  </div>
+  <span class="download-version">v1.2.8</span>
+</div>
+<p id="ios-notice" hidden>暂未提供 iOS 客户端，可继续<a href="./">使用网页版</a>。</p>
+<div class="download-grid">
+  <article class="download-card" data-platform="windows">
+    <span class="platform-current" hidden>当前平台</span><span class="platform-code">DESKTOP</span>
+    <h2>Windows</h2>
+    <p class="platform-requirements">Windows 10 / 11<br />x64</p>
+    <div class="download-actions">
+      <a
+        href="https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-windows-x64-setup.exe"
+        >下载安装版 <span>EXE</span></a
+      >
+      <a
+        href="https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-windows-x64-portable.zip"
+        >下载便携版 <span>ZIP</span></a
+      >
+    </div>
+  </article>
+  <article class="download-card" data-platform="macos">
+    <span class="platform-current" hidden>当前平台</span><span class="platform-code">DESKTOP</span>
+    <h2>macOS</h2>
+    <p class="platform-requirements">macOS 12 及以上<br />Apple Silicon</p>
+    <div class="download-actions">
+      <a
+        href="https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-macos-arm64.dmg"
+        >下载安装版 <span>DMG</span></a
+      >
+      <a
+        href="https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-macos-arm64-app.zip"
+        >下载应用包 <span>ZIP</span></a
+      >
+    </div>
+  </article>
+  <article class="download-card" data-platform="linux">
+    <span class="platform-current" hidden>当前平台</span><span class="platform-code">DESKTOP</span>
+    <h2>Linux</h2>
+    <p class="platform-requirements">Linux 桌面系统<br />x64</p>
+    <div class="download-actions">
+      <a
+        href="https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-linux-x64.AppImage"
+        >下载免安装版 <span>AppImage</span></a
+      >
+      <a
+        href="https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-linux-x64.deb"
+        >下载安装包 <span>DEB</span></a
+      >
+    </div>
+  </article>
+  <article class="download-card" data-platform="android">
+    <span class="platform-current" hidden>当前平台</span><span class="platform-code">MOBILE</span>
+    <h2>Android</h2>
+    <p class="platform-requirements">Android 7 及以上<br />ARM64</p>
+    <div class="download-actions">
+      <a
+        href="https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-android-arm64.apk"
+        >下载安装包 <span>APK</span></a
+      >
+    </div>
+  </article>
+</div>
+<nav class="download-links" aria-label="下载帮助">
+  <a
+    href="https://github.com/djkcyl/ArkReader/releases/tag/v1.2.8"
+    target="_blank"
+    rel="noopener noreferrer"
+    >更新说明 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false" style="vertical-align:-0.15em;flex:none;pointer-events:none"><path d="M5 19 19 5M6 5h13v13"/></svg>
+</a
+  >
+  <a href="./downloads/SHA256SUMS.txt" target="_blank" rel="noopener noreferrer"
+    >校验文件 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false" style="vertical-align:-0.15em;flex:none;pointer-events:none"><path d="M5 19 19 5M6 5h13v13"/></svg>
+</a
+  >
+  <a href="https://github.com/djkcyl/ArkReader/releases" target="_blank" rel="noopener noreferrer"
+    >GitHub 备用下载 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false" style="vertical-align:-0.15em;flex:none;pointer-events:none"><path d="M5 19 19 5M6 5h13v13"/></svg>
+</a
+  >
+</nav>
+</section>
+      </main>
+    </noscript>
+    <script src="./ui-watchdog.js"></script>
+  </body>
+</html>
