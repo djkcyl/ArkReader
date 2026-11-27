@@ -4,7 +4,6 @@ import {
   operatorMatches,
   operatorFilterCount,
   type OperatorFilterOptions,
-  type OperatorFilters,
   type OperatorMetadata,
 } from './operator-filter-model';
 import './operator-filter.css';

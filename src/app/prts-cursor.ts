@@ -31,8 +31,6 @@ interface Clip {
 export interface CursorProfile {
   source: unknown;
   handler: string;
-  reference: number[];
-  match: number;
   nodes: CursorNode[];
   sprites: Record<string, string>;
   down: Clip;
@@ -134,7 +132,6 @@ export class PRTSCursor {
     document.addEventListener('fullscreenchange', () => {
       this.host = undefined;
       this.lift();
-      this.resize();
     });
     document.addEventListener(
       'toggle',
@@ -150,7 +147,7 @@ export class PRTSCursor {
       },
       true,
     );
-    window.addEventListener('resize', () => this.resize());
+    window.addEventListener('resize', () => this.place());
     new MutationObserver((records) => {
       if (records.some((r) => r.target instanceof HTMLDialogElement)) {
         this.host = undefined;
@@ -182,7 +179,6 @@ export class PRTSCursor {
       );
       this.build(profile);
       this.profile = profile;
-      this.resize();
       if (this.visible) {
         this.lift();
         if (this.pressed) this.play(profile.down);
@@ -249,14 +245,6 @@ export class PRTSCursor {
   }
   private paint(view: NodeView) {
     view.element.style.transform = `rotate(${-view.rotation}deg) scale(${view.scale[0]},${view.scale[1]})`;
-  }
-  private resize() {
-    if (!this.profile) return;
-    const p = this.profile,
-      scale =
-        (innerWidth / p.reference[0]) ** (1 - p.match) * (innerHeight / p.reference[1]) ** p.match;
-    this.canvas.style.transform = `scale(${scale})`;
-    this.place();
   }
   private place() {
     let x = this.x,

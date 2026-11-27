@@ -1,70 +1,3 @@
-:root {
-  color-scheme: light;
-  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-  color: #30363c;
-  background: #e1e4e6;
-}
-* {
-  box-sizing: border-box;
-}
-body {
-  margin: 0;
-  min-height: 100dvh;
-  background: linear-gradient(118deg, #edeef0, #d6d8d9 64%, #c5c8ca);
-}
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    137deg,
-    transparent 0 340px,
-    #74777a 341px 342px,
-    transparent 343px 570px
-  );
-  opacity: 0.07;
-}
-.download-header {
-  position: relative;
-  min-height: 64px;
-  padding: 10px max(24px, calc((100vw - 1120px) / 2));
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  background: #202124;
-  color: #e1e9ec;
-}
-.download-brand {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-weight: 750;
-  letter-spacing: 4px;
-  text-decoration: none;
-  color: inherit;
-}
-.download-brand span {
-  font-weight: 400;
-  color: #95a7b0;
-}
-.download-header nav {
-  margin-left: auto;
-  display: flex;
-  gap: 24px;
-}
-.download-header nav a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-size: 13px;
-  color: inherit;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.download-header nav a:hover {
-  color: #52cef0;
-}
 .downloads {
   position: relative;
   width: min(1184px, 100%);
@@ -80,12 +13,15 @@ body::before {
   padding-bottom: 24px;
   margin-bottom: 28px;
 }
+body.mobile-app #desktop-downloads .desktop-page-heading > div:first-child {
+  flex: 1 1 auto;
+}
 .download-eyebrow {
   font-size: 10px;
   letter-spacing: 3px;
   color: #71838c;
 }
-h1 {
+.downloads h1 {
   margin: 10px 0 0;
   color: #242b30;
   font-size: clamp(28px, 4vw, 36px);
@@ -135,7 +71,7 @@ h1 {
 .current-platform .platform-code {
   color: #9acbd8;
 }
-h2 {
+.downloads h2 {
   margin: 0 0 8px;
   font-size: 24px;
   font-weight: 600;
@@ -182,7 +118,7 @@ h2 {
   font-size: 11px;
   opacity: 0.8;
 }
-a:focus-visible {
+.downloads a:focus-visible {
   outline: 2px solid #00abe1;
   outline-offset: 4px;
 }
@@ -212,24 +148,11 @@ a:focus-visible {
 #ios-notice a {
   color: #156b81;
 }
-[hidden] {
+.downloads [hidden] {
   display: none !important;
 }
+
 @media (max-width: 600px) {
-  .download-header {
-    padding: 10px 16px;
-    gap: 12px;
-  }
-  .download-header nav {
-    gap: 14px;
-  }
-  .download-header nav a {
-    font-size: 12px;
-  }
-  .download-brand {
-    font-size: 14px;
-    letter-spacing: 2px;
-  }
   .downloads {
     padding: 28px 18px;
   }
@@ -245,4 +168,15 @@ a:focus-visible {
     min-height: 0;
     margin-bottom: 20px;
   }
+}
+body.startup-page #startup-root > .downloads {
+  position: absolute;
+  inset: 56px 0 40px;
+  width: 100%;
+  height: auto;
+  overflow-y: auto;
+  margin: 0 auto;
+}
+body.startup-page[data-desktop-page='downloads'] #startup-root > main {
+  display: none;
 }

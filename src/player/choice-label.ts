@@ -2,9 +2,10 @@ import { lineAdvance } from '../core/line-breaking';
 import { readingFont, readingMarkup } from '../core/sticker-color';
 
 import { alignedTextOffset, layoutDialogText } from './dialog-layout';
+import { stageSize } from './stage-geometry';
 
 export function drawChoiceLabel(canvas: HTMLCanvasElement, text: string): void {
-  const rect = canvas.getBoundingClientRect();
+  const rect = stageSize(canvas);
   if (!rect.width || !rect.height) return;
   const ratio = window.devicePixelRatio || 1,
     scale = (rect.width * ratio) / 480;

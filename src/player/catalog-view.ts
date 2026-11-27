@@ -4,6 +4,7 @@ import { chapterProgressView, storyProgressView } from '../app/reading-progress-
 import { OperatorFilterView } from '../app/operator-filter-view';
 import type { OperatorFilterOptions, OperatorMetadata } from '../app/operator-filter-model';
 import { libraryHeading } from '../app/library-heading';
+import { isWeb } from '../app/platform';
 
 export interface CatalogStory {
   id: string;
@@ -149,7 +150,8 @@ export class CatalogView {
       card?.focus({ preventScroll: true });
     };
     try {
-      this.saved = JSON.parse(localStorage.getItem('arkreader.catalogView') ?? '{}') ?? {};
+      if (!isWeb)
+        this.saved = JSON.parse(localStorage.getItem('arkreader.catalogView') ?? '{}') ?? {};
     } catch {}
     this.observer = new IntersectionObserver(
       (entries) => {
@@ -245,8 +247,8 @@ export class CatalogView {
     const category = this.category || this.saved.category;
     this.category = this.groups.some((g) => g.category === category)
       ? category!
-      : this.groups.some((g) => g.category === 'side')
-        ? 'side'
+      : this.groups.some((g) => g.category === 'main')
+        ? 'main'
         : (this.groups[0]?.category ?? '');
     const wanted = data.stories.find(
       (s) => s.id === (requested ?? (this.selected || this.saved.selected)),
@@ -263,8 +265,7 @@ export class CatalogView {
     this.render();
     if (requested) document.dispatchEvent(new Event('arkreader-show-catalog'));
     if (requested && !wanted)
-      this.details.textContent =
-        '此链接不在当前剧情目录中，或此导出包未包含该剧情。请选择其他剧情。';
+      this.details.textContent = '此链接对应的剧情不在当前目录中，请选择其他剧情。';
   }
   label(id: string): string | undefined {
     return this.data.stories.find((s) => s.id === id)?.label;
@@ -666,15 +667,16 @@ export class CatalogView {
       button.setAttribute('aria-pressed', String(button.dataset.story === this.selected));
     this.root.closest('#intro')?.classList.toggle('chapter-open', !!this.opened);
     try {
-      localStorage.setItem(
-        'arkreader.catalogView',
-        JSON.stringify({
-          category: this.category,
-          group: this.opened?.id,
-          selected: this.selected,
-          query: this.search.value,
-        }),
-      );
+      if (!isWeb)
+        localStorage.setItem(
+          'arkreader.catalogView',
+          JSON.stringify({
+            category: this.category,
+            group: this.opened?.id,
+            selected: this.selected,
+            query: this.search.value,
+          }),
+        );
     } catch {}
     document.dispatchEvent(
       new CustomEvent('catalog-selection', {

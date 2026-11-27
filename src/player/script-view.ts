@@ -63,6 +63,7 @@ export class ScriptView {
       this.follow.setAttribute('aria-pressed', 'false');
     };
     this.list.addEventListener('wheel', stopFollow, { passive: true });
+    this.list.addEventListener('arkreader-scroll-input', stopFollow);
     this.list.addEventListener(
       'pointerdown',
       (event) => {

@@ -584,7 +584,9 @@ pub fn run() {
     if std::env::var_os("ARKREADER_VERIFY_HIDDEN").is_some() {
         context.config_mut().identifier = format!("io.arkreader.verify.p{}", std::process::id());
     }
-    let builder = tauri::Builder::default().plugin(tauri_plugin_opener::init());
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_clipboard_manager::init());
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     let builder = builder
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {

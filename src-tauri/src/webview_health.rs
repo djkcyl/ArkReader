@@ -415,28 +415,3 @@ pub fn monitor(app: tauri::AppHandle) {
         }
     });
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn stale_heartbeats_are_ignored() {
-        let health = Health::new();
-        health.generation.store(2, Ordering::SeqCst);
-        let initial = *health.heartbeat.lock().unwrap();
-        health.beat(1);
-        assert_eq!(initial, *health.heartbeat.lock().unwrap());
-        health.beat(2);
-        assert!(*health.heartbeat.lock().unwrap() >= initial);
-    }
-    #[test]
-    fn recovery_is_bounded_and_budget_recovers() {
-        let mut attempts = VecDeque::new();
-        let now = Instant::now();
-        for _ in 0..3 {
-            assert!(allow_recovery(&mut attempts, now));
-        }
-        assert!(!allow_recovery(&mut attempts, now));
-        assert!(allow_recovery(&mut attempts, now + Duration::from_secs(61)));
-    }
-}

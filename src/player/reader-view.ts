@@ -1,3 +1,4 @@
+import { stagePoint } from './stage-geometry';
 import { lineAdvance } from '../core/line-breaking';
 import type { StoryPlayer } from './runtime';
 import type { ReaderCell } from '../core/reader-model';
@@ -120,10 +121,11 @@ export class ReaderView {
       if (e.button !== 0) return;
       this.suppressReaderClick = false;
       this.scroll.velocity = 0;
+      const point = stagePoint(element, e);
       this.pointer = {
-        x: e.clientX,
-        y: e.clientY,
-        dragY: e.clientY,
+        x: point.x,
+        y: point.y,
+        dragY: point.y,
         dragged: false,
         id: e.pointerId,
       };
@@ -131,16 +133,17 @@ export class ReaderView {
     element.addEventListener('pointermove', (e) => {
       const point = this.pointer;
       if (!point || point.id !== e.pointerId || e.buttons === 0) return;
-      if (!point.dragged && Math.hypot(e.clientX - point.x, e.clientY - point.y) > 8) {
+      const local = stagePoint(element, e);
+      if (!point.dragged && Math.hypot(local.x - point.x, local.y - point.y) > 8) {
         point.dragged = true;
-        point.dragY = e.clientY;
+        point.dragY = local.y;
         this.scroll.begin();
         this.player?.readerPlayback.stopAuto();
         element.setPointerCapture(e.pointerId);
       }
       if (point.dragged) {
         e.preventDefault();
-        this.scroll.drag((e.clientY - point.dragY) / this.scale);
+        this.scroll.drag((local.y - point.dragY) / this.scale);
         this.applyScroll();
       }
     });

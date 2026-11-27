@@ -7,22 +7,22 @@
 
 [![Release](https://img.shields.io/github/v/release/djkcyl/ArkReader?style=flat-square&color=008caf)](https://github.com/djkcyl/ArkReader/releases/latest)
 
-[在线阅读](https://ar.aunly.cn/) · [下载客户端](https://ar.aunly.cn/download.html) · [功能](#功能) · [网页部署](#网页部署) · [源码构建](#源码构建) · [反馈与贡献](#反馈与贡献)
+[在线阅读](https://ar.aunly.cn/) · [下载客户端](https://ar.aunly.cn/?page=downloads) · [功能](#功能) · [网页部署](#网页部署) · [源码构建](#源码构建) · [反馈与贡献](#反馈与贡献)
 
 </div>
 
 ## 下载
 
-当前正式版 **1.2.1**。更新说明见 [Releases](https://github.com/djkcyl/ArkReader/releases/latest)。
+当前正式版 **1.2.2**。更新说明见 [Releases](https://github.com/djkcyl/ArkReader/releases/latest)。
 
 | 平台            | 架构          | 安装版                                                                                                           | 免安装版                                                                                                          |
 | --------------- | ------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Windows 10 / 11 | x64           | [EXE 安装器](https://github.com/djkcyl/ArkReader/releases/download/v1.2.1/ArkReader-1.2.1-windows-x64-setup.exe) | [便携 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.1/ArkReader-1.2.1-windows-x64-portable.zip) |
-| macOS 12+       | Apple Silicon | [DMG](https://github.com/djkcyl/ArkReader/releases/download/v1.2.1/ArkReader-1.2.1-macos-arm64.dmg)              | [应用 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.1/ArkReader-1.2.1-macos-arm64-app.zip)      |
-| Linux           | x64           | [DEB](https://github.com/djkcyl/ArkReader/releases/download/v1.2.1/ArkReader-1.2.1-linux-x64.deb)                | [AppImage](https://github.com/djkcyl/ArkReader/releases/download/v1.2.1/ArkReader-1.2.1-linux-x64.AppImage)       |
-| Android 7+      | ARM64         | [APK](https://github.com/djkcyl/ArkReader/releases/download/v1.2.1/ArkReader-1.2.1-android-arm64.apk)            | —                                                                                                                 |
+| Windows 10 / 11 | x64           | [EXE 安装器](https://github.com/djkcyl/ArkReader/releases/download/v1.2.2/ArkReader-1.2.2-windows-x64-setup.exe) | [便携 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.2/ArkReader-1.2.2-windows-x64-portable.zip) |
+| macOS 12+       | Apple Silicon | [DMG](https://github.com/djkcyl/ArkReader/releases/download/v1.2.2/ArkReader-1.2.2-macos-arm64.dmg)              | [应用 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.2/ArkReader-1.2.2-macos-arm64-app.zip)      |
+| Linux           | x64           | [DEB](https://github.com/djkcyl/ArkReader/releases/download/v1.2.2/ArkReader-1.2.2-linux-x64.deb)                | [AppImage](https://github.com/djkcyl/ArkReader/releases/download/v1.2.2/ArkReader-1.2.2-linux-x64.AppImage)       |
+| Android 7+      | ARM64         | [APK](https://github.com/djkcyl/ArkReader/releases/download/v1.2.2/ArkReader-1.2.2-android-arm64.apk)            | —                                                                                                                 |
 
-[Web 静态 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.1/ArkReader-1.2.1-web.zip) · [SHA-256 校验清单](https://github.com/djkcyl/ArkReader/releases/download/v1.2.1/SHA256SUMS.txt) · [历史版本](https://github.com/djkcyl/ArkReader/releases)
+[Web 静态 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.2/ArkReader-1.2.2-web.zip) · [SHA-256 校验清单](https://github.com/djkcyl/ArkReader/releases/download/v1.2.2/SHA256SUMS.txt) · [历史版本](https://github.com/djkcyl/ArkReader/releases)
 
 Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需要在系统设置中允许运行。Linux DEB 使用 WebKitGTK 4.1。暂不提供 Intel Mac 和 iOS 版本。
 
@@ -45,6 +45,8 @@ Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需
 ### 剧情播放
 
 支持背景、立绘、CG、动画、特效、字幕、音乐、语音、音效、影片和分支选择。播放界面沿用原版布局，可切换阅读模式，支持暂停、自动播放、快进和全屏。LOG 中的对白可以点击跳转。
+
+在播放器左上角的设置中选择「播放控制 → 复制剧情链接」，即可分享当前剧情。对方打开链接后会直接准备网页版播放。
 
 ![剧情播放](docs/images/player.jpg)
 
@@ -151,7 +153,6 @@ npm start
 | `npm run web:build:hosted` | 在 Linux 构建平台准备工具链并构建静态站点 |
 | `npm run build`            | TypeScript 检查与前端构建                 |
 | `npm run format:check`     | 格式检查                                  |
-| `npm test`                 | Rust 工作区测试                           |
 
 [发行工作流](.github/workflows/release.yml)按 Desktop、Mobile、Web 分组构建和验证。全部通过后，在同一个 Release 发布安装包、免安装包、APK、静态 Web ZIP 和校验清单。Android 的 SDK、NDK 和签名配置见 [移动端工作流](.github/workflows/mobile.yml)。
 

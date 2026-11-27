@@ -10,6 +10,7 @@ import { playerMediaUrl } from './resource-urls';
 import './history-view.css';
 import { NativeSelectableSurface } from './native-selectable';
 import { bindReviewJump } from './review-jump';
+import { stagePoint, fitStageDialog } from './stage-geometry';
 type Cell = StoryPlayer['history'][number];
 const logical = (n: number) => `${n / 12.8}cqw`;
 function place(el: HTMLElement, rect: readonly number[]) {
@@ -123,21 +124,23 @@ export class HistoryView {
       if (e.button === 0) {
         this.suppressClick = false;
         this.scroll.velocity = 0;
-        this.pointer = { id: e.pointerId, y: e.clientY, start: e.clientY, dragged: false };
+        const y = stagePoint(list, e).y;
+        this.pointer = { id: e.pointerId, y, start: y, dragged: false };
       }
     });
     list.addEventListener('pointermove', (e) => {
       const p = this.pointer;
       if (!p || p.id !== e.pointerId || e.buttons === 0) return;
-      if (!p.dragged && Math.abs(e.clientY - p.start) > 8) {
+      const y = stagePoint(list, e).y;
+      if (!p.dragged && Math.abs(y - p.start) > 8) {
         p.dragged = true;
-        p.y = e.clientY;
+        p.y = y;
         this.scroll.begin();
         list.setPointerCapture(e.pointerId);
       }
       if (p.dragged) {
         e.preventDefault();
-        this.scroll.drag((e.clientY - p.y) / this.scale);
+        this.scroll.drag((y - p.y) / this.scale);
         this.render();
       }
     });
@@ -179,6 +182,11 @@ export class HistoryView {
     }).observe(viewport);
     window.addEventListener('scroll', () => this.fit(), { passive: true });
     window.addEventListener('resize', () => this.fit(), { passive: true });
+    window.addEventListener('playback-screen-mode', () => {
+      this.pointer = null;
+      this.scroll.end();
+      this.fit();
+    });
   }
   show(player: StoryPlayer): void {
     if (
@@ -230,13 +238,7 @@ export class HistoryView {
     }));
   }
   private fit() {
-    const b = this.viewport.getBoundingClientRect();
-    Object.assign(this.dialog.style, {
-      left: b.left + 'px',
-      top: b.top + 'px',
-      width: b.width + 'px',
-      height: b.height + 'px',
-    });
+    fitStageDialog(this.dialog, this.viewport);
   }
   update(player: StoryPlayer): void {
     if (!this.dialog.open) return;

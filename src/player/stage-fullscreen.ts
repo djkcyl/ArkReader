@@ -1,11 +1,15 @@
 import { setControlLabel } from './control-label';
 import { isWeb, isMobile } from '../app/platform';
-/** Browser display mode, separate from the story's authored camera/viewport. */
+
+/** Display orientation is independent of the story's authored camera. */
 export class StageFullscreen {
   private pending = false;
   private revision = 0;
   private orientationLocked = false;
   private systemFullscreen = false;
+  private mobileSession = false;
+  private mobilePlaying = false;
+  private layout = '';
   constructor(
     private surface: HTMLElement,
     private button: HTMLButtonElement,
@@ -28,82 +32,126 @@ export class StageFullscreen {
       }
     });
     document.addEventListener('fullscreenchange', () => this.sync());
+    window.addEventListener('resize', () => this.sync(), { passive: true });
+    window.visualViewport?.addEventListener('resize', () => this.sync(), { passive: true });
+    window.visualViewport?.addEventListener('scroll', () => this.sync(), { passive: true });
+    screen.orientation?.addEventListener('change', () => this.sync());
     document.body.classList.toggle('web-system-fullscreen', isWeb && isMobile && this.supported());
     this.sync();
   }
   get active(): boolean {
+    return this.full() || this.surface.classList.contains('window-filled');
+  }
+  private full(): boolean {
     return (
       document.fullscreenElement === this.surface ||
-      this.surface.classList.contains('window-filled')
+      (this.mobileSession && document.fullscreenElement === document.documentElement)
     );
   }
   private supported(): boolean {
-    return (
-      typeof this.surface.requestFullscreen === 'function' && document.fullscreenEnabled !== false
-    );
+    const target = isWeb && isMobile ? document.documentElement : this.surface;
+    return typeof target.requestFullscreen === 'function' && document.fullscreenEnabled !== false;
   }
   private fillWindow(value: boolean): void {
     this.surface.classList.toggle('window-filled', value);
     document.body.classList.toggle('window-filled', value);
   }
+  private unlock(): void {
+    if (this.orientationLocked) screen.orientation?.unlock();
+    this.orientationLocked = false;
+  }
+  /** Called before the first await in the user's Play/Continue click. */
+  prepareMobile(): void {
+    if (!isWeb || !isMobile) return;
+    this.mobileSession = true;
+    if (
+      !this.full() &&
+      !this.pending &&
+      this.supported() &&
+      navigator.userActivation?.isActive !== false
+    )
+      void this.requestSystem(true);
+  }
+  enterMobile(): void {
+    this.mobileSession = this.mobilePlaying = true;
+    this.fillWindow(true);
+    this.sync();
+  }
   private sync(): void {
-    const full = document.fullscreenElement === this.surface;
-    if (this.systemFullscreen && !full) {
-      if (this.orientationLocked) {
-        screen.orientation.unlock();
-        this.orientationLocked = false;
-      }
-      if (isWeb && isMobile && document.body.classList.contains('playing')) this.fillWindow(true);
-    }
+    const full = this.full();
+    if (this.systemFullscreen && !full) this.unlock();
     this.systemFullscreen = full;
+    if (this.mobilePlaying) this.fillWindow(true);
+    const viewport = window.visualViewport;
+    const width = viewport?.width ?? innerWidth,
+      height = viewport?.height ?? innerHeight;
+    const rotated = isWeb && isMobile && this.mobilePlaying && height > width + 1;
+    this.surface.dataset.stageRotated = String(rotated);
+    document.body.classList.toggle('mobile-landscape', rotated);
+    this.surface.style.setProperty('--stage-screen-width', `${width}px`);
+    this.surface.style.setProperty('--stage-screen-height', `${height}px`);
+    this.surface.style.setProperty('--stage-screen-left', `${viewport?.offsetLeft ?? 0}px`);
+    this.surface.style.setProperty('--stage-screen-top', `${viewport?.offsetTop ?? 0}px`);
     const filled = this.surface.classList.contains('window-filled');
-    setControlLabel(
-      this.button,
-      document.fullscreenElement === this.surface ? '退出全屏' : '系统全屏',
-    );
-    this.button.setAttribute('aria-pressed', String(document.fullscreenElement === this.surface));
+    setControlLabel(this.button, full ? '退出全屏' : '系统全屏');
+    this.button.setAttribute('aria-pressed', String(full));
     this.button.disabled = this.pending;
     if (this.windowButton) {
       setControlLabel(this.windowButton, filled ? '退出窗口全屏' : '窗口全屏');
       this.windowButton.setAttribute('aria-pressed', String(filled));
       this.windowButton.disabled = this.pending;
     }
-    this.surface.dispatchEvent(new Event('playback-screen-mode'));
-  }
-  private async toggle(): Promise<void> {
-    if (this.pending) return;
-    if (document.fullscreenElement === this.surface) {
-      await this.exit();
-      return;
+    const layout = `${full}/${filled}/${rotated}/${width}/${height}/${viewport?.offsetLeft}/${viewport?.offsetTop}`;
+    if (layout !== this.layout) {
+      this.layout = layout;
+      this.surface.dispatchEvent(new Event('playback-screen-mode', { bubbles: true }));
     }
-    this.fillWindow(false);
+  }
+  private async requestSystem(mobile: boolean): Promise<void> {
+    if (this.pending) return;
+    if (!mobile) this.fillWindow(false);
     const revision = ++this.revision;
+    const target = mobile ? document.documentElement : this.surface;
     this.pending = true;
     this.sync();
     try {
       if (this.supported()) {
-        await this.surface.requestFullscreen();
+        await target.requestFullscreen({ navigationUI: 'hide' });
         const orientation = screen.orientation as ScreenOrientation & {
           lock?: (mode: string) => Promise<void>;
         };
-        if (isWeb && isMobile && orientation?.lock) {
-          await orientation
-            .lock('landscape')
-            .then(() => {
-              this.orientationLocked = true;
-            })
-            .catch(() => {});
+        if (mobile && revision === this.revision && orientation?.lock) {
+          try {
+            await orientation.lock('landscape');
+            this.orientationLocked = true;
+          } catch {
+            /* Portrait browser layouts use the same landscape stage below. */
+          }
         }
-      } else this.fillWindow(true);
+      } else if (!mobile) this.fillWindow(true);
     } catch {
-      // Permission denial or an unsupported implementation must not break play.
-      if (revision === this.revision) this.fillWindow(true);
+      if (!mobile && revision === this.revision) this.fillWindow(true);
     } finally {
       this.pending = false;
-      // Leaving the story may have raced the browser's asynchronous transition.
-      if (revision !== this.revision) await this.exit();
+      if (revision !== this.revision) {
+        this.unlock();
+        if (document.fullscreenElement === target) await document.exitFullscreen().catch(() => {});
+      }
       this.sync();
     }
+  }
+  private async toggle(): Promise<void> {
+    if (this.pending) return;
+    if (isWeb && isMobile) {
+      this.mobileSession = true;
+      if (this.full()) {
+        ++this.revision;
+        this.unlock();
+        await document.exitFullscreen().catch(() => {});
+        this.sync();
+      } else await this.requestSystem(true);
+    } else if (this.full()) await this.exit();
+    else await this.requestSystem(false);
   }
   async toggleWindow(): Promise<void> {
     if (this.pending) return;
@@ -112,10 +160,10 @@ export class StageFullscreen {
     this.pending = true;
     this.sync();
     try {
-      if (document.fullscreenElement === this.surface) await document.exitFullscreen();
+      if (this.full()) await document.exitFullscreen();
       if (revision === this.revision) this.fillWindow(!filled);
     } catch {
-      /* Keep the existing screen mode if the platform refuses to exit it. */
+      /* Retain the previous display when the browser refuses a change. */
     } finally {
       this.pending = false;
       this.sync();
@@ -123,15 +171,15 @@ export class StageFullscreen {
   }
   async exit(): Promise<void> {
     ++this.revision;
+    const full = this.full();
+    this.mobileSession = this.mobilePlaying = false;
+    this.unlock();
     this.fillWindow(false);
-    if (this.orientationLocked) {
-      screen.orientation.unlock();
-      this.orientationLocked = false;
-    }
+    this.sync();
     try {
-      if (document.fullscreenElement === this.surface) await document.exitFullscreen();
+      if (full) await document.exitFullscreen();
     } catch {
-      /* The browser may already have exited while this request was pending. */
+      /* The browser may already have exited fullscreen. */
     }
     this.sync();
   }

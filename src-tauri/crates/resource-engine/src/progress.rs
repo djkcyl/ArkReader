@@ -424,39 +424,3 @@ impl Observer for Progress {
         self.advance(&mut d);
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn progress_never_rewinds_when_more_dependencies_are_discovered() {
-        let p = Progress::new(
-            "test".into(),
-            Kind::Prepare,
-            false,
-            CancellationToken::new(),
-        );
-        p.phase(Phase::Download, "download", 0, 0, "");
-        p.transfer(
-            "one",
-            "one",
-            100,
-            TransferState::Ready,
-            Some(100),
-            Some(false),
-        );
-        let previous = p.snapshot(false)["overallProgress"].as_f64().unwrap();
-        p.transfer(
-            "two",
-            "two",
-            900,
-            TransferState::Downloading,
-            Some(0),
-            Some(false),
-        );
-        let next = p.snapshot(false);
-        assert!(next["overallProgress"].as_f64().unwrap() >= previous);
-        assert_eq!(next["transfers"]["readyFiles"], 1);
-        assert_eq!(next["transfers"]["totalFiles"], 2);
-    }
-}

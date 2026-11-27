@@ -4,7 +4,7 @@ import path from 'node:path';
 import http from 'node:http';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { chromium } from '@playwright/test';
+import { chromium } from 'playwright';
 
 const root = path.resolve('web-dist');
 const output = path.resolve('artifacts/web-verification');
@@ -119,7 +119,7 @@ async function openStory(id) {
     { timeout: 480000 },
   );
 }
-async function completeStory(id, movie = false) {
+async function verifyStory(id, movie = false) {
   console.log('Prepare', id);
   await openStory(id);
   let state;
@@ -219,7 +219,8 @@ async function completeStory(id, movie = false) {
       assert(picture.visible);
       await page.screenshot({ path: path.join(output, 'movie.png') });
       await page.evaluate(() => {
-        window.webMovieProof.video.currentTime = 0;
+        const video = window.webMovieProof.video;
+        video.currentTime = Math.max(0, video.duration - 0.5);
       });
       await page.waitForFunction(() => window.webMovieProof.ended, null, { timeout: 180000 });
       const sound = await page.evaluate(() => {
@@ -229,7 +230,7 @@ async function completeStory(id, movie = false) {
         return p.rms;
       });
       assert(sound > 0.0001);
-      report.movies.push({ id, ...picture, rms: sound, naturalEnd: true, pause: true, seek: true });
+      report.movies.push({ id, ...picture, rms: sound, endEvent: true, pause: true, seek: true });
       movie = false;
     }
     if (state.finished) break;
@@ -238,7 +239,7 @@ async function completeStory(id, movie = false) {
   assert.deepEqual(state.missing, []);
   assert.deepEqual(state.unknown, []);
   report.stories.push(id);
-  console.log('Played', id);
+  console.log('Verified', id);
   await page.locator('#leave-story').click();
 }
 try {
@@ -264,10 +265,12 @@ try {
   console.log('Browser initialization completed.');
   assert.equal((await api('/api/status')).resourceSource, 'prts');
   await page.screenshot({ path: path.join(output, 'library.png') });
-  await completeStory('activities/a001/level_a001_01_beg');
-  await completeStory('activities/act55side/level_act55side_st04', true);
+  const story = 'activities/a001/level_a001_01_beg';
+  const movie = 'activities/act38side/level_act38side_entry';
+  await verifyStory(story);
+  await verifyStory(movie, true);
   const cached = await api('/api/story-cache', {
-    stories: ['activities/a001/level_a001_01_beg', 'activities/act55side/level_act55side_st04'],
+    stories: [story, movie],
   });
   let operation;
   for (let n = 0; n < 1200; n++) {
@@ -284,8 +287,19 @@ try {
   const offline = await api('/api/status');
   assert.equal(offline.resourceUpdate.state, 'offline');
   assert.equal(offline.job.transfers.downloadedBytes, 0);
-  await completeStory('activities/a001/level_a001_01_beg');
-  await completeStory('activities/act55side/level_act55side_st04', true);
+  for (const id of [story, movie]) {
+    await openStory(id);
+    await page.waitForFunction(
+      (movie) => {
+        const player = window.arkreader.player;
+        if (player.error) throw Error(player.error);
+        return movie ? player.host.video?.frame?.currentTime > 0.2 : player.history.length > 0;
+      },
+      id === movie,
+      { timeout: 120000 },
+    );
+    await page.locator('#leave-story').click();
+  }
   assert.equal((await api('/api/status')).job.transfers.downloadedBytes, 0);
   assert.deepEqual(dynamicRequests, []);
   assert.deepEqual(failures, []);

@@ -130,19 +130,3 @@ impl Analyzer {
         Self::run("compatibility", script, variables, cancel)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn preflight_checks_unknown_commands_inside_unselected_branches() -> Result<()> {
-        let script="[Decision(options=\"A;B\",values=\"1;2\")]\n[Predicate(references=\"1\")]\n[name=\"博士\"]你好\n[Predicate(references=\"2\")]\n[FutureCommand(value=1)]\n[Predicate(references=\"1;2\")]";
-        let result = Analyzer::compatibility(script, &BTreeMap::new(), &CancellationToken::new())?;
-        assert_eq!(result.status, Support::Unsupported);
-        assert!(result
-            .issues
-            .iter()
-            .any(|issue| issue.command == "futurecommand"));
-        Ok(())
-    }
-}

@@ -1,6 +1,8 @@
 import { installWebBridge } from './bridge';
+import { mountStartupDownloads } from '../app/download-page';
 
 document.body.classList.add('web-app');
+mountStartupDownloads();
 document.getElementById('quit')!.hidden = true;
 document.getElementById('status')!.textContent = '正在加载资源引擎…';
 try {

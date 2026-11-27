@@ -1,6 +1,5 @@
 .venv/
 __pycache__/
-.pytest_cache/
 node_modules/
 dist/
 web-dist/
@@ -11,11 +10,7 @@ artifacts/
 bin/
 obj/
 
-exports/
-.update/
-.update-smoke/
 src-tauri/target/
-src-tauri/resources/service/
 src-tauri/resources/native/
 src-tauri/resources/web-media/
 src-tauri/gen/*
@@ -32,9 +27,6 @@ src-tauri/gen/android/app/tauri.properties
 src-tauri/gen/android/local.properties
 *.jks
 *.keystore
-/arkreader/
-/pyproject.toml
-/uv.lock
 
 # Local profiles, packages and release staging never belong in source control.
 user-data/
@@ -65,7 +57,6 @@ desktop.ini
 # Local development material is intentionally not part of the release source.
 /AGENTS.md
 /prompts/
-/tests/
 /development/
 /docs/*
 !/docs/releases/
@@ -77,9 +68,6 @@ desktop.ini
 !/docs/images/script.jpg
 !/docs/images/audio.jpg
 !/docs/images/android.png
-/update.config.json
-/vitest.config.ts
-/arkreader/update.py
 /src-tauri/crates/resource-engine/examples/
 /tools/*
 !/tools/build-desktop.mjs

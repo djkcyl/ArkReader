@@ -16,6 +16,7 @@ import { libraryHeading } from './library-heading';
 import { ReadingPreviews, previewText } from './reading-preview';
 import type { ScriptSource } from '../core/script-preview';
 import { confirmAction } from './action-confirm';
+import { isWeb } from './platform';
 
 type LibraryTab = 'catalog' | 'recent' | 'favorites' | 'cache';
 const tabs: LibraryTab[] = ['catalog', 'recent', 'favorites', 'cache'];
@@ -57,7 +58,7 @@ export class ReadingShelf {
       this.data = parseShelf(localStorage.getItem('arkreader.shelf'));
     } catch {}
     try {
-      const saved = localStorage.getItem('arkreader.libraryTab');
+      const saved = isWeb ? null : localStorage.getItem('arkreader.libraryTab');
       if (tabs.includes(saved as LibraryTab)) this.mode = saved as LibraryTab;
     } catch {}
     const intro = document.getElementById('intro')!;
@@ -219,7 +220,7 @@ export class ReadingShelf {
     for (const panel of this.root.querySelectorAll<HTMLElement>(':scope > [role=tabpanel]'))
       panel.hidden = panel.id !== `library-${tab}`;
     try {
-      localStorage.setItem('arkreader.libraryTab', tab);
+      if (!isWeb) localStorage.setItem('arkreader.libraryTab', tab);
     } catch {}
     document.dispatchEvent(new CustomEvent('library-tab-changed', { detail: { tab } }));
     this.render();

@@ -60,7 +60,7 @@ export function installSettingsWidgets(dialog: HTMLDialogElement, profile: Setti
   dialog.style.setProperty('--native-action-width', unit(profile.action.size[0]));
   dialog.style.setProperty('--native-action-height', unit(profile.action.size[1]));
   dialog.style.setProperty('--native-setting-font', unit(profile.action.text.fontSize!));
-  for (const id of ['pause', 'window-full', 'full']) {
+  for (const id of ['pause', 'window-full', 'full', 'share-story']) {
     const button = document.getElementById(id)!;
     const text = button.textContent ?? '';
     button.className = 'native-client-action';

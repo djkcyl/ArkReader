@@ -7,6 +7,7 @@ import {
 import { navigationProfile as P } from './navigation-profile';
 import { digitalAxis, strongestAxis, NavigationGamepads } from '../core/navigation-input';
 import { topNativeDialog } from './native-dialogs';
+import { stageRect, stageSize } from './stage-geometry';
 export type NavigationEntry = {
   element: HTMLElement;
   rect: NavigationRect;
@@ -34,17 +35,17 @@ function visible(element: HTMLElement): boolean {
  */
 export function storyNavigationEntries(stage: HTMLElement): NavigationEntry[] {
   const viewport = stage.querySelector<HTMLElement>('.viewport')!,
-    b = viewport.getBoundingClientRect(),
+    b = stageSize(viewport),
     scale = b.width / 1280;
   const entries: NavigationEntry[] = [];
   const add = (element: HTMLElement | null, rect?: readonly number[]) => {
     if (!element || !visible(element)) return;
-    const r = element.getBoundingClientRect();
+    const r = stageRect(element, viewport);
     entries.push({
       element,
       rect: rect
-        ? [b.left + rect[0] * scale, b.top + rect[1] * scale, rect[2] * scale, rect[3] * scale]
-        : [r.left, r.top, r.width, r.height],
+        ? [rect[0] * scale, rect[1] * scale, rect[2] * scale, rect[3] * scale]
+        : [r.x, r.y, r.width, r.height],
     });
   };
   const modal = topNativeDialog();
@@ -79,8 +80,8 @@ export function storyNavigationEntries(stage: HTMLElement): NavigationEntry[] {
   // graphic/hotzone is much larger and must not define its navigation edge.
   for (const element of stage.querySelectorAll<HTMLElement>('.quick-notice-known'))
     if (visible(element)) {
-      const r = element.getBoundingClientRect();
-      entries.push({ element, rect: [r.left + r.width / 2, r.top + r.height / 2, 0, 0] });
+      const r = stageRect(element, viewport);
+      entries.push({ element, rect: [r.x + r.width / 2, r.y + r.height / 2, 0, 0] });
     }
   return entries;
 }

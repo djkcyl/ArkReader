@@ -24,7 +24,7 @@ void (async () => {
   try {
     const catalog = await (await fetch('/api/catalog')).json();
     for (const id of [
-      'activities/act44side/level_act44side_entry',
+      'activities/act38side/level_act38side_entry',
       'activities/act20side/level_act20side_entry',
     ]) {
       phase = id + ': prepare';

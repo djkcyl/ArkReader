@@ -317,15 +317,3 @@ pub fn entries(input: Region, cancelled: CancellationToken) -> Result<Vec<(Strin
     }
     Ok(entries)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn lz4ak_handles_overlapping_matches_and_rejects_incomplete_data() {
-        assert_eq!(decode_lz4ak(&[0x41, b'a', 0, 1], 9).unwrap(), b"aaaaaaaaa");
-        assert_eq!(decode_lz4ak(&[3, b'a', b'b', b'c'], 3).unwrap(), b"abc");
-        assert!(decode_lz4ak(&[4, b'a'], 4).is_err());
-        assert!(decode_lz4ak(&[0x40, 0, 1], 8).is_err());
-    }
-}

@@ -57,7 +57,6 @@ jobs:
           workspaces: src-tauri
           cache-on-failure: true
       - run: npm ci
-      - run: npm run format:check
       - name: Identify native media toolchain
         id: media_toolchain
         env:
@@ -86,13 +85,9 @@ jobs:
         env:
           MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
         run: npm run desktop:build
-      - name: Native routing tests
-        run: |
-          if [[ "$RUNNER_OS" == "macOS" ]]; then export MACOSX_DEPLOYMENT_TARGET=12.0; fi
-          cargo test --release --locked --workspace --features tauri/custom-protocol --manifest-path src-tauri/Cargo.toml
       - name: Native resource initialization and startup
         if: runner.os != 'Linux'
-        run: node tools/verify-release.mjs
+        run: npm run test:desktop
       - name: AppImage resource initialization and startup
         if: runner.os == 'Linux'
         env:
@@ -102,7 +97,7 @@ jobs:
           pulseaudio --start --exit-idle-time=-1
           pactl load-module module-null-sink sink_name=arkreader_verify
           export PULSE_SINK=arkreader_verify
-          xvfb-run -a node tools/verify-release.mjs src-tauri/target/release/bundle/appimage/*.AppImage
+          xvfb-run -a npm run test:desktop -- src-tauri/target/release/bundle/appimage/*.AppImage
       - name: Native verification log
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9

@@ -1,6 +1,6 @@
 [package]
 name = "arkreader-desktop"
-version = "1.2.1"
+version = "1.2.2"
 description = "ArkReader desktop and Android application"
 edition = "2021"
 publish = false
@@ -25,6 +25,7 @@ axum = "0.8"
 http-body-util = "0.1"
 tower = { version = "0.5", features = ["util"] }
 tauri-plugin-opener = "2"
+tauri-plugin-clipboard-manager = "2"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"

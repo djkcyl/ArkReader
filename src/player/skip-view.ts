@@ -6,6 +6,7 @@ import { lineAdvance } from '../core/line-breaking';
 import { layoutDialogText, alignedTextOffset } from './dialog-layout';
 import type { StoryPlayer } from './runtime';
 import './skip-view.css';
+import { fitStageDialog } from './stage-geometry';
 
 type Graphic = {
   id: number;
@@ -93,6 +94,7 @@ export class SkipView {
       this.drawTexts();
     }).observe(viewport);
     window.addEventListener('resize', () => this.fit(), { passive: true });
+    window.addEventListener('playback-screen-mode', () => this.fit());
     window.addEventListener('scroll', () => this.fit(), { passive: true });
   }
   show(player: StoryPlayer): void {
@@ -160,13 +162,7 @@ export class SkipView {
     }));
   }
   private fit() {
-    const r = this.viewport.getBoundingClientRect();
-    Object.assign(this.dialog.style, {
-      left: r.left + 'px',
-      top: r.top + 'px',
-      width: r.width + 'px',
-      height: r.height + 'px',
-    });
+    fitStageDialog(this.dialog, this.viewport);
   }
   private render() {
     const brief = this.player!.skipBrief,

@@ -155,7 +155,7 @@ function targetFor(target: EventTarget | null): Target | undefined {
   else if (['native-story-settings-tab', 'native-playback-settings-tab'].includes(id))
     role = 'settings.tab';
   else if (['high-res-rt', 'quick-skip-decisions'].includes(id)) role = 'settings.toggle';
-  else if (['pause', 'window-full', 'full'].includes(id)) role = 'settings.action';
+  else if (['pause', 'window-full', 'full', 'share-story'].includes(id)) role = 'settings.action';
   else if (id === 'resume') role = 'prompt.ok';
   else if (id === 'script-close') role = 'shell.cancel';
   else if (id === 'script-toggle' || element.closest('#script-panel')) role = 'shell.tab';

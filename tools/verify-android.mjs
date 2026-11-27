@@ -26,6 +26,7 @@ async function find(directory, suffix) {
 }
 let device;
 let page;
+let passed = false;
 const errors = [];
 try {
   const avd = adb('emu', 'avd', 'name')
@@ -229,8 +230,9 @@ try {
       2,
     ),
   );
+  passed = true;
 } finally {
-  if (page) {
+  if (page && !passed) {
     const state = await page
       .evaluate(async () => ({
         url: location.href,
@@ -242,46 +244,13 @@ try {
       }))
       .catch(String);
     await fs.writeFile(`${out}/state.json`, JSON.stringify(state, null, 2));
-    if (state?.progress?.state === 'failed') {
-      const url = 'https://ak-conf.hypergryph.com/config/prod/official/network_config';
-      const cdp = await page.context().newCDPSession(page);
-      const { frameTree } = await cdp.send('Page.getFrameTree');
-      const browserRequest = await Promise.race([
-        cdp
-          .send('Network.loadNetworkResource', {
-            frameId: frameTree.frame.id,
-            url,
-            options: { disableCache: true, includeCredentials: false },
-          })
-          .catch(String),
-        sleep(20000).then(() => 'Browser request timed out'),
-      ]);
-      const hostRequest = await fetch(url, { signal: AbortSignal.timeout(20000) })
-        .then(async (response) => ({
-          status: response.status,
-          body: (await response.text()).slice(0, 1000),
-        }))
-        .catch(String);
-      await fs.writeFile(
-        `${out}/network.json`,
-        JSON.stringify(
-          {
-            hostRequest,
-            browserRequest,
-            deviceTime: adb('shell', 'date', '-u'),
-          },
-          null,
-          2,
-        ),
-      );
-      await cdp.detach();
+  }
+  if (page && !passed) await page.screenshot({ path: `${out}/last-state.png` }).catch(() => {});
+  if (!passed)
+    try {
+      await fs.writeFile(`${out}/logcat.txt`, adb('logcat', '-d', '-t', '3000'));
+    } catch (error) {
+      await fs.writeFile(`${out}/logcat-error.txt`, String(error));
     }
-  }
-  if (page) await page.screenshot({ path: `${out}/last-state.png` }).catch(() => {});
-  try {
-    await fs.writeFile(`${out}/logcat.txt`, adb('logcat', '-d', '-t', '3000'));
-  } catch (error) {
-    await fs.writeFile(`${out}/logcat-error.txt`, String(error));
-  }
   await device?.close();
 }

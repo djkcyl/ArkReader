@@ -14,7 +14,9 @@
   z-index: 2147483647;
   user-select: none;
 }
-.prts-cursor-layer[hidden],
+.prts-cursor-layer[hidden] {
+  display: none !important;
+}
 .prts-cursor-layer[popover]:not(:popover-open) {
   display: none !important;
 }

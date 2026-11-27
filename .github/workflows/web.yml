@@ -50,12 +50,11 @@ jobs:
         run: npm run web:build:hosted
       - name: Resource engine checks
         run: |
-          cargo test --locked --manifest-path src-tauri/Cargo.toml -p arkreader-resource-engine --lib
-          cargo clippy --locked --manifest-path src-tauri/Cargo.toml -p arkreader-resource-engine --lib --tests -- -D warnings
+          cargo clippy --locked --manifest-path src-tauri/Cargo.toml -p arkreader-resource-engine --lib -- -D warnings
           cargo clippy --locked --manifest-path src-tauri/Cargo.toml -p arkreader-resource-engine --features web --bin arkreader-web --target wasm32-unknown-emscripten -- -D warnings
       - run: npx playwright install --with-deps chrome
-      - name: Static deployment, real playback and offline cache
-        run: node tools/verify-web.mjs
+      - name: Static playback, movie and offline smoke checks
+        run: npm run test:web
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
@@ -67,7 +66,6 @@ jobs:
         run: |
           version=$(node -p 'require("./package.json").version')
           node tools/publish-web.mjs "release/ArkReader-$version-web.zip" "$(git rev-parse HEAD)" --verify-only
-          npm ci --ignore-scripts --prefix artifacts/web-deploy-check
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-web

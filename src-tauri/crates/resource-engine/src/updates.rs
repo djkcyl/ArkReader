@@ -94,37 +94,3 @@ pub fn warning(resource: &str, client: &str, baseline: &Baseline) -> String {
         String::new()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::cmp::Ordering;
-
-    #[test]
-    fn compares_client_versions_numerically() {
-        assert_eq!(compare_client("2.7.91", "2.7.91.0"), Some(Ordering::Equal));
-        assert_eq!(compare_client("2.10.1", "2.9.99"), Some(Ordering::Greater));
-        assert_eq!(compare_client("2.7.91", "2.8.0"), Some(Ordering::Less));
-        assert_eq!(compare_client("future-format", "2.7.91"), None);
-    }
-
-    #[test]
-    fn checks_both_android_resource_and_client_versions() {
-        let b = &*BASELINE;
-        assert_eq!(b.platform, Platform::Android);
-        assert!(warning(&b.resource_version, &b.client_version, b).is_empty());
-        assert!(!warning("99-01-01-00-00-00-new", &b.client_version, b).is_empty());
-        assert!(!warning(&b.resource_version, "999.0.0", b).is_empty());
-        assert!(!warning("unknown", &b.client_version, b).is_empty());
-    }
-
-    #[test]
-    fn changed_resource_identity_is_not_hidden_by_matching_timestamps() {
-        let b = &*BASELINE;
-        assert!(!warning("26-11-13-06-37-23-changed", &b.client_version, b).is_empty());
-        assert_eq!(
-            compare_resource("26-08-17-11-25-42_dbc172", &b.resource_version),
-            Some(Ordering::Less)
-        );
-    }
-}

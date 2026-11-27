@@ -40,6 +40,20 @@ body.window-filled {
   inset: 0;
   z-index: 1000;
 }
+.playback-surface.window-filled[data-stage-rotated='true'] {
+  inset: auto;
+  left: calc(var(--stage-screen-left) + var(--stage-screen-width));
+  top: var(--stage-screen-top);
+  width: var(--stage-screen-height);
+  height: var(--stage-screen-width);
+  transform-origin: 0 0;
+  transform: rotate(90deg);
+  padding: env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px) env(safe-area-inset-top, 0px);
+}
+.playback-surface.window-filled.script-open[data-stage-rotated='true'] {
+  --script-height: clamp(100px, calc(var(--stage-screen-width) * 0.28), 180px);
+}
 .playback-surface:is(:fullscreen, .window-filled) > .playback-frame {
   flex: 1;
   min-height: 0;

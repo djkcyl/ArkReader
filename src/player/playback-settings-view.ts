@@ -23,6 +23,10 @@ export function mountPlaybackSettings(dialog: HTMLDialogElement): HTMLElement {
       <span>显示</span>
       <div class="browser-controls" role="group" aria-label="显示模式"></div>
     </div>
+    <div class="playback-setting-row">
+      <span>分享</span
+      ><button id="share-story" type="button" aria-live="polite">复制剧情链接</button>
+    </div>
     <label class="playback-volume" for="volume"
       ><span>音量</span><output id="volume-value" for="volume">100%</output
       ><input id="volume" type="range" min="0" max="100" value="100" aria-label="音量"

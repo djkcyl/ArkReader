@@ -2,6 +2,7 @@ import { defineConfig, type UserConfig } from 'vite';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
+const downloadContent = readFileSync('src/app/download-content.html', 'utf8');
 export default defineConfig(({ mode }): UserConfig => ({
   base: './',
   plugins: [
@@ -9,7 +10,10 @@ export default defineConfig(({ mode }): UserConfig => ({
       name: 'app-version-html',
       transformIndexHtml: {
         order: 'pre',
-        handler: (html) => html.replaceAll('%APP_VERSION%', version),
+        handler: (html) =>
+          html
+            .replaceAll('%DOWNLOAD_CONTENT%', downloadContent)
+            .replaceAll('%APP_VERSION%', version),
       },
     },
   ],

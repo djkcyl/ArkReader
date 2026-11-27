@@ -1,3 +1,4 @@
+import { stagePoint } from './stage-geometry';
 /** Fullscreen progress is an overlay, never part of the stage's layout. */
 export class FloatingProgress {
   private floating = false;
@@ -5,6 +6,7 @@ export class FloatingProgress {
   private dragging = false;
   private revealPointer: number | null = null;
   private suppressClickUntil = 0;
+  private touchInteraction = false;
   private compact = matchMedia('(max-height:500px) and (orientation:landscape)');
   constructor(
     private surface: HTMLElement,
@@ -17,7 +19,7 @@ export class FloatingProgress {
       'pointermove',
       (event) => {
         if (!this.floating || event.pointerType !== 'mouse' || event.buttons) return;
-        if (this.nearBottom(event.clientY)) this.show();
+        if (this.nearBottom(event)) this.show();
       },
       { passive: true },
     );
@@ -25,13 +27,14 @@ export class FloatingProgress {
       'pointerdown',
       (event) => {
         if (!this.floating) return;
+        this.touchInteraction = event.pointerType === 'touch';
         if (this.footer.contains(event.target as Node)) {
           this.dragging = true;
           this.show();
           return;
         }
         // A first touch near the bottom reveals controls without advancing the story.
-        if (event.isPrimary && event.pointerType === 'touch' && this.nearBottom(event.clientY)) {
+        if (event.isPrimary && event.pointerType === 'touch' && this.nearBottom(event)) {
           this.revealPointer = event.pointerId;
           this.show();
           event.preventDefault();
@@ -81,19 +84,30 @@ export class FloatingProgress {
       if (event.pointerType === 'mouse' && !this.dragging) this.hide();
     });
     footer.addEventListener('focusin', () => this.show());
-    footer.addEventListener('focusout', () => this.show());
+    footer.addEventListener('focusout', () => {
+      if (!this.touchInteraction) this.show();
+    });
+    footer.addEventListener('keydown', () => {
+      this.touchInteraction = false;
+      this.show();
+    });
     window.addEventListener('blur', () => {
       this.dragging = false;
       this.hide();
     });
     this.sync();
   }
-  private nearBottom(y: number) {
+  private nearBottom(event: PointerEvent) {
     const area = this.surface.classList.contains('script-open')
       ? (this.surface.querySelector<HTMLElement>('.playback-frame') ?? this.surface)
       : this.surface;
-    const rect = area.getBoundingClientRect();
-    return y >= rect.bottom - 56 && y <= rect.bottom;
+    const point = stagePoint(area, event);
+    return (
+      point.x >= 0 &&
+      point.x <= point.width &&
+      point.y >= point.height - 56 &&
+      point.y <= point.height
+    );
   }
   private sync() {
     const floating =
@@ -116,6 +130,12 @@ export class FloatingProgress {
   private hide() {
     clearTimeout(this.timer);
     this.timer = undefined;
+    if (
+      this.touchInteraction &&
+      document.activeElement instanceof HTMLElement &&
+      this.footer.contains(document.activeElement)
+    )
+      document.activeElement.blur();
     this.surface.classList.remove('progress-open');
   }
 }

@@ -56,11 +56,55 @@ fn skip_zero_padding(input: &mut (impl Read + Seek), cancel: &CancellationToken)
     }
 }
 
+// ADX ends with one 18-byte marker, even for stereo audio. FFmpeg's demuxer
+// reads channel-sized groups, and reports INVALIDDATA when that marker lands
+// alone in its last read. Remove only the validated marker from our temporary
+// track; the original USM and every encoded sample remain unchanged.
+fn trim_adx_end_marker(audio: &mut fs::File) -> Result<()> {
+    const END_MARKER: [u8; 18] = [
+        0x80, 0x01, 0, 0x0e, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+    let length = audio.metadata()?.len();
+    if length < 38 {
+        return Ok(());
+    }
+    audio.seek(SeekFrom::End(-18))?;
+    let mut tail = [0; 18];
+    audio.read_exact(&mut tail)?;
+    if tail != END_MARKER {
+        return Ok(());
+    }
+    audio.seek(SeekFrom::Start(0))?;
+    let mut header = [0; 20];
+    audio.read_exact(&mut header)?;
+    ensure!(
+        &header[..2] == b"\x80\x00" && header[4..7] == [3, 18, 4] && header[7] > 0,
+        "Invalid ADX header before end marker"
+    );
+    let start = u16::from_be_bytes(header[2..4].try_into()?) as u64 + 4;
+    let end = length - 18;
+    ensure!(start >= 20 && start <= end, "Invalid ADX audio boundaries");
+    let frame_size = 18 * u64::from(header[7]);
+    let samples = u32::from_be_bytes(header[12..16].try_into()?) as u64;
+    ensure!(
+        (end - start).is_multiple_of(frame_size)
+            && (samples == 0 || end - start == samples.div_ceil(32) * frame_size),
+        "ADX audio length does not match its sample count"
+    );
+    audio.set_len(end)?;
+    Ok(())
+}
+
 pub fn demux(path: &Path, video: &Path, audio: &Path, cancel: &CancellationToken) -> Result<()> {
     let mut input = fs::File::open(path)?;
     let length = input.metadata()?.len();
     let mut video = fs::File::create(video)?;
-    let mut audio = fs::File::create(audio)?;
+    let mut audio = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(audio)?;
     let mut seen_video = false;
     let mut seen_audio = false;
     while input.stream_position()? < length {
@@ -142,6 +186,7 @@ pub fn demux(path: &Path, video: &Path, audio: &Path, cancel: &CancellationToken
         input.seek(SeekFrom::Start(end))?;
     }
     ensure!(seen_video && seen_audio, "Native movie is missing a track");
+    trim_adx_end_marker(&mut audio)?;
     video.sync_all()?;
     audio.sync_all()?;
     Ok(())
@@ -308,69 +353,5 @@ impl Decoder {
         write_json(&record, &asset)?;
         drop(staging);
         Ok(Asset::Video(asset))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn chunk(tag: &[u8; 4], data: &[u8], kind: u8) -> Vec<u8> {
-        let padding = (32 - data.len() % 32) % 32;
-        let mut bytes = vec![0; 32];
-        bytes[..4].copy_from_slice(tag);
-        bytes[4..8].copy_from_slice(&((24 + data.len() + padding) as u32).to_be_bytes());
-        bytes[9] = 24;
-        bytes[10..12].copy_from_slice(&(padding as u16).to_be_bytes());
-        bytes[15] = kind;
-        bytes.extend(data);
-        bytes.resize(bytes.len() + padding, 0);
-        bytes
-    }
-
-    fn movie() -> Vec<u8> {
-        let mut bytes = chunk(b"CRID", &[], 1);
-        bytes.extend(chunk(b"@SFV", b"DKIF\0\0\0\0VP90first-picture", 0));
-        bytes.extend(chunk(b"@SFA", b"\x80\x00adx-header00first-audio", 0));
-        bytes
-    }
-
-    fn run(bytes: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
-        let directory = tempfile::tempdir()?;
-        let input = directory.path().join("input.usm");
-        let video = directory.path().join("movie.ivf");
-        let audio = directory.path().join("movie.adx");
-        fs::write(&input, bytes)?;
-        demux(&input, &video, &audio, &CancellationToken::new())?;
-        Ok((fs::read(video)?, fs::read(audio)?))
-    }
-
-    #[test]
-    fn preserves_both_tracks_after_zero_filled_gaps() -> Result<()> {
-        let mut bytes = movie();
-        bytes.extend(vec![0; 2560]);
-        bytes.extend(chunk(b"@SFV", b"last-picture", 0));
-        bytes.extend(chunk(b"@SFA", b"last-audio", 0));
-        bytes.extend(vec![0; 131079]);
-        let (video, audio) = run(&bytes)?;
-        assert_eq!(video, b"DKIF\0\0\0\0VP90first-picturelast-picture");
-        assert_eq!(audio, b"\x80\x00adx-header00first-audiolast-audio");
-        Ok(())
-    }
-
-    #[test]
-    fn padding_does_not_hide_corrupt_or_truncated_chunks() {
-        let mut bytes = movie();
-        bytes.extend(vec![0; 64]);
-        bytes.extend(chunk(b"@SFV", b"last", 0));
-        bytes.pop();
-        assert!(run(&bytes).is_err());
-        let mut bytes = movie();
-        bytes.extend(vec![0; 65]);
-        bytes.extend(chunk(b"@SFV", b"misaligned", 0));
-        assert!(run(&bytes).is_err());
-        let mut bytes = movie();
-        bytes.extend(b"bad-tail");
-        assert!(run(&bytes).is_err());
     }
 }

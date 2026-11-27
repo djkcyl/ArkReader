@@ -4,6 +4,7 @@ import { readerSettingsProfile } from './reader-settings-profile';
 import { playerMediaUrl } from './resource-urls';
 import { NativeSelectableSurface } from './native-selectable';
 import { navigationProfile } from './navigation-profile';
+import { fitStageDialog } from './stage-geometry';
 type State = {
   key: string;
   index: number;
@@ -83,6 +84,7 @@ export class ReaderSettingsView {
     new ResizeObserver(() => this.fit()).observe(stage);
     window.addEventListener('scroll', () => this.fit(), { passive: true });
     window.addEventListener('resize', () => this.fit(), { passive: true });
+    window.addEventListener('playback-screen-mode', () => this.fit());
   }
   configure(reader: boolean): void {
     this.native = true;
@@ -150,13 +152,7 @@ export class ReaderSettingsView {
   }
   private fit(): void {
     if (!this.native) return;
-    const b = this.stage.getBoundingClientRect();
-    Object.assign(this.dialog.style, {
-      left: b.left + 'px',
-      top: b.top + 'px',
-      width: b.width + 'px',
-      height: b.height + 'px',
-    });
+    fitStageDialog(this.dialog, this.stage);
   }
   private input(key: string, index: number): HTMLInputElement {
     if (key === 'dialog')

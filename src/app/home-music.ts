@@ -40,7 +40,9 @@ export class HomeMusic {
   private audioState = Promise.resolve();
   private selectionTimer?: ReturnType<typeof setTimeout>;
   private button = document.createElement('button');
-  private panel = document.createElement('section');
+  private panel = document.createElement(
+    typeof HTMLElement.prototype.showPopover === 'function' ? 'section' : 'dialog',
+  );
   constructor(header: HTMLElement, prepared?: PreparedStartupMusic) {
     this.startupPrepared = !!prepared;
     const settings = musicSettings();
@@ -53,26 +55,58 @@ export class HomeMusic {
     this.button.setAttribute('aria-label', '主页音乐');
     this.button.setAttribute('aria-controls', 'home-music-panel');
     this.button.setAttribute('aria-expanded', 'false');
-    this.button.setAttribute('popovertarget', 'home-music-panel');
+    if (!(this.panel instanceof HTMLDialogElement))
+      this.button.setAttribute('popovertarget', 'home-music-panel');
     this.button.innerHTML =
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l11-2v12M9 9l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/></svg><span>主页音乐</span>';
     header.insertBefore(this.button, header.querySelector('.window-controls'));
     this.panel.id = 'home-music-panel';
-    this.panel.setAttribute('popover', 'auto');
+    if (!(this.panel instanceof HTMLDialogElement)) this.panel.setAttribute('popover', 'auto');
     this.panel.setAttribute('aria-labelledby', 'home-music-title');
     this.panel.innerHTML =
       '<header><h2 id="home-music-title">主页音乐</h2><button id="home-music-close" type="button" aria-label="关闭音乐面板">×</button></header><label class="home-music-switch"><span>播放音乐</span><input id="home-music-enabled" type="checkbox"></label><label class="home-music-volume" for="home-music-volume"><span>音量</span><output id="home-music-volume-value"></output><input id="home-music-volume" type="range" min="0" max="100" aria-label="主页音乐音量"></label><p id="home-music-status" role="status"></p><progress id="home-music-progress" max="1" value="0" hidden></progress><button id="home-music-retry" type="button" hidden>重试</button><div id="home-music-tracks" role="radiogroup" aria-label="主页音乐曲目"></div>';
     document.getElementById('app')!.append(this.panel);
-    this.el('home-music-close').onclick = () => this.panel.hidePopover();
-    this.panel.addEventListener('toggle', () => {
-      const open = this.panel.matches(':popover-open');
+    const syncOpen = () => {
+      const open =
+        this.panel instanceof HTMLDialogElement
+          ? this.panel.open
+          : this.panel.matches(':popover-open');
+      this.panel.dataset.open = String(open);
       this.button.setAttribute('aria-expanded', String(open));
       if (open && !this.catalog) void this.loadCatalog();
       if (open)
         this.panel
           .querySelector<HTMLInputElement>('input[name=home-music-track]:checked')
           ?.scrollIntoView({ block: 'nearest' });
-    });
+    };
+    const close = () => {
+      if (this.panel instanceof HTMLDialogElement) this.panel.close();
+      else this.panel.hidePopover();
+      syncOpen();
+    };
+    this.el('home-music-close').onclick = close;
+    this.panel.addEventListener('arkreader-close', close);
+    this.panel.addEventListener('toggle', syncOpen);
+    if (this.panel instanceof HTMLDialogElement) {
+      const dialog = this.panel;
+      this.button.onclick = () => {
+        if (dialog.open) dialog.close();
+        else dialog.showModal();
+        syncOpen();
+      };
+      dialog.addEventListener('close', syncOpen);
+      dialog.addEventListener('pointerdown', (event) => {
+        const rect = dialog.getBoundingClientRect();
+        if (
+          event.target === dialog &&
+          (event.clientX < rect.left ||
+            event.clientX > rect.right ||
+            event.clientY < rect.top ||
+            event.clientY > rect.bottom)
+        )
+          close();
+      });
+    }
     this.el<HTMLInputElement>('home-music-enabled').onchange = (event) => {
       this.enabled = (event.target as HTMLInputElement).checked;
       this.save();
@@ -96,7 +130,7 @@ export class HomeMusic {
     };
     document.addEventListener('arkreader-playback-state', (event) => {
       this.storyActive = (event as CustomEvent).detail.playing;
-      if (this.storyActive && this.panel.matches(':popover-open')) this.panel.hidePopover();
+      if (this.storyActive && this.panel.dataset.open === 'true') close();
       this.reconcile();
     });
     document.addEventListener('visibilitychange', () => this.reconcile());

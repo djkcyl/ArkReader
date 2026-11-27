@@ -52,7 +52,7 @@ export class AudioPage {
     this.root.addEventListener('keydown', (event) => {
       if (
         event.key === 'Escape' &&
-        !document.querySelector('dialog[open],[popover]:popover-open:not(#prts-cursor)')
+        !document.querySelector('dialog[open],#home-music-panel[data-open="true"]')
       ) {
         event.preventDefault();
         returnToLibrary();

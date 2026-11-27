@@ -22,10 +22,7 @@ export class VersionNotice {
   private banner = document.createElement('aside');
   private content = document.createElement('div');
   private dismissed = false;
-  constructor(
-    private resources: HTMLElement,
-    show: () => void,
-  ) {
+  constructor(resources: HTMLElement, show: () => void) {
     this.banner.id = 'version-notice';
     this.banner.className = 'version-notice';
     this.banner.hidden = true;

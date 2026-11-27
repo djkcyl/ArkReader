@@ -1,4 +1,5 @@
 import { ReaderScroll } from '../core/reader-scroll';
+import { stagePoint, stageRect, stageSize } from './stage-geometry';
 import {
   clampScrollbar,
   scrollbarPage,
@@ -39,7 +40,8 @@ export class NativeScrollbar {
       e.preventDefault();
       e.stopPropagation();
       this.track.focus({ preventScroll: true });
-      this.press = { id: e.pointerId, x: e.clientX, y: e.clientY, dragged: false, offset: 0 };
+      const point = stagePoint(this.track, e);
+      this.press = { id: e.pointerId, x: point.x, y: point.y, dragged: false, offset: 0 };
       this.track.setPointerCapture(e.pointerId);
       this.page();
       this.frame = requestAnimationFrame(() => this.repeat());
@@ -47,27 +49,25 @@ export class NativeScrollbar {
     this.track.onpointermove = (e) => {
       const p = this.press;
       if (!p || p.id !== e.pointerId) return;
+      const point = stagePoint(this.track, e);
       if (
         !p.dragged &&
-        scrollbarStartsDrag(
-          (e.clientX - p.x) * devicePixelRatio,
-          (e.clientY - p.y) * devicePixelRatio,
-        )
+        scrollbarStartsDrag((point.x - p.x) * devicePixelRatio, (point.y - p.y) * devicePixelRatio)
       ) {
         p.dragged = true;
         cancelAnimationFrame(this.frame);
         this.frame = 0;
-        const h = this.thumb.getBoundingClientRect();
+        const h = stageRect(this.thumb, this.track);
         // OnBeginDrag tests the ORIGINAL press point against the CURRENT handle.
         p.offset =
-          p.x >= h.left && p.x <= h.right && p.y >= h.top && p.y <= h.bottom
-            ? (h.top + h.bottom) / 2 - p.y
+          p.x >= h.x && p.x <= h.x + h.width && p.y >= h.y && p.y <= h.y + h.height
+            ? h.y + h.height / 2 - p.y
             : 0;
       }
       if (p.dragged) {
         e.preventDefault();
-        const b = this.track.getBoundingClientRect();
-        const value = scrollbarDrag(b.bottom - e.clientY, p.offset, b.height, this.size);
+        const height = stageSize(this.track).height;
+        const value = scrollbarDrag(height - point.y, p.offset, height, this.size);
         if (value !== undefined) this.setValue(value);
       }
     };
@@ -77,6 +77,7 @@ export class NativeScrollbar {
     this.track.onpointerup = release;
     this.track.onpointercancel = release;
     this.track.onlostpointercapture = release;
+    window.addEventListener('playback-screen-mode', () => this.cancel(true));
     this.track.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -147,9 +148,9 @@ export class NativeScrollbar {
   private page() {
     const p = this.press;
     if (!p || p.dragged) return;
-    const h = this.thumb.getBoundingClientRect();
-    if (p.x >= h.left && p.x <= h.right && p.y >= h.top && p.y <= h.bottom) return;
-    this.setValue(scrollbarPage(this.value, this.size, p.y < (h.top + h.bottom) / 2));
+    const h = stageRect(this.thumb, this.track);
+    if (p.x >= h.x && p.x <= h.x + h.width && p.y >= h.y && p.y <= h.y + h.height) return;
+    this.setValue(scrollbarPage(this.value, this.size, p.y < h.y + h.height / 2));
   }
   private repeat() {
     this.frame = 0;

@@ -9,6 +9,7 @@ import type { PreparedStartupMusic } from './home-music-boot';
 import { AudioPage } from './audio-page';
 import { confirmAction } from './action-confirm';
 import { mountResourceSource } from './resource-source';
+import { DownloadPage } from './download-page';
 interface Status {
   version: string | null;
   stories: number;
@@ -55,6 +56,7 @@ export function mountDesktopShell(options: {
   previewUi: () => void;
 }): void {
   document.body.classList.add('desktop-app');
+  const initialDownloads = isWeb && document.body.dataset.desktopPage === 'downloads';
   document.body.dataset.desktopPage = 'library';
   const rail = document.createElement('aside');
   rail.className = 'desktop-rail';
@@ -91,6 +93,7 @@ export function mountDesktopShell(options: {
   mountWindowChrome(header);
   const homeMusic = new HomeMusic(header, options.music);
   const audioPage = new AudioPage(() => show('library'), options.previewUi);
+  const downloads = isWeb ? new DownloadPage() : undefined;
   let resumeAudioPage: (() => void) | undefined;
   (window as unknown as { arkreaderHomeMusic: HomeMusic }).arkreaderHomeMusic = homeMusic;
   const resources = document.createElement('section');
@@ -179,6 +182,7 @@ export function mountDesktopShell(options: {
   notice.setAttribute('role', 'status');
   notice.hidden = true;
   header.after(resources, audioPage.root, about);
+  if (downloads) header.after(downloads.root);
   document.getElementById('app')!.append(notice);
   const versions = new VersionNotice(resources, () => show('resources'));
   mountResourceSource(
@@ -206,13 +210,7 @@ export function mountDesktopShell(options: {
     $<HTMLButtonElement>('resource-refresh').disabled = scanBusy;
   }
   function show(page: 'library' | 'resources' | 'audio' | 'about' | 'downloads') {
-    if (page === 'downloads') {
-      if (isWeb) {
-        if (document.body.matches('.playing,.resource-loading')) options.leave();
-        location.assign(new URL('download.html', location.href));
-      }
-      return;
-    }
+    if (page === 'downloads' && !downloads) return;
     const previous = document.body.dataset.desktopPage;
     if (page === previous) {
       if (page === 'library' && document.body.matches('.playing,.resource-loading'))
@@ -228,9 +226,16 @@ export function mountDesktopShell(options: {
       resumeAudioPage = options.suspendForAudio();
     } else if (document.body.matches('.playing,.resource-loading')) options.leave();
     document.body.dataset.desktopPage = page;
+    if (isWeb) {
+      const url = new URL(location.href);
+      if (page === 'downloads') url.searchParams.set('page', 'downloads');
+      else url.searchParams.delete('page');
+      history.replaceState(history.state, '', url);
+    }
     resources.hidden = page !== 'resources';
     about.hidden = page !== 'about';
     audioPage.root.hidden = page !== 'audio';
+    if (downloads) downloads.root.hidden = page !== 'downloads';
     audioPage.setPlaying(!!resumeAudioPage);
     for (const button of rail.querySelectorAll('button')) {
       if (button.dataset.page === page) button.setAttribute('aria-current', 'page');
@@ -242,6 +247,7 @@ export function mountDesktopShell(options: {
     if (page === 'resources') void refresh();
   }
   document.addEventListener('arkreader-show-library', () => show('library'));
+  if (initialDownloads) show('downloads');
   for (const button of rail.querySelectorAll<HTMLButtonElement>('button[data-page]'))
     button.onclick = () =>
       show(button.dataset.page as 'library' | 'resources' | 'audio' | 'about' | 'downloads');

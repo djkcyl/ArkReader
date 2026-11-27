@@ -1,3 +1,4 @@
+import { stagePoint } from './stage-geometry';
 import { playerMediaUrl } from './resource-urls';
 import { NativeSelectableSurface } from './native-selectable';
 import { NativeScrollbar } from './native-scrollbar';
@@ -266,9 +267,9 @@ export class NativeVolumeSlider {
     this.sync();
   }
   private local(event: PointerEvent) {
-    const box = this.root.getBoundingClientRect(),
-      scale = box.width / this.width;
-    return { x: (event.clientX - box.x) / scale - this.shiftX, y: (event.clientY - box.y) / scale };
+    const point = stagePoint(this.root, event),
+      scale = point.width / this.width;
+    return { x: point.x / scale - this.shiftX, y: point.y / scale };
   }
   private fraction() {
     return (

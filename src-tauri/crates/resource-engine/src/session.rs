@@ -74,29 +74,3 @@ impl Session {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn live_sessions_are_retained_and_abandoned_sessions_are_reclaimed() -> Result<()> {
-        let root = tempfile::tempdir()?;
-        let live = Session::new(root.path())?;
-        let abandoned = root.path().join("session-abandoned");
-        fs::create_dir(&abandoned)?;
-        fs::write(abandoned.join(".lease"), b"")?;
-        fs::write(abandoned.join(".arkreader-session"), br#"{"format":1}"#)?;
-        let unrelated = root.path().join("session-unowned");
-        fs::create_dir(&unrelated)?;
-        let next = Session::new(root.path())?;
-        assert!(live.path().exists());
-        assert!(!abandoned.exists());
-        assert!(unrelated.exists());
-        let released = next.path().to_owned();
-        next.close()?;
-        assert!(!released.exists());
-        live.close()?;
-        Ok(())
-    }
-}

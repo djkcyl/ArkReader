@@ -1,0 +1,77 @@
+.app-scroll-region {
+  scrollbar-width: none !important;
+}
+.app-scroll-region::-webkit-scrollbar {
+  display: none !important;
+}
+#app-scrollbars {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  pointer-events: none;
+}
+#app-scrollbars::backdrop {
+  background: transparent;
+  pointer-events: none;
+}
+.app-scrollbar-pair {
+  position: absolute;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.app-scrollbar {
+  position: absolute;
+  touch-action: none;
+  user-select: none;
+  pointer-events: auto;
+  outline: none;
+}
+.app-scrollbar-y {
+  top: 0;
+  right: 0;
+  width: 12px;
+}
+.app-scrollbar-x {
+  bottom: 0;
+  left: 0;
+  height: 12px;
+}
+.app-scrollbar-thumb {
+  position: absolute;
+  background: url('/media/native-playback-scrollbar.png') center/100% 100% no-repeat;
+  filter: brightness(0.6);
+}
+.app-scrollbar-y .app-scrollbar-thumb {
+  top: 0;
+  left: 3px;
+  width: 6px;
+}
+.app-scrollbar-x .app-scrollbar-thumb {
+  top: 3px;
+  left: 0;
+  height: 6px;
+}
+.app-scrollbar:is(:hover, :focus-visible) {
+  background: #82949d20;
+}
+.app-scrollbar:is(:hover, :focus-visible) .app-scrollbar-thumb {
+  filter: brightness(0.75);
+}
+.app-scrollbar.dragging .app-scrollbar-thumb {
+  filter: brightness(0.5);
+}
+.app-scrollbar:focus-visible {
+  outline: 1px solid #00abe1;
+  outline-offset: -1px;
+}
+#app-scrollbars [hidden] {
+  display: none !important;
+}

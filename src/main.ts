@@ -27,6 +27,7 @@ import { StandaloneStoryHost } from './player/standalone-story-host';
 import { unsupportedStandaloneHostCommands } from './core/story-host-requirements';
 import { parseScript } from './core/parser';
 import { StageFullscreen } from './player/stage-fullscreen';
+import { fitStageDialog, stagePoint } from './player/stage-geometry';
 import { FloatingProgress } from './player/floating-progress';
 import { requirePackResources } from './core/pack-resources';
 import './player/page-frame.css';
@@ -55,6 +56,7 @@ import { adoptStartupMusic } from './app/home-music-boot';
 import { invoke } from '@tauri-apps/api/core';
 import './app/mobile.css';
 import { mountApplicationControls, syncApplicationControl } from './app/native-controls';
+import { copyStoryLink, storyShareUrl } from './app/story-share';
 
 if (isNative && !document.getElementById('startup-root')) {
   await invoke('app_retry');
@@ -251,6 +253,7 @@ let volumeSlider: NativeVolumeSlider | undefined;
 let player: StoryPlayer | undefined,
   audio: StoryAudio | undefined,
   renderer: StageRenderer | undefined;
+let sharedGesturePending = false;
 let storyHost: StandaloneStoryHost | undefined;
 audioLevels.subscribe((channel, value) => {
   if (channel !== 'player') return;
@@ -304,16 +307,11 @@ async function prepareNativeWidgets(signal: AbortSignal) {
     $<HTMLButtonElement>('host-leave'),
   );
   const fit = () => {
-    const r = $('stage').getBoundingClientRect();
-    Object.assign(hostBoundary.style, {
-      left: r.left + 'px',
-      top: r.top + 'px',
-      width: r.width + 'px',
-      height: r.height + 'px',
-    });
+    fitStageDialog(hostBoundary, $('stage'));
   };
   new ResizeObserver(fit).observe($('stage'));
   window.addEventListener('resize', fit);
+  window.addEventListener('playback-screen-mode', fit);
   window.addEventListener('scroll', fit, { passive: true });
   fit();
 }
@@ -462,6 +460,7 @@ let pressPointer: number | null = null,
   suppressPointerClickUntil = 0;
 
 function releasePlayback(): Promise<void> {
+  sharedGesturePending = false;
   scriptView.clear();
   saveReadingProgress();
   readingShelf.flush();
@@ -488,13 +487,13 @@ function prepareStory(story: string, signal: AbortSignal): Promise<Pack> {
   return prepareRemoteStory<Pack>(story, signal, (state) => loadingView.update(state));
 }
 
-async function requestPlayback(): Promise<void> {
+async function requestPlayback(automatic = false): Promise<void> {
   if (loading || pendingPlayback) return;
   const story = catalogView.selectedId;
   if (!story) return;
   const choice = readingShelf.resume(story);
   if (!choice) {
-    await start();
+    await start(undefined, automatic);
     return;
   }
   const controller = new AbortController(),
@@ -559,7 +558,7 @@ document.addEventListener(
   true,
 );
 
-async function start(target?: PlaybackTarget): Promise<void> {
+async function start(target?: PlaybackTarget, automatic = false): Promise<void> {
   if (loading) return;
   const request = new AbortController(),
     signal = request.signal;
@@ -571,6 +570,7 @@ async function start(target?: PlaybackTarget): Promise<void> {
     setDesktopPlaying(false);
     return;
   }
+  stageFullscreen.prepareMobile();
   const keepFullscreen =
     !!target &&
     !!player &&
@@ -583,6 +583,7 @@ async function start(target?: PlaybackTarget): Promise<void> {
   let newAudio: StoryAudio | undefined,
     newRenderer: StageRenderer | undefined,
     newPlayer: StoryPlayer | undefined;
+  let waitForGesture = false;
   let newHost: StandaloneStoryHost | undefined;
   const preload = new AbortController();
   const cancelResources = () => {
@@ -593,13 +594,18 @@ async function start(target?: PlaybackTarget): Promise<void> {
   try {
     // The loading surface belongs to the application frame. Leave either
     // fullscreen mode before replaying so it cannot sit behind the stage.
-    if (!keepFullscreen) await stageFullscreen.exit();
+    if (!keepFullscreen && !(isWeb && isMobile)) await stageFullscreen.exit();
     signal.throwIfAborted();
     const releasing = releasePlayback();
     newAudio = new StoryAudio();
+    waitForGesture =
+      automatic &&
+      isWeb &&
+      newAudio.context.state !== 'running' &&
+      !navigator.userActivation?.hasBeenActive;
     newAudio.setVolume(audioLevels.get('player') / 100);
     signal.addEventListener('abort', cancelResources, { once: true });
-    await Promise.all([releasing, newAudio.unlock()]);
+    await Promise.all([releasing, waitForGesture ? Promise.resolve() : newAudio.unlock()]);
     signal.throwIfAborted();
     const pack = await prepareStory(story, signal);
     signal.throwIfAborted();
@@ -726,6 +732,7 @@ async function start(target?: PlaybackTarget): Promise<void> {
       /* Storage is optional. */
     }
     const title = catalogView.label(story) ?? pack.review?.label ?? story;
+    if (isWeb) document.title = `${title} · ArkReader`;
     const locationUrl = new URL(location.href);
     locationUrl.searchParams.set('story', story);
     history.replaceState(null, '', locationUrl);
@@ -746,6 +753,7 @@ async function start(target?: PlaybackTarget): Promise<void> {
     lastFrame = performance.now();
     newAudio.setVolume(Number($<HTMLInputElement>('volume').value) / 100);
     let resumeNotice = '';
+    if (waitForGesture) newPlayer.setPaused(true);
     if (target?.position && target.position.script !== newPlayer.scriptIdentity) {
       resumeNotice = '剧情内容已更新，上次位置不再适用，已从头播放。';
       newPlayer.tick(0);
@@ -784,10 +792,12 @@ async function start(target?: PlaybackTarget): Promise<void> {
     scrubbing = false;
     $('playback-seek-status').textContent = resumeNotice;
     player = newPlayer;
+    sharedGesturePending = waitForGesture;
     audio = newAudio;
     renderer = newRenderer;
     storyHost = newHost;
-    if (isMobile && !stageFullscreen.active) await stageFullscreen.toggleWindow();
+    if (isWeb && isMobile) stageFullscreen.enterMobile();
+    else if (isMobile && !stageFullscreen.active) await stageFullscreen.toggleWindow();
     newHost = undefined;
     loadingView.update({ phase: 'started', message: '准备完成', done: 1, total: 1 });
     loadingView.close();
@@ -813,6 +823,7 @@ async function start(target?: PlaybackTarget): Promise<void> {
     };
   } catch (error) {
     if (signal.aborted) return;
+    if (isWeb && isMobile) await stageFullscreen.exit();
     const canvas = $<HTMLCanvasElement>('canvas');
     canvas.width = canvas.height = 1;
     $('loading').textContent = String(error);
@@ -887,6 +898,8 @@ function sync(): void {
         .toString()
         .padStart(2, '0')}`;
   $('paused').hidden = !player.paused;
+  $('paused').querySelector('h2')!.textContent = sharedGesturePending ? '剧情已就绪' : '已暂停';
+  setControlLabel($('resume'), sharedGesturePending ? '开始阅读' : '继续播放');
   $('ended').hidden = !player.finished;
   // Native AVGAutoButton only animates in BUTTON mode; QUICK displays OFF.
   const isAuto = player.readerMode ? player.readerPlayback.auto : player.auto && !player.quickPlay;
@@ -976,6 +989,7 @@ playbackSeek.addEventListener('pointercancel', () => {
   scrubbing = false;
 });
 function returnToLibrary(): void {
+  if (isWeb) document.title = 'ArkReader · 明日方舟剧情播放器';
   scriptView.close();
   cancelPlaybackPrompt();
   const locationUrl = new URL(location.href);
@@ -1024,6 +1038,10 @@ function setHiddenUI(hidden: boolean): void {
   sync();
 }
 function advanceVisibleStory(): void {
+  if (sharedGesturePending) {
+    void resumeSharedPlayback();
+    return;
+  }
   if (!player || player.paused || player.finished || player.error || player.theaterMode) return;
   if (hiddenUI) setHiddenUI(false);
   else if (player.readerVisible) readerView.advance();
@@ -1065,8 +1083,8 @@ gestureCanvas.addEventListener('pointerdown', (e) => {
   if (e.button !== 0 || !player?.canQuickPlay || hiddenUI || keyboardQuick.active) return;
   if (pressPointer !== null) return;
   pressPointer = e.pointerId;
-  const rect = gestureCanvas.getBoundingClientRect();
-  quickPress.down(e.pointerId, e.clientX - rect.left, e.clientY, rect.width, performance.now());
+  const point = stagePoint(gestureCanvas, e);
+  quickPress.down(e.pointerId, point.x, point.y, point.width, performance.now());
   gestureCanvas.setPointerCapture(e.pointerId);
 });
 gestureCanvas.addEventListener('pointermove', (e) => {
@@ -1077,7 +1095,7 @@ gestureCanvas.addEventListener('pointermove', (e) => {
     cancelGesture();
     return;
   }
-  quickPress.move(e.pointerId, e.clientY);
+  quickPress.move(e.pointerId, stagePoint(gestureCanvas, e).y);
 });
 gestureCanvas.addEventListener('pointerup', (e) => {
   if (pressPointer !== e.pointerId) return;
@@ -1093,6 +1111,7 @@ gestureCanvas.addEventListener('lostpointercapture', (e) => {
   if (pressPointer === e.pointerId) cancelGesture();
 });
 window.addEventListener('blur', cancelGesture);
+window.addEventListener('playback-screen-mode', cancelGesture);
 window.addEventListener('blur', () => keyboardQuick.cancel());
 document.addEventListener('keydown', (event) => keyboardQuick.keydown(event));
 document.addEventListener('keyup', (event) => keyboardQuick.keyup(event));
@@ -1237,10 +1256,49 @@ $('volume').oninput = () => {
 };
 $('pause').onclick = () => {
   readerSettingsView.dismiss(true);
+  if (sharedGesturePending) {
+    void resumeSharedPlayback();
+    return;
+  }
   player?.setPaused(!player.paused);
   sync();
 };
-$('resume').onclick = () => player?.setPaused(false);
+$('resume').onclick = () => void resumeSharedPlayback();
+async function resumeSharedPlayback(): Promise<void> {
+  const current = player,
+    currentAudio = audio;
+  if (!current || !currentAudio) return;
+  try {
+    const unlocked = currentAudio.unlock();
+    stageFullscreen.prepareMobile();
+    await unlocked;
+    if (player !== current) return;
+    sharedGesturePending = false;
+    current.setPaused(false);
+    lastFrame = performance.now();
+    sync();
+  } catch {
+    if (player === current) setControlLabel($('resume'), '点此继续阅读');
+  }
+}
+let shareFeedback: ReturnType<typeof setTimeout> | undefined;
+$('share-story').onclick = () => {
+  if (!player) return;
+  const button = $<HTMLButtonElement>('share-story');
+  button.title = storyShareUrl(player.pack.id);
+  button.disabled = true;
+  clearTimeout(shareFeedback);
+  void copyStoryLink(player.pack.id)
+    .then(() => setControlLabel(button, '链接已复制'))
+    .catch(() => {
+      setControlLabel(button, '复制失败');
+      button.title = `请检查剪贴板权限，或复制此链接：${button.title}`;
+    })
+    .finally(() => {
+      button.disabled = false;
+      shareFeedback = setTimeout(() => setControlLabel(button, '复制剧情链接'), 2200);
+    });
+};
 $('hide').onclick = () => setHiddenUI(!hiddenUI);
 $('log').onclick = () => {
   if (player) historyView.show(player);
@@ -1299,6 +1357,12 @@ window.addEventListener('arkreader-back', (event) => {
     if (modal.dispatchEvent(new Event('cancel', { cancelable: true }))) modal.close();
     return;
   }
+  const music = document.getElementById('home-music-panel');
+  if (music?.dataset.open === 'true') {
+    event.preventDefault();
+    music.dispatchEvent(new Event('arkreader-close'));
+    return;
+  }
   if (document.body.dataset.desktopPage === 'audio') {
     event.preventDefault();
     document.querySelector<HTMLButtonElement>('[data-page="library"]')?.click();
@@ -1350,6 +1414,20 @@ document.addEventListener('arkreader-before-close', () => {
 });
 let initialCatalog = true,
   catalogGeneration = 0;
+let sharedLinkOpened = false;
+function openSharedStory(): void {
+  if (
+    !isWeb ||
+    !requestedStory ||
+    sharedLinkOpened ||
+    initialCatalog ||
+    document.documentElement.dataset.arkreaderUi !== 'ready' ||
+    document.body.dataset.desktopPage !== 'library'
+  )
+    return;
+  sharedLinkOpened = true;
+  if (catalogView.selectedId === requestedStory) void requestPlayback(true);
+}
 async function loadCatalog(): Promise<void> {
   const generation = ++catalogGeneration;
   catalogView.busy();
@@ -1365,6 +1443,7 @@ async function loadCatalog(): Promise<void> {
     storyCache.setCatalog(data);
     initialCatalog = false;
     $('connection').textContent = `剧情档案 · ${data.stories.length.toLocaleString()} 段`;
+    openSharedStory();
   } catch (error) {
     if (generation === catalogGeneration) {
       catalogView.fail(error);
@@ -1404,3 +1483,4 @@ if (isNative || isWeb)
 if (isNative || isWeb) await mountApplicationControls();
 document.documentElement.dataset.arkreaderUi = 'ready';
 document.dispatchEvent(new Event('arkreader-ui-ready'));
+openSharedStory();

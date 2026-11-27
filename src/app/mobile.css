@@ -172,10 +172,18 @@ body.mobile-app #catalog-nav {
   scrollbar-width: none;
 }
 body.mobile-app .archive-tab {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: max-content;
+  white-space: nowrap;
+  border-left: 0;
+  border-bottom: 3px solid transparent;
   padding: 8px 12px;
   min-height: 40px;
   width: auto;
   flex: 0 0 auto;
+}
+body.mobile-app .archive-tab[aria-pressed='true'] {
+  border-bottom-color: #00abe1;
 }
 body.mobile-app .archive-tab .tab-index,
 body.mobile-app .archive-tab .tab-en {

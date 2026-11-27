@@ -1,5 +1,7 @@
 import { loadWidgetProfile, type Graphic, type WidgetProfile } from '../player/native-widgets';
 import { playerMediaUrl } from '../player/resource-urls';
+import { stagePoint } from '../player/stage-geometry';
+import { mountScrollbars } from './scrollbars';
 import './native-controls.css';
 import './native-application.css';
 
@@ -94,9 +96,8 @@ class AppRange implements Control {
     input.addEventListener('change', this.sync);
     this.root.addEventListener('pointerdown', (event) => {
       if (input.disabled || event.button !== 0 || !event.isPrimary || this.pointer !== null) return;
-      const box = this.root.getBoundingClientRect();
       const center = this.center();
-      const local = event.clientX - box.left;
+      const local = stagePoint(this.root, event).x;
       this.offset = Math.abs(local - center) < 30 * this.scale ? local - center : 0;
       this.began = input.value;
       this.pointer = event.pointerId;
@@ -109,7 +110,7 @@ class AppRange implements Control {
     this.root.addEventListener('pointermove', (event) => {
       if (event.pointerId !== this.pointer) return;
       if (!event.buttons) this.release();
-      else this.setAt(event.clientX - this.root.getBoundingClientRect().left - this.offset);
+      else this.setAt(stagePoint(this.root, event).x - this.offset);
     });
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) {
       this.root.addEventListener(name, (event) => {
@@ -566,12 +567,15 @@ export async function mountApplicationControls(): Promise<void> {
       if (button.matches('#start,#cache-start,[data-action=apply],#load-retry'))
         button.classList.add('ark-primary');
       if (button.matches('#catalog-back,#leave-story')) button.classList.add('ark-back');
-      if (button.matches('#home-music-close,#operator-filter-dialog>header>button'))
+      if (button.matches('#home-music-close,#operator-filter-dialog>header>button')) {
         button.classList.add('ark-close');
+        button.replaceChildren();
+      }
     }
   };
   scan();
   document.body.classList.add('app-native-ui');
+  mountScrollbars();
   let queued = false;
   const observer = new MutationObserver((records) => {
     if (
