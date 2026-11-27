@@ -31,6 +31,13 @@ pub fn fingerprint(value: &impl Serialize) -> Result<String> {
 }
 pub fn receipt(path: &Path, cancel: &CancellationToken) -> Result<Receipt> {
     crate::error::checkpoint(cancel)?;
+    #[cfg(target_os = "emscripten")]
+    if let Some(digest) = crate::web::cached_digest(path) {
+        return Ok(Receipt {
+            size: path.metadata()?.len(),
+            sha256: hex::encode(digest),
+        });
+    }
     let mut input = fs::File::open(path)?;
     let before = input.metadata()?;
     let mut hash = Sha256::new();
@@ -84,7 +91,39 @@ pub fn media_files(value: &Value, files: &mut Vec<String>) {
 pub struct Artifacts {
     root: PathBuf,
 }
+
+fn restore_file(from: &Path, to: &Path) -> Result<()> {
+    #[cfg(target_os = "emscripten")]
+    {
+        use std::ffi::{c_char, CString};
+        unsafe extern "C" {
+            fn ark_clone_file(from: *const c_char, to: *const c_char) -> i32;
+        }
+        let from = CString::new(from.to_str().context("Invalid cached resource path")?)?;
+        let to = CString::new(to.to_str().context("Invalid runtime resource path")?)?;
+        // Share verified immutable bytes instead of copying every cached image
+        // and soundtrack into the Wasm filesystem on every page load.
+        ensure!(
+            unsafe { ark_clone_file(from.as_ptr(), to.as_ptr()) } == 0,
+            "Could not restore cached resource"
+        );
+    }
+    #[cfg(not(target_os = "emscripten"))]
+    if fs::hard_link(from, to).is_err() {
+        fs::copy(from, to)?;
+    }
+    Ok(())
+}
 impl Artifacts {
+    #[cfg(target_os = "emscripten")]
+    pub async fn prepare_restore(
+        &self,
+        namespace: &str,
+        key: &str,
+        cancel: &CancellationToken,
+    ) -> Result<()> {
+        crate::web::prepare_cache(&self.path(namespace, key)?, cancel).await
+    }
     pub fn new(data: &Path) -> Result<Self> {
         let root = data.join("derived-cache");
         fs::create_dir_all(&root)?;
@@ -138,9 +177,7 @@ impl Artifacts {
             let staged =
                 tempfile::tempdir_in(to.parent().context("Derived target has no parent")?)?;
             let payload = staged.path().join("payload");
-            if fs::hard_link(&from, &payload).is_err() {
-                fs::copy(from, &payload)?;
-            }
+            restore_file(&from, &payload)?;
             crate::error::checkpoint(cancel)?;
             fs::rename(payload, to)?;
         }

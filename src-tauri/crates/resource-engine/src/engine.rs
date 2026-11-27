@@ -361,6 +361,8 @@ impl Engine {
         let runtime = self.runtime.clone();
         let lookup = key.clone();
         let cancel = job.cancel.clone();
+        #[cfg(target_os = "emscripten")]
+        artifacts.prepare_restore("base", &lookup, &cancel).await?;
         let saved =
             crate::runtime::blocking(move || artifacts.restore("base", &lookup, &runtime, &cancel))
                 .await??;
@@ -947,6 +949,8 @@ impl Engine {
         let root = self.runtime.clone();
         let cancel = job.cancel.clone();
         let key = signature.clone();
+        #[cfg(target_os = "emscripten")]
+        artifacts.prepare_restore("music", &key, &cancel).await?;
         if let Some(result) =
             crate::runtime::blocking(move || artifacts.restore("music", &key, &root, &cancel))
                 .await??

@@ -182,6 +182,7 @@ interface Region {
 /** DOM handles over native scrolling content; no wrappers, synthetic scrolling
  * model or changes to wheel/touch handling in the content panes. */
 export function mountScrollbars(): void {
+  if (document.getElementById('app-scrollbars')) return;
   const overlay = document.createElement('div');
   if (typeof overlay.showPopover !== 'function') return;
   overlay.id = 'app-scrollbars';

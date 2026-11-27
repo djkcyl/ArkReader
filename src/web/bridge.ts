@@ -17,9 +17,10 @@ interface Status {
   resourceUpdate?: { warning?: string };
 }
 
-async function prepareWebApplication(base: URL): Promise<boolean> {
-  const status = document.getElementById('status')!;
-  status.textContent = '正在检查网页更新…';
+export async function prepareWebApplication(report: (message: string) => void): Promise<boolean> {
+  if (!('serviceWorker' in navigator)) throw Error('请通过 HTTPS 或 localhost 打开网页版。');
+  const base = new URL('./', location.href);
+  report('正在检查网页更新…');
   const registration = await navigator.serviceWorker.register(new URL('sw.js', base), {
     scope: base.pathname,
     updateViaCache: 'none',
@@ -27,7 +28,7 @@ async function prepareWebApplication(base: URL): Promise<boolean> {
   await registration.update().catch(() => {});
   const candidate = registration.installing ?? registration.waiting ?? registration.active;
   if (candidate && !['activated', 'redundant'].includes(candidate.state)) {
-    status.textContent = '正在更新网页版…';
+    report('正在更新网页版…');
     await new Promise<void>((resolve) => {
       const settled = () => {
         if (!['activated', 'redundant'].includes(candidate.state)) return;
@@ -56,18 +57,15 @@ async function prepareWebApplication(base: URL): Promise<boolean> {
   const { build } = await response.json();
   const current = document.querySelector<HTMLMetaElement>('meta[name="arkreader-build"]')?.content;
   if (build !== current) {
-    status.textContent = '正在切换到新版…';
+    report('正在切换到新版…');
     location.reload();
     return false;
   }
   return true;
 }
 
-export async function installWebBridge(): Promise<boolean> {
-  if (!('serviceWorker' in navigator)) throw Error('请通过 HTTPS 或 localhost 打开网页版。');
+export async function installWebBridge(): Promise<void> {
   const base = new URL('./', location.href);
-  // Finish the application update before creating or starting the resource engine.
-  if (!(await prepareWebApplication(base))) return false;
   document.getElementById('status')!.textContent = '正在加载资源引擎…';
   if (history.state?.arkreader !== 'inside') {
     history.replaceState({ arkreader: 'entry' }, '', location.href);
@@ -205,5 +203,4 @@ export async function installWebBridge(): Promise<boolean> {
     if (event.persisted) location.reload();
   });
   await ready;
-  return true;
 }

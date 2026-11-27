@@ -38,7 +38,10 @@ export function prioritizeDownloads(root: HTMLElement): void {
 export class DownloadPage {
   readonly root = document.createElement('section');
   private unsubscribe: () => void;
-  constructor() {
+  private ready: boolean;
+  private render: (state: ClientDownloadState) => void;
+  constructor(ready = true) {
+    this.ready = ready;
     this.root.id = 'desktop-downloads';
     this.root.className = 'desktop-page downloads';
     this.root.hidden = true;
@@ -65,7 +68,7 @@ export class DownloadPage {
       button.append(...link.childNodes);
       link.replaceWith(button);
       button.onclick = () => {
-        if (!clientDownloads.busy) void clientDownloads.start(id);
+        if (this.ready && !clientDownloads.busy) void clientDownloads.start(id);
         transfer.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       };
     }
@@ -110,8 +113,9 @@ export class DownloadPage {
           `https://github.com/djkcyl/ArkReader/releases/tag/v${state.version}`;
       }
       for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-package]'))
-        button.disabled = clientDownloads.busy;
+        button.disabled = !this.ready || clientDownloads.busy;
     };
+    this.render = update;
     this.unsubscribe = clientDownloads.subscribe(update);
     this.root.querySelector<HTMLAnchorElement>('#ios-notice a')!.onclick = (event) => {
       event.preventDefault();
@@ -121,37 +125,18 @@ export class DownloadPage {
   dispose(): void {
     this.unsubscribe();
   }
+  setReady(ready: boolean): void {
+    this.ready = ready;
+    this.render(clientDownloads.state);
+  }
 }
 
-export function mountStartupDownloads(): void {
-  const startup = document.getElementById('startup-root')!;
-  const entry = startup.querySelector<HTMLAnchorElement>('.startup-download');
-  if (!entry) return;
-  const page = new DownloadPage();
-  startup.append(page.root);
-  const show = (downloads: boolean) => {
-    document.body.dataset.desktopPage = downloads ? 'downloads' : 'library';
-    page.root.hidden = !downloads;
-    entry.textContent = downloads ? '返回剧情库' : '下载客户端';
-    entry.setAttribute('aria-expanded', String(downloads));
-    const url = new URL(location.href);
-    if (downloads) url.searchParams.set('page', 'downloads');
-    else url.searchParams.delete('page');
-    history.replaceState(history.state, '', url);
-  };
-  entry.onclick = (event) => {
-    event.preventDefault();
-    show(document.body.dataset.desktopPage !== 'downloads');
-  };
-  const events = new AbortController();
-  document.addEventListener('arkreader-show-library', () => show(false), { signal: events.signal });
-  document.addEventListener(
-    'arkreader-startup-finished',
-    () => {
-      events.abort();
-      page.dispose();
-    },
-    { once: true },
-  );
-  if (new URLSearchParams(location.search).get('page') === 'downloads') show(true);
+let startupPage: DownloadPage | undefined;
+export function startupDownloads(): DownloadPage {
+  return (startupPage ??= new DownloadPage(false));
+}
+export function adoptStartupDownloads(): DownloadPage | undefined {
+  const page = startupPage;
+  startupPage = undefined;
+  return page;
 }

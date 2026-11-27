@@ -29,7 +29,7 @@ body.app-native-ui .desktop-rail button {
   border-radius: 0;
   min-height: 76px;
   color: #b9babb;
-  font-family: ArkNative, 'Microsoft YaHei', sans-serif;
+  font-family: var(--shell-font);
 }
 body.app-native-ui .desktop-rail button:hover {
   background: #353638;

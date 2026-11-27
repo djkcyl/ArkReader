@@ -1,9 +1,4 @@
-const databaseName = 'arkreader-resources-v1';
-const request = (value) =>
-  new Promise((resolve, reject) => {
-    value.onsuccess = () => resolve(value.result);
-    value.onerror = () => reject(value.error);
-  });
+import { openResourceDatabase, idbResult as request } from './resource-db';
 const transaction = (value) =>
   new Promise((resolve, reject) => {
     value.oncomplete = resolve;
@@ -12,14 +7,16 @@ const transaction = (value) =>
 
 /** Keep persistent bytes as lazy Blobs; only files being written occupy MEMFS. */
 export async function mountStorage(FS) {
-  const opening = indexedDB.open(databaseName, 1);
-  opening.onupgradeneeded = () => opening.result.createObjectStore('files', { keyPath: 'path' });
-  const database = await request(opening);
+  const database = await openResourceDatabase();
   const dirty = new Map(),
     lazy = new Map();
   const reader = new FileReaderSync();
   const blocks = new Map();
-  const blockSize = 256 * 1024;
+  const blockSize = 1024 * 1024;
+  const blobIds = new WeakMap();
+  const digests = new WeakMap();
+  const checks = new Map();
+  let checkId = 0;
   let blobId = 0;
   let revision = 0,
     active = false,
@@ -31,7 +28,11 @@ export async function mountStorage(FS) {
   };
   const parent = (path) => path.slice(0, path.lastIndexOf('/'));
   function useBlob(node, blob) {
-    const owner = ++blobId;
+    let owner = blobIds.get(blob);
+    if (!owner) {
+      owner = ++blobId;
+      blobIds.set(blob, owner);
+    }
     const original = node.stream_ops;
     node.contents = null;
     node.usedBytes = blob.size;
@@ -58,7 +59,7 @@ export async function mountStorage(FS) {
               reader.readAsArrayBuffer(node.webBlob.slice(start, start + blockSize)),
             );
           blocks.set(key, block);
-          while (blocks.size > 64) blocks.delete(blocks.keys().next().value);
+          while (blocks.size > 16) blocks.delete(blocks.keys().next().value);
           const begin = position + copied - start,
             size = Math.min(count - copied, block.length - begin);
           bytes.set(block.subarray(begin, begin + size), offset + copied);
@@ -184,5 +185,67 @@ export async function mountStorage(FS) {
       ),
     500,
   );
-  return { flush };
+  function clone(from, to) {
+    const source = FS.lookupPath(from).node;
+    if (!FS.isFile(source.mode)) throw Error('Cached resource is not a file');
+    const bytes = source.webBlob ?? new Blob([source.contents.subarray(0, source.usedBytes)]);
+    FS.writeFile(to, new Uint8Array());
+    useBlob(FS.lookupPath(to).node, bytes);
+    const modified = FS.stat(from).mtime.getTime();
+    FS.utime(to, modified, modified);
+  }
+  const cachedBlob = (path) => FS.analyzePath(path).object?.webBlob;
+  function prepare(directory) {
+    const id = ++checkId,
+      check = { pending: true, cancelled: false };
+    checks.set(id, check);
+    void (async () => {
+      const receipt = cachedBlob(directory + '/receipt.json');
+      if (!receipt) return;
+      const snapshot = JSON.parse(await receipt.text());
+      const names = Object.keys(snapshot.files);
+      let next = 0;
+      await Promise.all(
+        Array.from({ length: Math.min(3, names.length) }, async () => {
+          while (!check.cancelled && next < names.length) {
+            const name = names[next++];
+            if (
+              name.startsWith('/') ||
+              name.includes('\\') ||
+              name.split('/').some((part) => !part || part === '.' || part === '..')
+            )
+              return;
+            const blob = cachedBlob(directory + '/files/' + name);
+            if (blob && !digests.has(blob))
+              digests.set(
+                blob,
+                new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer())),
+              );
+          }
+        }),
+      );
+    })()
+      .catch(() => {
+        // Unavailable bytes still go through the engine's normal cache validation.
+      })
+      .finally(() => {
+        check.pending = false;
+      });
+    return id;
+  }
+  return {
+    flush,
+    clone,
+    prepare,
+    pending: (id) => (checks.get(id)?.pending ? 1 : 0),
+    close: (id) => {
+      const check = checks.get(id);
+      if (check) check.cancelled = true;
+      checks.delete(id);
+    },
+    digest: (path) => {
+      const blob = cachedBlob(path);
+      return blob && digests.get(blob);
+    },
+  };
 }

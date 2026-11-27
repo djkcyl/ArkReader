@@ -1,4 +1,5 @@
 .downloads {
+  font-family: var(--shell-font, 'Segoe UI', 'Microsoft YaHei', sans-serif);
   position: relative;
   width: min(1184px, 100%);
   margin: 0 auto;
@@ -100,7 +101,7 @@ body.mobile-app #desktop-downloads .desktop-page-heading > div:first-child {
   min-height: 44px;
   padding: 10px 13px;
   color: white;
-  background: #343638;
+  background: var(--download-fill, #343638);
   border: 1px solid #f1f3f4;
   box-shadow: 0 4px 7px #0002;
   text-decoration: none;
@@ -112,10 +113,14 @@ body.mobile-app #desktop-downloads .desktop-page-heading > div:first-child {
   border-radius: 0;
 }
 .downloads .current-platform .download-actions :is(a, button):first-child {
-  background: #008bb5;
+  --download-fill: #008bb5;
+  background: var(--download-fill);
   border-color: #b9efff;
 }
 .downloads .download-actions :is(a, button):hover {
+  background: var(--download-fill, #343638);
+  color: white;
+  border-color: #f1f3f4;
   filter: brightness(1.12);
 }
 .downloads .download-actions :is(a, button) span {
@@ -212,6 +217,15 @@ body.mobile-app #desktop-downloads .desktop-page-heading > div:first-child {
   text-decoration: none;
   white-space: nowrap;
 }
+.downloads .client-download-actions button {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid #edf1f3;
+  border-radius: 0;
+  background: #343638;
+  color: white;
+  font: 14px/1.4 var(--shell-font, 'Segoe UI', 'Microsoft YaHei', sans-serif);
+}
 .client-download-transfer[data-state='error'] {
   border-color: #a35136;
 }
@@ -244,15 +258,4 @@ body.mobile-app #desktop-downloads .desktop-page-heading > div:first-child {
     min-height: 0;
     margin-bottom: 20px;
   }
-}
-body.startup-page #startup-root > .downloads {
-  position: absolute;
-  inset: 56px 0 40px;
-  width: 100%;
-  height: auto;
-  overflow-y: auto;
-  margin: 0 auto;
-}
-body.startup-page[data-desktop-page='downloads'] #startup-root > main {
-  display: none;
 }

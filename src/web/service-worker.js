@@ -6,13 +6,15 @@ self.addEventListener('install', (event) =>
       const cache = await caches.open(cacheName);
       try {
         await cache.addAll(
-          Object.entries(PRECACHE).map(
-            ([path, integrity]) =>
-              new Request(new URL(path, self.registration.scope).href, {
-                cache: 'reload',
-                integrity,
-              }),
-          ),
+          Object.entries(PRECACHE)
+            .filter(([path]) => !path.startsWith('engine/'))
+            .map(
+              ([path, integrity]) =>
+                new Request(new URL(path, self.registration.scope).href, {
+                  cache: 'reload',
+                  integrity,
+                }),
+            ),
         );
       } catch (error) {
         await caches.delete(cacheName);
@@ -107,7 +109,9 @@ self.addEventListener('fetch', (event) => {
         const previous = await (await caches.open(name)).match(key);
         if (previous) return previous;
       }
-      const response = await fetch(event.request);
+      const response = await fetch(
+        PRECACHE[path] ? new Request(event.request, { integrity: PRECACHE[path] }) : event.request,
+      );
       if (response.ok && response.type === 'basic') await cache.put(key, response.clone());
       return response;
     })(),

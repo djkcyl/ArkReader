@@ -32,6 +32,7 @@ self.onmessage = async ({ data }) => {
         printErr: (message) => console.warn(message),
       });
       storage = await mountStorage(module.FS);
+      module.arkStorage = storage;
       module.arkNet = browserNetwork(module);
       let parsed;
       module.arkAnalyze = (mode, payload, output, length) => {

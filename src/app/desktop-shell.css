@@ -2,6 +2,7 @@
 body.desktop-app {
   --rail: 80px;
   --app-surface: #e6e9eb;
+  --shell-font: 'Segoe UI', 'Microsoft YaHei', sans-serif;
   padding-left: var(--rail);
 }
 .desktop-rail {
@@ -94,6 +95,7 @@ body.web-app:not(.mobile-app) .desktop-rail nav {
 }
 body.desktop-app .brand,
 body.desktop-app.playing .brand {
+  font-family: var(--shell-font);
   padding: 17px 28px;
   gap: 18px;
   min-height: 64px;

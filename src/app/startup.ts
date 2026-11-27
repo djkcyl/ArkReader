@@ -65,6 +65,8 @@ window.startupError = (message) => {
   $('skip-music').hidden = !preparingMusic;
 };
 function render(value: Progress) {
+  if (isWeb && (value.transfers?.downloadedBytes ?? 0) > 0)
+    document.body.classList.remove('web-restoring');
   versionNote.textContent = value.versionNotice ?? '';
   versionNote.hidden = !value.versionNotice;
   if (value.cursorReady) void cursor.load().catch((error) => console.warn(String(error)));
@@ -77,7 +79,11 @@ function render(value: Progress) {
   const paused = value.state === 'cancelled',
     cancelling = value.state === 'cancelling';
   document.body.dataset.state = paused ? 'paused' : cancelling ? 'cancelling' : 'loading';
-  $('startup-heading').textContent = paused ? '准备已暂停' : '正在准备剧情档案';
+  $('startup-heading').textContent = paused
+    ? '准备已暂停'
+    : document.body.classList.contains('web-restoring')
+      ? '正在打开剧情库'
+      : '正在准备剧情档案';
   $('status').textContent = paused ? '下载进度已保留，可继续准备。' : value.message || '正在启动…';
   progress = Math.max(progress, 0.9 * Math.min(1, value.overallProgress ?? 0));
   $<HTMLProgressElement>('startup-progress').value = progress;

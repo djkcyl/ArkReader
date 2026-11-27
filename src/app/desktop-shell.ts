@@ -9,7 +9,14 @@ import type { PreparedStartupMusic } from './home-music-boot';
 import { AudioPage } from './audio-page';
 import { confirmAction } from './action-confirm';
 import { mountResourceSource } from './resource-source';
-import { DownloadPage } from './download-page';
+import { DownloadPage, adoptStartupDownloads } from './download-page';
+import {
+  applicationPages,
+  createApplicationRail,
+  decorateApplicationHeader,
+  markApplicationPage,
+  type ApplicationPage,
+} from './application-chrome';
 import externalArrow from './external-arrow.svg?raw';
 interface Status {
   version: string | null;
@@ -28,15 +35,6 @@ interface Storage extends Status {
   startupBytes: number | null;
   scanned: boolean;
 }
-const icons = {
-  library: '<path d="M4 5h6v14H4zM14 5h6v14h-6zM7 8v7M17 8v7"/>',
-  storage: '<path d="M3 7h18v13H3zM3 7l3-4h12l3 4M8 12h8M10 16h4"/>',
-  info: '<circle cx="12" cy="12" r="9"/><path d="M12 10v7M12 7h.01"/>',
-  audio: '<path d="M3 9h4l5-4v14l-5-4H3zM16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/>',
-  download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
-};
-const icon = (name: keyof typeof icons) =>
-  `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[name]}</svg>`;
 export function formatBytes(bytes: number | null): string {
   if (bytes === null) return '待统计';
   if (bytes < 1024) return `${bytes} B`;
@@ -57,28 +55,11 @@ export function mountDesktopShell(options: {
   previewUi: () => void;
 }): void {
   document.body.classList.add('desktop-app');
-  const initialDownloads = isWeb && document.body.dataset.desktopPage === 'downloads';
+  const requestedPage = document.body.dataset.desktopPage as ApplicationPage;
+  const initialPage = isWeb && applicationPages.includes(requestedPage) ? requestedPage : 'library';
   document.body.dataset.desktopPage = 'library';
-  const rail = document.createElement('aside');
-  rail.className = 'desktop-rail';
-  rail.innerHTML = /* HTML */ `<div class="desktop-monogram" aria-label="ArkReader">
-      A<span>/</span>
-    </div>
-    <nav aria-label="应用导航">
-      <button data-page="library" aria-current="page" title="剧情库">
-        ${icon('library')}<span>剧情库</span></button
-      ><button data-page="resources" title="资源管理">${icon('storage')}<span>资源</span></button
-      ><button data-page="audio" title="声音设置">${icon('audio')}<span>声音</span></button
-      >${isWeb ? `<button data-page="downloads" title="下载客户端">${icon('download')}<span>客户端</span></button>` : ''}<button
-        data-page="about"
-        title="应用信息"
-      >
-        ${icon('info')}<span>应用</span>
-      </button>
-    </nav>
-    <span class="desktop-rail-foot"
-      >${isWeb ? 'WEB' : 'DESKTOP'}<br /><span id="rail-version"></span
-    ></span>`;
+  const rail = createApplicationRail();
+  markApplicationPage(rail, 'library');
   document.body.prepend(rail);
   const header = document.querySelector<HTMLElement>('.brand')!;
   header.querySelector('.subtitle')!.textContent = '明日方舟 · 剧情档案';
@@ -87,14 +68,12 @@ export function mountDesktopShell(options: {
     event.preventDefault();
     show('library');
   };
-  const badge = document.createElement('span');
-  badge.className = 'desktop-badge';
-  badge.textContent = isWeb ? '网页版' : '桌面版';
-  titleLink.after(badge);
+  decorateApplicationHeader(header);
   mountWindowChrome(header);
   const homeMusic = new HomeMusic(header, options.music);
   const audioPage = new AudioPage(() => show('library'), options.previewUi);
-  const downloads = isWeb ? new DownloadPage() : undefined;
+  const downloads = isWeb ? (adoptStartupDownloads() ?? new DownloadPage()) : undefined;
+  downloads?.setReady(true);
   let resumeAudioPage: (() => void) | undefined;
   (window as unknown as { arkreaderHomeMusic: HomeMusic }).arkreaderHomeMusic = homeMusic;
   const resources = document.createElement('section');
@@ -261,7 +240,7 @@ export function mountDesktopShell(options: {
       button.disabled = busy || jobRunning;
     $<HTMLButtonElement>('resource-refresh').disabled = scanBusy;
   }
-  function show(page: 'library' | 'resources' | 'audio' | 'about' | 'downloads') {
+  function show(page: ApplicationPage) {
     if (page === 'downloads' && !downloads) return;
     const previous = document.body.dataset.desktopPage;
     if (page === previous) {
@@ -289,17 +268,14 @@ export function mountDesktopShell(options: {
     audioPage.root.hidden = page !== 'audio';
     if (downloads) downloads.root.hidden = page !== 'downloads';
     audioPage.setPlaying(!!resumeAudioPage);
-    for (const button of rail.querySelectorAll('button')) {
-      if (button.dataset.page === page) button.setAttribute('aria-current', 'page');
-      else button.removeAttribute('aria-current');
-    }
+    markApplicationPage(rail, page);
     window.scrollTo(0, 0);
     resume?.();
     if (page === 'audio') audioPage.focus();
     if (page === 'resources') void refresh();
   }
   document.addEventListener('arkreader-show-library', () => show('library'));
-  if (initialDownloads) show('downloads');
+  if (initialPage !== 'library') show(initialPage);
   for (const button of rail.querySelectorAll<HTMLButtonElement>('button[data-page]'))
     button.onclick = () =>
       show(button.dataset.page as 'library' | 'resources' | 'audio' | 'about' | 'downloads');

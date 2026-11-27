@@ -8,6 +8,10 @@ use std::{ffi::CString, path::Path, time::Duration};
 use tokio_util::sync::CancellationToken;
 
 unsafe extern "C" {
+    fn ark_prepare_cache(directory: *const u8) -> u32;
+    fn ark_prepare_cache_poll(id: u32) -> i32;
+    fn ark_prepare_cache_close(id: u32);
+    fn ark_cached_digest(path: *const u8, output: *mut u8) -> i32;
     fn ark_analyze(mode: *const u8, payload: *const u8, output: *mut u8, length: usize) -> i32;
     fn ark_media_open(
         video: *const u8,
@@ -19,6 +23,27 @@ unsafe extern "C" {
     fn ark_media_step(movie: usize, budget: i32) -> i32;
     fn ark_media_close(movie: usize);
     fn av_strerror(error: i32, buffer: *mut u8, size: usize) -> i32;
+}
+pub async fn prepare_cache(directory: &Path, cancel: &CancellationToken) -> Result<()> {
+    let directory = CString::new(directory.to_string_lossy().as_bytes())?;
+    struct Check(u32);
+    impl Drop for Check {
+        fn drop(&mut self) {
+            unsafe { ark_prepare_cache_close(self.0) };
+        }
+    }
+    let check = Check(unsafe { ark_prepare_cache(directory.as_ptr().cast()) });
+    while unsafe { ark_prepare_cache_poll(check.0) } != 0 {
+        crate::error::checkpoint(cancel)?;
+        tokio::time::sleep(Duration::from_millis(4)).await;
+    }
+    crate::error::checkpoint(cancel)?;
+    Ok(())
+}
+pub fn cached_digest(path: &Path) -> Option<[u8; 32]> {
+    let path = CString::new(path.to_str()?).ok()?;
+    let mut bytes = [0; 32];
+    (unsafe { ark_cached_digest(path.as_ptr().cast(), bytes.as_mut_ptr()) } == 1).then_some(bytes)
 }
 pub fn analyze(mode: &str, payload: &str) -> Result<String> {
     let mode = CString::new(mode)?;

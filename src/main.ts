@@ -57,6 +57,7 @@ import { invoke } from '@tauri-apps/api/core';
 import './app/mobile.css';
 import { mountApplicationControls, syncApplicationControl } from './app/native-controls';
 import { copyStoryLink, storyShareUrl } from './app/story-share';
+import { applicationHeader } from './app/application-chrome';
 
 if (isNative && !document.getElementById('startup-root')) {
   await invoke('app_retry');
@@ -69,16 +70,14 @@ if (document.getElementById('startup-root')) {
   document.getElementById('startup-style')?.remove();
   document.body.classList.remove('startup-page', 'native-skin');
   delete document.body.dataset.state;
-  const app = document.createElement('div');
-  app.id = 'app';
-  document.body.append(app);
+  if (!document.getElementById('app')) {
+    const app = document.createElement('div');
+    app.id = 'app';
+    document.body.append(app);
+  }
 }
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = /* HTML */ ` <header class="brand">
-    <a href="./">ARK<span>READER</span></a
-    ><span class="subtitle">明日方舟 · 剧情播放器</span
-    ><span class="connection" id="connection">连接资源库</span>
-  </header>
+document.querySelector<HTMLDivElement>('#app')!.innerHTML = /* HTML */ `${applicationHeader}
   <main>
     <section id="intro" class="intro">
       <div class="story-select"></div>

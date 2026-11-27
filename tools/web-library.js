@@ -1,4 +1,28 @@
 mergeInto(LibraryManager.library, {
+  ark_clone_file: function (from, to) {
+    try {
+      Module['arkStorage'].clone(UTF8ToString(from >>> 0), UTF8ToString(to >>> 0));
+      return 0;
+    } catch (error) {
+      console.warn(error);
+      return -1;
+    }
+  },
+  ark_prepare_cache: function (directory) {
+    return Module['arkStorage'].prepare(UTF8ToString(directory >>> 0));
+  },
+  ark_prepare_cache_poll: function (id) {
+    return Module['arkStorage'].pending(id);
+  },
+  ark_prepare_cache_close: function (id) {
+    Module['arkStorage'].close(id);
+  },
+  ark_cached_digest: function (path, output) {
+    var digest = Module['arkStorage'].digest(UTF8ToString(path >>> 0));
+    if (!digest) return 0;
+    HEAPU8.set(digest, output >>> 0);
+    return 1;
+  },
   ark_analyze: function (mode, payload, output, length) {
     return Module['arkAnalyze'](
       UTF8ToString(mode >>> 0),
