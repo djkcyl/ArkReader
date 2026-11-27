@@ -10,6 +10,7 @@ import { AudioPage } from './audio-page';
 import { confirmAction } from './action-confirm';
 import { mountResourceSource } from './resource-source';
 import { DownloadPage } from './download-page';
+import externalArrow from './external-arrow.svg?raw';
 interface Status {
   version: string | null;
   stories: number;
@@ -128,7 +129,7 @@ export function mountDesktopShell(options: {
         <input class="desktop-path" id="storage-path" readonly aria-label="资料库位置" /><button
           id="resource-open"
         >
-          打开文件夹 ↗
+          打开文件夹 ${externalArrow}
         </button>
       </div>
       <p>资料库保存在系统用户目录，更新程序不影响已下载资源。</p>
@@ -151,6 +152,26 @@ export function mountDesktopShell(options: {
         <span class="desktop-eyebrow">ARKREADER / APPLICATION</span>
         <h1>ArkReader <span id="desktop-version"></span></h1>
         <p>一个跨平台的《明日方舟》剧情播放器。</p>
+        <nav class="app-links" aria-label="项目链接">
+          <a href="https://ar.aunly.cn/" target="_blank" rel="noopener noreferrer"
+            >官方网站 ${externalArrow}</a
+          >
+          <a href="https://github.com/djkcyl/ArkReader" target="_blank" rel="noopener noreferrer"
+            >GitHub ${externalArrow}</a
+          >
+          <a
+            href="https://github.com/djkcyl/ArkReader/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            >更新说明 ${externalArrow}</a
+          >
+          <a
+            href="https://github.com/djkcyl/ArkReader/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            >问题反馈 ${externalArrow}</a
+          >
+        </nav>
       </div>
     </div>
     <article class="desktop-card">
@@ -167,6 +188,8 @@ export function mountDesktopShell(options: {
               ['Ctrl / ⌘ + K', '搜索剧情'],
               ['双击剧情', '直接播放'],
               ['空格', '推进对白'],
+              ['按住 Ctrl', '32× 快进'],
+              ['A', '切换自动播放'],
               ['F10', '窗口全屏'],
               ['Esc', '返回或取消'],
             ]
@@ -174,6 +197,35 @@ export function mountDesktopShell(options: {
           .map(([action, description]) => `<div><dt>${action}</dt><dd>${description}</dd></div>`)
           .join('')}
       </dl>
+    </article>
+    <div class="app-guide">
+      <article class="desktop-card">
+        <h2>阅读与回顾</h2>
+        <h3>继续阅读</h3>
+        <p>历史记录保留最高阅读进度。再次打开剧情时，可继续阅读或从头播放。</p>
+        <h3>回到某一段</h3>
+        <p>点击 LOG 中的台词，或展开“剧情脚本”选择对应行，即可跳转。</p>
+        <h3>分享剧情</h3>
+        <p>播放器设置中的“复制剧情链接”可生成分享链接，对方可在网页中打开同一段剧情。</p>
+      </article>
+      <article class="desktop-card">
+        <h2>缓存与声音</h2>
+        <h3>提前缓存</h3>
+        <p>在剧情目录缓存单段，或前往“缓存”批量下载。已缓存的剧情可离线阅读。</p>
+        <h3>分开调节音量</h3>
+        <p>“声音”页可分别调节界面音效、主页音乐和剧情播放音量。</p>
+        <h3>本地记录</h3>
+        <p>
+          ${isWeb ? '收藏、阅读记录和资源保存在当前浏览器中。清除网站数据会将它们一并删除。' : '资料库与阅读记录保存在系统用户目录，更新或替换程序不会清除它们。'}
+        </p>
+      </article>
+    </div>
+    <article class="desktop-card">
+      <h2>关于项目</h2>
+      <p>由 djkcyl 开发维护。游戏资源来自官方公开资源及 PRTS 镜像，无需安装游戏或登录账号。</p>
+      <p>
+        遇到问题时，请在 GitHub 反馈中附上应用版本、设备与浏览器、剧情名称，以及出现问题的位置。
+      </p>
     </article>
     <p class="desktop-fineprint">非官方项目。剧情、图像与音频版权归原权利人所有。</p>`;
   const notice = document.createElement('p');

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { clientDownloads } from './client-downloads.mjs';
 
 const run = (command, args, options = {}) =>
   execFileSync(command, args, {
@@ -43,6 +44,15 @@ for (const name of [
 ])
   if (!entries.includes(name)) throw Error('Missing Web asset: ' + name);
 const files = new Map(entries.map((name) => ['site/' + name, read(name)]));
+const downloadsArg = process.argv.indexOf('--downloads-dir');
+if (downloadsArg !== -1) {
+  const directory = process.argv[downloadsArg + 1];
+  if (!directory) throw Error('Missing client download directory');
+  for (const [name, bytes] of clientDownloads(path.resolve(directory), version, sourceCommit))
+    files.set('site/' + name, bytes);
+}
+for (const [name, bytes] of files)
+  if (bytes.length > 25_000_000) throw Error(`Static hosting file limit exceeded: ${name}`);
 const pkg = {
   name: 'arkreader-web-deploy',
   version,
@@ -81,8 +91,11 @@ if (process.argv.includes('--verify-only')) {
     fs.writeFileSync(file, bytes);
   }
   run(process.execPath, [path.join(check, 'build.mjs')]);
-  for (const name of entries)
-    if (!fs.readFileSync(path.join(check, 'dist', name)).equals(read(name)))
+  for (const [name, bytes] of files)
+    if (
+      name.startsWith('site/') &&
+      !fs.readFileSync(path.join(check, 'dist', name.slice(5))).equals(Buffer.from(bytes))
+    )
       throw Error('Deployment copy differs: ' + name);
   console.log('Deployment build preserves every verified static asset.');
   process.exit(0);

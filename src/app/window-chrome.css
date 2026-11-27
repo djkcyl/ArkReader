@@ -13,7 +13,7 @@ body.desktop-app .brand.app-titlebar {
   align-items: stretch;
   align-self: stretch;
   flex: none;
-  height: 64px;
+  height: var(--app-header-height, 64px);
   margin: -16px 0 -16px 6px;
 }
 .window-controls button {

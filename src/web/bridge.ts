@@ -17,9 +17,58 @@ interface Status {
   resourceUpdate?: { warning?: string };
 }
 
-export async function installWebBridge(): Promise<void> {
+async function prepareWebApplication(base: URL): Promise<boolean> {
+  const status = document.getElementById('status')!;
+  status.textContent = '正在检查网页更新…';
+  const registration = await navigator.serviceWorker.register(new URL('sw.js', base), {
+    scope: base.pathname,
+    updateViaCache: 'none',
+  });
+  await registration.update().catch(() => {});
+  const candidate = registration.installing ?? registration.waiting ?? registration.active;
+  if (candidate && !['activated', 'redundant'].includes(candidate.state)) {
+    status.textContent = '正在更新网页版…';
+    await new Promise<void>((resolve) => {
+      const settled = () => {
+        if (!['activated', 'redundant'].includes(candidate.state)) return;
+        candidate.removeEventListener('statechange', settled);
+        resolve();
+      };
+      candidate.addEventListener('statechange', settled);
+      settled();
+    });
+  }
+  if (candidate?.state === 'redundant') throw Error('网页更新未完成，请稍后重试。');
+  const active = registration.active;
+  if (!active) throw Error('网页程序未能准备完成，请重试。');
+  if (navigator.serviceWorker.controller !== active)
+    await new Promise<void>((resolve) => {
+      const controlled = () => {
+        if (navigator.serviceWorker.controller !== active) return;
+        navigator.serviceWorker.removeEventListener('controllerchange', controlled);
+        resolve();
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', controlled);
+      controlled();
+    });
+  const response = await fetch(new URL('build.json', base));
+  if (!response.ok) throw Error('无法读取网页版本，请重试。');
+  const { build } = await response.json();
+  const current = document.querySelector<HTMLMetaElement>('meta[name="arkreader-build"]')?.content;
+  if (build !== current) {
+    status.textContent = '正在切换到新版…';
+    location.reload();
+    return false;
+  }
+  return true;
+}
+
+export async function installWebBridge(): Promise<boolean> {
   if (!('serviceWorker' in navigator)) throw Error('请通过 HTTPS 或 localhost 打开网页版。');
   const base = new URL('./', location.href);
+  // Finish the application update before creating or starting the resource engine.
+  if (!(await prepareWebApplication(base))) return false;
+  document.getElementById('status')!.textContent = '正在加载资源引擎…';
   if (history.state?.arkreader !== 'inside') {
     history.replaceState({ arkreader: 'entry' }, '', location.href);
     history.pushState({ arkreader: 'inside' }, '', location.href);
@@ -29,18 +78,6 @@ export async function installWebBridge(): Promise<void> {
     if (!window.dispatchEvent(new Event('arkreader-back', { cancelable: true })))
       history.pushState({ arkreader: 'inside' }, '', location.href);
     else history.back();
-  });
-  const previousController = navigator.serviceWorker.controller;
-  let entering = true;
-  document.addEventListener(
-    'arkreader-ui-ready',
-    () => {
-      entering = false;
-    },
-    { once: true },
-  );
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (previousController && entering) location.reload();
   });
   const worker = new Worker(new URL('./worker.js', import.meta.url), {
     type: 'module',
@@ -107,15 +144,6 @@ export async function installWebBridge(): Promise<void> {
         }),
       );
   });
-  const registration = await navigator.serviceWorker.register(new URL('sw.js', base), {
-    scope: base.pathname,
-  });
-  await navigator.serviceWorker.ready;
-  await registration.update().catch(() => {});
-  if (!navigator.serviceWorker.controller)
-    await new Promise<void>((resolve) =>
-      navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), { once: true }),
-    );
   window.__ARKREADER_WEB__ = {
     async invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
       let result: unknown;
@@ -177,4 +205,5 @@ export async function installWebBridge(): Promise<void> {
     if (event.persisted) location.reload();
   });
   await ready;
+  return true;
 }

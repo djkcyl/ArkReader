@@ -1,6 +1,7 @@
 /* Application frame. Scroll belongs to a content pane, never the document. */
 html,
 body {
+  --app-header-height: 64px;
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
@@ -11,7 +12,7 @@ body {
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 64px minmax(0, 1fr);
+  grid-template-rows: var(--app-header-height) minmax(0, 1fr);
   overflow: hidden;
 }
 #app > .brand,
@@ -22,7 +23,7 @@ body.desktop-app:not(.playing) .brand {
   position: relative;
   top: auto;
   min-height: 0;
-  height: 64px;
+  height: var(--app-header-height);
   padding: 16px 28px;
   z-index: 18;
 }

@@ -2,7 +2,10 @@ import { defineConfig, type UserConfig } from 'vite';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
-const downloadContent = readFileSync('src/app/download-content.html', 'utf8');
+const downloadContent = readFileSync('src/app/download-content.html', 'utf8').replaceAll(
+  '%EXTERNAL_ARROW%',
+  readFileSync('src/app/external-arrow.svg', 'utf8'),
+);
 export default defineConfig(({ mode }): UserConfig => {
   if (mode === 'web' && !/^engine\/[a-f0-9]{64}\/$/.test(process.env.VITE_ENGINE_PATH ?? ''))
     throw new Error('Build the Web engine with npm run web:build before bundling its frontend.');

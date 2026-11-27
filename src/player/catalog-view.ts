@@ -5,6 +5,7 @@ import { OperatorFilterView } from '../app/operator-filter-view';
 import type { OperatorFilterOptions, OperatorMetadata } from '../app/operator-filter-model';
 import { libraryHeading } from '../app/library-heading';
 import { isWeb } from '../app/platform';
+import externalArrow from '../app/external-arrow.svg?raw';
 
 export interface CatalogStory {
   id: string;
@@ -494,6 +495,8 @@ export class CatalogView {
           const subtitle = group.subtitle ?? group.stories[0]?.subtitle;
           if (subtitle) info.append(el('span', 'card-subtitle', subtitle));
           const bottom = el('div', 'card-bottom');
+          const arrow = el('span');
+          arrow.innerHTML = externalArrow;
           bottom.append(
             el(
               'span',
@@ -502,7 +505,7 @@ export class CatalogView {
                 ? `${new Set(this.matching(group).map((s) => s.recordId ?? s.id)).size} 篇密录 · ${this.matching(group).length} 段剧情`
                 : `${this.matching(group).length} RECORDS`,
             ),
-            el('span', '', '↗'),
+            arrow,
           );
           info.append(bottom);
           button.append(info);

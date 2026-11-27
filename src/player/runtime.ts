@@ -395,7 +395,7 @@ export class StoryPlayer {
     );
   }
   get playbackPercent(): number {
-    return this.finished
+    return this.finished || this.atFinalEndTip
       ? 100
       : Math.min(
           99,
@@ -425,6 +425,7 @@ export class StoryPlayer {
   }
   restoreViewed(ranges: [number, number][]): void {
     this.viewingProgress.restore(ranges, this.scheduler.index);
+    if (this.atFinalEndTip) this.viewingProgress.finish();
     this.savedPosition = undefined;
   }
   time = 0;
@@ -2732,7 +2733,9 @@ export class StoryPlayer {
       }
       if (this.readerPlayback.tick(delta)) this.advance();
       this.scheduler.tick();
-      this.viewingProgress.observe(this.scheduler.index);
+      // The final EndTip waits for a dismissal after all story content has played.
+      if (this.atFinalEndTip) this.viewingProgress.finish();
+      else this.viewingProgress.observe(this.scheduler.index);
       if (this.scheduler.ended && !this.finished) {
         if (this.scheduler.index >= this.scheduler.commands.length) this.viewingProgress.finish();
         this.readerPlayback.reset();
@@ -3109,6 +3112,9 @@ export class StoryPlayer {
   }
   get atEnd(): boolean {
     return !!this.endDone;
+  }
+  private get atFinalEndTip(): boolean {
+    return this.atEnd && this.scheduler.index === this.scheduler.commands.length - 1;
   }
   dispose(): void {
     this.readerPlayback.reset();

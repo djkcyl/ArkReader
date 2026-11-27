@@ -1,5 +1,5 @@
 body.desktop-app[data-desktop-page='audio'] {
-  background: #e6e9eb;
+  background: var(--app-surface, #e6e9eb);
   color: #23313a;
   background-image: none;
 }

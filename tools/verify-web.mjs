@@ -9,6 +9,7 @@ import { chromium } from 'playwright';
 const root = path.resolve('web-dist');
 const build = JSON.parse(await fs.readFile(path.join(root, 'build.json'), 'utf8'));
 assert.match(build.engine ?? '', /^engine\/[a-f0-9]{64}\/$/);
+assert.match(build.build ?? '', /^[a-f0-9]{24}$/);
 const output = path.resolve('artifacts/web-verification');
 const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'arkreader-web-check-'));
 await fs.mkdir(output, { recursive: true });
@@ -64,6 +65,10 @@ async function ready() {
       .locator('#startup-error')
       .textContent()
       .catch(() => 'Startup failed'),
+  );
+  assert.equal(
+    await page.locator('meta[name="arkreader-build"]').getAttribute('content'),
+    build.build,
   );
   await page.waitForFunction(() => document.querySelector('.archive-card,.story-track'));
 }
@@ -136,6 +141,7 @@ async function verifyStory(id, movie = false) {
           player.paused = true;
           return { movie: true };
         }
+        if (player.atEnd && player.scheduler.index === player.scheduler.commands.length - 1) break;
         if (player.choices.length) player.choose(0);
         else if (
           player.atEnd ||
@@ -148,6 +154,9 @@ async function verifyStory(id, movie = false) {
       player.paused = true;
       return {
         finished: player.finished,
+        atEnd: player.atEnd,
+        progress: player.viewingProgress.value,
+        position: player.position,
         error: player.error,
         missing: player.pack.missing,
         unknown: player.scheduler.unknownCommands,
@@ -236,14 +245,23 @@ async function verifyStory(id, movie = false) {
       report.movies.push({ id, ...picture, rms: sound, endEvent: true, pause: true, seek: true });
       movie = false;
     }
-    if (state.finished) break;
+    if (state.finished || state.atEnd) break;
   }
-  assert(state.finished, id);
+  assert(state.finished || state.atEnd, id);
+  assert.equal(state.progress.percent, 100, `${id}: end-of-story progress`);
+  assert(state.progress.complete, `${id}: end-of-story completion`);
+  assert.equal(state.position?.percent, 100, `${id}: completed bookmark`);
   assert.deepEqual(state.missing, []);
   assert.deepEqual(state.unknown, []);
   report.stories.push(id);
   console.log('Verified', id);
   await page.locator('#leave-story').click();
+  const saved = await page.evaluate(
+    (id) => JSON.parse(localStorage.getItem('arkreader.shelf')).progress[id],
+    id,
+  );
+  assert.equal(saved.percent, 100, `${id}: saved completion`);
+  assert(saved.complete, `${id}: saved completion flag`);
 }
 try {
   context = await chromium.launchPersistentContext(profile, {

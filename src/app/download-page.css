@@ -151,6 +151,78 @@ body.mobile-app #desktop-downloads .desktop-page-heading > div:first-child {
 .downloads [hidden] {
   display: none !important;
 }
+.download-actions a[aria-disabled='true'] {
+  opacity: 0.55;
+}
+.client-download-transfer {
+  margin-bottom: 24px;
+  padding: 20px 22px;
+  background: #f3f5f6;
+  border-left: 3px solid #00abe1;
+}
+.client-download-heading,
+.client-download-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.client-download-name {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  margin: 10px 0;
+  color: #627783;
+}
+.client-download-transfer progress {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin: 14px 0;
+  border: 0;
+  background: #d1d9dc;
+  accent-color: #00a9d4;
+}
+.client-download-transfer progress::-webkit-progress-bar {
+  background: #d1d9dc;
+}
+.client-download-transfer progress::-webkit-progress-value {
+  background: #00a9d4;
+}
+.client-download-transfer progress::-moz-progress-bar {
+  background: #00a9d4;
+}
+.client-download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  --ark-control-min: 0px;
+}
+.client-download-actions a {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  min-height: 40px;
+  color: white;
+  background: #008bb5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.client-download-transfer[data-state='error'] {
+  border-color: #a35136;
+}
+.client-download-transfer[data-state='error'] [data-download-status] {
+  color: #a35136;
+}
+@media (max-width: 600px) {
+  .client-download-footer {
+    align-items: start;
+    flex-direction: column;
+  }
+  .client-download-transfer {
+    padding: 16px;
+  }
+}
 
 @media (max-width: 600px) {
   .downloads {

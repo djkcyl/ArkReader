@@ -4,11 +4,20 @@ self.addEventListener('install', (event) =>
   event.waitUntil(
     (async () => {
       const cache = await caches.open(cacheName);
-      await cache.addAll(
-        PRECACHE.map(
-          (path) => new Request(new URL(path, self.registration.scope).href, { cache: 'reload' }),
-        ),
-      );
+      try {
+        await cache.addAll(
+          Object.entries(PRECACHE).map(
+            ([path, integrity]) =>
+              new Request(new URL(path, self.registration.scope).href, {
+                cache: 'reload',
+                integrity,
+              }),
+          ),
+        );
+      } catch (error) {
+        await caches.delete(cacheName);
+        throw error;
+      }
       await self.skipWaiting();
     })(),
   ),
@@ -74,6 +83,8 @@ async function resource(event) {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+  // Client packages are downloaded explicitly, never stored in the application cache.
+  if (url.pathname.startsWith(new URL('downloads/', self.registration.scope).pathname)) return;
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/media/')) {
     event.respondWith(resource(event));
     return;
@@ -85,7 +96,8 @@ self.addEventListener('fetch', (event) => {
       const path = url.pathname.slice(new URL(self.registration.scope).pathname.length);
       const key =
         event.request.mode === 'navigate'
-          ? new URL(PRECACHE.includes(path) ? path : 'index.html', self.registration.scope).href
+          ? new URL(Object.hasOwn(PRECACHE, path) ? path : 'index.html', self.registration.scope)
+              .href
           : event.request;
       const saved = await cache.match(key);
       if (saved) return saved;

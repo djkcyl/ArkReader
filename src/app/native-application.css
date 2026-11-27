@@ -1,6 +1,6 @@
 body.app-native-ui:not(.playing) {
   color: #303236;
-  background: linear-gradient(118deg, #edeef0, #d6d8d9 54%, #c5c8ca);
+  background: var(--app-surface, #e6e9eb);
   font-family: ArkNative, 'Microsoft YaHei', sans-serif;
 }
 body.app-native-ui:not(.playing)::before {
@@ -12,8 +12,8 @@ body.app-native-ui:not(.playing)::before {
   );
   opacity: 0.08;
 }
-body.app-native-ui .brand,
-body.app-native-ui.playing .brand {
+body.desktop-app.app-native-ui .brand,
+body.desktop-app.app-native-ui.playing .brand {
   background: #202124;
   border: 0;
 }
@@ -36,7 +36,7 @@ body.app-native-ui .desktop-rail button:hover {
   color: white;
 }
 body.app-native-ui .desktop-rail button[aria-current] {
-  background: #e9ebed;
+  background: var(--app-surface, #e6e9eb);
   color: #292b2e;
 }
 body.app-native-ui .desktop-rail button[aria-current]::before {

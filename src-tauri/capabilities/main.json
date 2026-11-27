@@ -11,6 +11,14 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-start-dragging",
     "core:window:allow-destroy",
-    "clipboard-manager:allow-write-text"
+    "clipboard-manager:allow-write-text",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://ar.aunly.cn/*" },
+        { "url": "https://github.com/djkcyl/ArkReader" },
+        { "url": "https://github.com/djkcyl/ArkReader/*" }
+      ]
+    }
   ]
 }

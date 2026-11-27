@@ -94,14 +94,13 @@ const sourceCommit = spawnSync('git', ['rev-parse', 'HEAD'], {
   encoding: 'utf8',
 }).stdout.trim();
 const version = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8')).version;
-await fs.writeFile(
-  path.join(output, 'build.json'),
-  JSON.stringify(
-    { version, sourceCommit, engine: enginePath, ...(preview ? { preview: true } : {}) },
-    null,
-    2,
-  ) + '\n',
-);
+const metadata = {
+  version,
+  sourceCommit,
+  engine: enginePath,
+  ...(preview ? { preview: true } : {}),
+};
+await fs.writeFile(path.join(output, 'build.json'), JSON.stringify(metadata, null, 2) + '\n');
 await fs.writeFile(
   path.join(output, 'README.txt'),
   `ArkReader ${version}\n\n将本目录原样部署到静态托管服务，通过 HTTPS 访问（本机 localhost 也可以）。\n入口是 index.html，不需要单独运行后端。请勿使用 file:// 直接打开。\n\n源码：https://github.com/djkcyl/ArkReader/tree/${sourceCommit}\n`,
@@ -124,8 +123,29 @@ const worker = await fs.readFile(path.join(root, 'src/web/service-worker.js'), '
 const digest = createHash('sha256').update(worker);
 for (const file of files.sort())
   digest.update(file).update(await fs.readFile(path.join(output, file)));
+const build = digest.digest('hex').slice(0, 24);
+// The document and cached manifest identify the same complete application build.
+const indexFile = path.join(output, 'index.html');
+await fs.writeFile(
+  indexFile,
+  (await fs.readFile(indexFile, 'utf8')).replace(
+    '</head>',
+    `  <meta name="arkreader-build" content="${build}" />\n  </head>`,
+  ),
+);
+await fs.writeFile(
+  path.join(output, 'build.json'),
+  JSON.stringify({ ...metadata, build }, null, 2) + '\n',
+);
+const precache = {};
+for (const file of files)
+  precache[file] =
+    'sha256-' +
+    createHash('sha256')
+      .update(await fs.readFile(path.join(output, file)))
+      .digest('base64');
 await fs.writeFile(
   path.join(output, 'sw.js'),
-  `const PRECACHE=${JSON.stringify(files)};\nconst BUILD=${JSON.stringify(digest.digest('hex').slice(0, 24))};\n${worker}`,
+  `const PRECACHE=${JSON.stringify(precache)};\nconst BUILD=${JSON.stringify(build)};\n${worker}`,
 );
 console.log(output);

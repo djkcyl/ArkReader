@@ -1,6 +1,7 @@
 /* Application chrome only: native stage, controls and story dialogs stay intact. */
 body.desktop-app {
   --rail: 80px;
+  --app-surface: #e6e9eb;
   padding-left: var(--rail);
 }
 .desktop-rail {
@@ -13,11 +14,14 @@ body.desktop-app {
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-right: 1px solid #ffffff0b;
   user-select: none;
 }
 .desktop-monogram {
-  height: 82px;
+  height: var(--app-header-height, 64px);
+  flex: 0 0 var(--app-header-height, 64px);
+  width: 100%;
+  justify-content: center;
+  background: #202124;
   display: flex;
   align-items: center;
   font:
@@ -36,7 +40,7 @@ body.desktop-app {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px;
+  padding: 0 8px 8px;
 }
 body.web-app:not(.mobile-app) .desktop-rail nav {
   min-height: 0;
@@ -119,7 +123,7 @@ body.desktop-app:not(.playing) footer {
 }
 body.desktop-app[data-desktop-page='resources'],
 body.desktop-app[data-desktop-page='about'] {
-  background: #e6e9eb;
+  background: var(--app-surface);
   color: #23313a;
   background-image: none;
 }
@@ -330,6 +334,32 @@ body.desktop-app:not([data-desktop-page='library']) #app > footer {
   font-weight: 400;
   color: #80969c;
   margin-left: 10px;
+}
+.app-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin-top: 16px;
+}
+.app-links a {
+  color: #216a80;
+  font-size: 13px;
+  text-underline-offset: 4px;
+}
+.app-guide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+}
+.app-guide .desktop-card {
+  min-width: 0;
+}
+.app-guide h3 {
+  margin: 18px 0 4px;
+  font-size: 13px;
+}
+.app-guide p:last-child {
+  margin-bottom: 0;
 }
 body.desktop-app.playing #player-panel {
   padding-top: 18px;
