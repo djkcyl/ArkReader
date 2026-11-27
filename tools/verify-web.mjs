@@ -7,6 +7,8 @@ import { createHash } from 'node:crypto';
 import { chromium } from 'playwright';
 
 const root = path.resolve('web-dist');
+const build = JSON.parse(await fs.readFile(path.join(root, 'build.json'), 'utf8'));
+assert.match(build.engine ?? '', /^engine\/[a-f0-9]{64}\/$/);
 const output = path.resolve('artifacts/web-verification');
 const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'arkreader-web-check-'));
 await fs.mkdir(output, { recursive: true });
@@ -305,7 +307,7 @@ try {
   assert.deepEqual(failures, []);
   report.offline = true;
   report.wasmSha256 = createHash('sha256')
-    .update(await fs.readFile(path.join(root, 'engine/arkreader_web.wasm')))
+    .update(await fs.readFile(path.join(root, build.engine, 'arkreader_web.wasm')))
     .digest('hex');
   await fs.writeFile(path.join(output, 'verification.json'), JSON.stringify(report, null, 2));
   console.log('Static web initialization, story, movie and offline checks passed.');

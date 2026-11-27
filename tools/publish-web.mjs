@@ -31,7 +31,14 @@ const read = (name) =>
 const build = JSON.parse(read('build.json'));
 if (build.version !== version || build.sourceCommit !== sourceCommit)
   throw Error('Web build identity mismatch');
-for (const name of ['index.html', 'sw.js', 'engine/arkreader_web.wasm'])
+if (!/^engine\/[a-f0-9]{64}\/$/.test(build.engine ?? ''))
+  throw Error('Web engine identity missing');
+for (const name of [
+  'index.html',
+  'sw.js',
+  build.engine + 'arkreader-web.js',
+  build.engine + 'arkreader_web.wasm',
+])
   if (!entries.includes(name)) throw Error('Missing Web asset: ' + name);
 const files = new Map(entries.map((name) => ['site/' + name, read(name)]));
 const pkg = {

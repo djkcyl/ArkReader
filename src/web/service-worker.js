@@ -18,7 +18,6 @@ self.addEventListener('activate', (event) =>
     (async () => {
       const previous = (await caches.keys())
         .filter((name) => name.startsWith('arkreader-app-') && name !== cacheName)
-        .sort()
         .reverse();
       for (const name of previous.slice(1)) await caches.delete(name);
       await self.clients.claim();

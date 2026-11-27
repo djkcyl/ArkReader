@@ -65,15 +65,21 @@ if (!process.argv.includes('--frontend-only')) {
     ...flags.flatMap((flag) => ['-C', `link-arg=${flag}`]),
   ]);
 }
+const engine = path.join(root, 'src-tauri/target/wasm32-unknown-emscripten/web');
+const engineFiles = ['arkreader-web.js', 'arkreader_web.wasm'];
+const engineDigest = createHash('sha256');
+for (const name of engineFiles)
+  engineDigest.update(name).update(await fs.readFile(path.join(engine, name)));
+const enginePath = `engine/${engineDigest.digest('hex')}/`;
+env.VITE_ENGINE_PATH = enginePath;
 run(process.execPath, ['node_modules/typescript/bin/tsc', '--noEmit']);
 run(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--mode', 'web']);
 const output = path.join(root, 'web-dist');
 await fs.rename(path.join(output, 'web.html'), path.join(output, 'index.html'));
 await fs.cp(path.join(root, 'src/web/public'), output, { recursive: true });
-await fs.mkdir(path.join(output, 'engine'), { recursive: true });
-const engine = path.join(root, 'src-tauri/target/wasm32-unknown-emscripten/web');
-for (const name of ['arkreader-web.js', 'arkreader_web.wasm'])
-  await fs.copyFile(path.join(engine, name), path.join(output, 'engine', name));
+await fs.mkdir(path.join(output, enginePath), { recursive: true });
+for (const name of engineFiles)
+  await fs.copyFile(path.join(engine, name), path.join(output, enginePath, name));
 await fs.mkdir(path.join(output, 'licenses'), { recursive: true });
 await fs.cp(path.join(root, 'licenses'), path.join(output, 'licenses'), { recursive: true });
 for (const name of ['FFmpeg-LICENSE.txt', 'FFmpeg-SOURCE.txt'])
@@ -89,7 +95,7 @@ const sourceCommit = spawnSync('git', ['rev-parse', 'HEAD'], {
 const version = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8')).version;
 await fs.writeFile(
   path.join(output, 'build.json'),
-  JSON.stringify({ version, sourceCommit }, null, 2) + '\n',
+  JSON.stringify({ version, sourceCommit, engine: enginePath }, null, 2) + '\n',
 );
 await fs.writeFile(
   path.join(output, 'README.txt'),

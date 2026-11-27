@@ -168,7 +168,7 @@ export async function installWebBridge(): Promise<void> {
       return result as T;
     },
   };
-  worker.postMessage({ type: 'start', base: new URL('engine/', base).href });
+  worker.postMessage({ type: 'start', base: new URL(import.meta.env.VITE_ENGINE_PATH, base).href });
   window.addEventListener('pagehide', () => {
     document.dispatchEvent(new Event('arkreader-before-close'));
     worker.terminate();

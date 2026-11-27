@@ -20,6 +20,8 @@ if (process.argv.includes('--web')) {
   const build = JSON.parse(await fs.readFile(path.join(root, 'build.json'), 'utf8'));
   if (build.version !== version || build.sourceCommit !== sourceCommit)
     throw Error('Web build does not match release source');
+  if (!/^engine\/[a-f0-9]{64}\/$/.test(build.engine ?? ''))
+    throw Error('Web engine identity missing');
   async function collect(folder) {
     for (const item of await fs.readdir(folder, { withFileTypes: true })) {
       const file = path.join(folder, item.name);
@@ -35,7 +37,8 @@ if (process.argv.includes('--web')) {
   for (const name of [
     'index.html',
     'sw.js',
-    'engine/arkreader_web.wasm',
+    build.engine + 'arkreader-web.js',
+    build.engine + 'arkreader_web.wasm',
     'licenses/FFmpeg-LICENSE.txt',
     'licenses/FFmpeg-SOURCE.txt',
     '.nojekyll',

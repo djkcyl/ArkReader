@@ -689,7 +689,9 @@ async function start(target?: PlaybackTarget, automatic = false): Promise<void> 
     newHost = new StandaloneStoryHost();
     const restoringAudio = new RestoringAudio(newAudio, () => newPlayer?.time ?? player?.time ?? 0),
       restoringVideo = new RestoringVideo(
-        new StoryVideo(newAudio.context, newAudio.master),
+        new StoryVideo(newAudio.context, newAudio.master, () => {
+          (newPlayer ?? player)?.setPaused(true);
+        }),
         () => newPlayer?.scheduler.index !== target?.commandIndex,
       );
     newPlayer = new StoryPlayer(pack, restoringAudio, savedSpeed, {
@@ -898,8 +900,16 @@ function sync(): void {
         .toString()
         .padStart(2, '0')}`;
   $('paused').hidden = !player.paused;
-  $('paused').querySelector('h2')!.textContent = sharedGesturePending ? '剧情已就绪' : '已暂停';
-  setControlLabel($('resume'), sharedGesturePending ? '开始阅读' : '继续播放');
+  const videoNeedsGesture = player.host.video?.needsGesture;
+  $('paused').querySelector('h2')!.textContent = videoNeedsGesture
+    ? '点击播放影片'
+    : sharedGesturePending
+      ? '剧情已就绪'
+      : '已暂停';
+  setControlLabel(
+    $('resume'),
+    videoNeedsGesture ? '播放影片' : sharedGesturePending ? '开始阅读' : '继续播放',
+  );
   $('ended').hidden = !player.finished;
   // Native AVGAutoButton only animates in BUTTON mode; QUICK displays OFF.
   const isAuto = player.readerMode ? player.readerPlayback.auto : player.auto && !player.quickPlay;
@@ -1038,7 +1048,7 @@ function setHiddenUI(hidden: boolean): void {
   sync();
 }
 function advanceVisibleStory(): void {
-  if (sharedGesturePending) {
+  if (sharedGesturePending || player?.host.video?.needsGesture) {
     void resumeSharedPlayback();
     return;
   }
@@ -1256,7 +1266,7 @@ $('volume').oninput = () => {
 };
 $('pause').onclick = () => {
   readerSettingsView.dismiss(true);
-  if (sharedGesturePending) {
+  if (sharedGesturePending || player?.host.video?.needsGesture) {
     void resumeSharedPlayback();
     return;
   }
@@ -1270,15 +1280,18 @@ async function resumeSharedPlayback(): Promise<void> {
   if (!current || !currentAudio) return;
   try {
     const unlocked = currentAudio.unlock();
+    current.setPaused(false);
     stageFullscreen.prepareMobile();
     await unlocked;
     if (player !== current) return;
     sharedGesturePending = false;
-    current.setPaused(false);
     lastFrame = performance.now();
     sync();
   } catch {
-    if (player === current) setControlLabel($('resume'), '点此继续阅读');
+    if (player === current) {
+      current.setPaused(true);
+      setControlLabel($('resume'), '点此继续阅读');
+    }
   }
 }
 let shareFeedback: ReturnType<typeof setTimeout> | undefined;

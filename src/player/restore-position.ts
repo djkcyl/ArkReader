@@ -17,6 +17,9 @@ export class RestoringVideo implements VideoPort {
   get frame() {
     return this.video.frame;
   }
+  get needsGesture() {
+    return this.video.needsGesture;
+  }
   play(url: string, started: () => void, ended: (error?: string) => void) {
     if (this.restoring && this.skipDuringRestore()) {
       started();

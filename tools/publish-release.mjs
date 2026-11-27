@@ -64,10 +64,12 @@ const readEntry = (name) =>
 const web = JSON.parse(readEntry('build.json'));
 if (web.version !== version || web.sourceCommit !== sourceCommit)
   throw Error('Web archive source mismatch');
+if (!/^engine\/[a-f0-9]{64}\/$/.test(web.engine ?? '')) throw Error('Web engine identity missing');
 for (const file of [
   'index.html',
   'sw.js',
-  'engine/arkreader_web.wasm',
+  web.engine + 'arkreader-web.js',
+  web.engine + 'arkreader_web.wasm',
   'licenses/FFmpeg-LICENSE.txt',
   'licenses/FFmpeg-SOURCE.txt',
   '.nojekyll',
