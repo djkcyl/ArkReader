@@ -10,6 +10,7 @@ const run = (command, args, options = {}) =>
   }).trim();
 const archive = path.resolve(process.argv[2]);
 const sourceCommit = process.argv[3];
+const preview = process.argv.includes('--preview');
 const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 if (!/^[a-f0-9]{40}$/.test(sourceCommit ?? ''))
   throw Error('An exact build source commit is required');
@@ -31,6 +32,7 @@ const read = (name) =>
 const build = JSON.parse(read('build.json'));
 if (build.version !== version || build.sourceCommit !== sourceCommit)
   throw Error('Web build identity mismatch');
+if (!!build.preview !== preview) throw Error('Web preview mode mismatch');
 if (!/^engine\/[a-f0-9]{64}\/$/.test(build.engine ?? ''))
   throw Error('Web engine identity missing');
 for (const name of [
@@ -68,7 +70,7 @@ files.set(
 );
 files.set(
   'README.md',
-  `# ArkReader ${version}\n\n此分支保存已通过发行验证的静态站点，仅保留一个提交。\n\nMakers 等静态托管平台：\n\n- 生产分支：\`web\`\n- 框架：Other\n- 根目录：\`./\`\n- 安装命令：\`npm ci\`\n- 构建命令：\`npm run build\`\n- 输出目录：\`dist\`\n\n[源码](https://github.com/djkcyl/ArkReader/tree/${sourceCommit}) · [下载](https://github.com/djkcyl/ArkReader/releases/tag/v${version})\n`,
+  `# ArkReader ${version}${preview ? ' · Web 预览' : ''}\n\n${preview ? '此分支当前为临时网页验证版，不对应新的正式发行。' : '此分支保存已通过发行验证的静态站点。'}仅保留一个提交。\n\nMakers 等静态托管平台：\n\n- 生产分支：\`web\`\n- 框架：Other\n- 根目录：\`./\`\n- 安装命令：\`npm ci\`\n- 构建命令：\`npm run build\`\n- 输出目录：\`dist\`\n\n[源码](https://github.com/djkcyl/ArkReader/tree/${sourceCommit}) · [下载](https://github.com/djkcyl/ArkReader/releases/tag/v${version})\n`,
 );
 if (process.argv.includes('--verify-only')) {
   const check = path.resolve('artifacts/web-deploy-check');
@@ -120,14 +122,18 @@ if (
   process.exit(0);
 }
 const commit = run('git', [
-  '-c',
-  'user.name=github-actions[bot]',
-  '-c',
-  'user.email=41898282+github-actions[bot]@users.noreply.github.com',
+  ...(preview
+    ? []
+    : [
+        '-c',
+        'user.name=github-actions[bot]',
+        '-c',
+        'user.email=41898282+github-actions[bot]@users.noreply.github.com',
+      ]),
   'commit-tree',
   webTree,
   '-m',
-  `Deploy ArkReader ${version} from ${sourceCommit}`,
+  `${preview ? 'Preview' : 'Deploy'} ArkReader ${version} from ${sourceCommit}`,
 ]);
 run('git', [
   'push',

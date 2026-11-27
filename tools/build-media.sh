@@ -41,6 +41,7 @@ case "$target" in
   web)
     compiler=emcc
     options+=(
+      --enable-muxer=webm,wav --disable-encoder=flac --enable-encoder=pcm_s16le
       --enable-cross-compile --target-os=none --arch=wasm32
       --cc=emcc --ar=emar --ranlib=emranlib --nm=emnm
       --disable-programs --disable-avfilter --disable-pthreads --disable-w32threads --disable-os2threads

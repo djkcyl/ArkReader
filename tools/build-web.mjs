@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const preview = process.argv.includes('--preview');
 const sdk = process.env.EMSDK || path.join(root, '.cache/web-build/emsdk');
 const emscripten = path.join(sdk, 'upstream/emscripten');
 const env = {
@@ -95,7 +96,11 @@ const sourceCommit = spawnSync('git', ['rev-parse', 'HEAD'], {
 const version = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8')).version;
 await fs.writeFile(
   path.join(output, 'build.json'),
-  JSON.stringify({ version, sourceCommit, engine: enginePath }, null, 2) + '\n',
+  JSON.stringify(
+    { version, sourceCommit, engine: enginePath, ...(preview ? { preview: true } : {}) },
+    null,
+    2,
+  ) + '\n',
 );
 await fs.writeFile(
   path.join(output, 'README.txt'),

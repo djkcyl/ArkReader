@@ -49,6 +49,7 @@ import { requirePackResources } from '../core/pack-resources';
 export interface Asset {
   url: string;
   kind: 'image' | 'audio' | 'effect' | 'video';
+  audio?: { url: string; sha256: string; size: number };
   profile?: BgEffectProfile;
   width?: number;
   height?: number;

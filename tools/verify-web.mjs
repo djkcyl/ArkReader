@@ -165,8 +165,8 @@ async function verifyStory(id, movie = false) {
         const { player, audio } = window.arkreader,
           video = player.host.video.frame;
         const analyser = audio.context.createAnalyser();
-        player.host.video.video.node.connect(analyser);
-        window.webMovieProof = { video, analyser, rms: 0, ended: false };
+        audio.master.connect(analyser);
+        window.webMovieProof = { video, analyser, source: audio.master, rms: 0, ended: false };
         video.addEventListener(
           'ended',
           () => {
@@ -228,6 +228,7 @@ async function verifyStory(id, movie = false) {
       const sound = await page.evaluate(() => {
         const p = window.webMovieProof;
         clearInterval(p.timer);
+        p.source.disconnect(p.analyser);
         p.analyser.disconnect();
         return p.rms;
       });

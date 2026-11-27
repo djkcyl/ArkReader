@@ -262,6 +262,7 @@ pub async fn serve_media(engine: &Engine, name: &str, headers: &HeaderMap) -> Re
         "ogg" => "audio/ogg",
         "mp3" => "audio/mpeg",
         "mp4" => "video/mp4",
+        "webm" => "video/webm",
         "json" => "application/json",
         "ttf" => "font/ttf",
         "otf" => "font/otf",

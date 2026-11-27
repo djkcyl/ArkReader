@@ -13,6 +13,7 @@ unsafe extern "C" {
         video: *const u8,
         audio: *const u8,
         output: *const u8,
+        soundtrack: *const u8,
         failure: *mut i32,
     ) -> usize;
     fn ark_media_step(movie: usize, budget: i32) -> i32;
@@ -57,11 +58,13 @@ pub async fn remux(
     video: &Path,
     audio: &Path,
     output: &Path,
+    soundtrack: &Path,
     cancel: &CancellationToken,
 ) -> Result<()> {
     let video = CString::new(video.to_string_lossy().as_bytes())?;
     let audio = CString::new(audio.to_string_lossy().as_bytes())?;
     let output = CString::new(output.to_string_lossy().as_bytes())?;
+    let soundtrack = CString::new(soundtrack.to_string_lossy().as_bytes())?;
     // The Emscripten runtime and this opaque media handle stay on one worker.
     struct Movie(usize);
     impl Drop for Movie {
@@ -76,6 +79,7 @@ pub async fn remux(
             video.as_ptr().cast(),
             audio.as_ptr().cast(),
             output.as_ptr().cast(),
+            soundtrack.as_ptr().cast(),
             &mut failure,
         )
     });

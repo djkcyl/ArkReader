@@ -129,11 +129,20 @@ pub enum Asset {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MovieTrack {
+    pub url: String,
+    pub sha256: String,
+    pub size: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VideoAsset {
     pub url: String,
     pub sha256: String,
     pub size: u64,
     pub codecs: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audio: Option<MovieTrack>,
     pub bundle: String,
     pub md5: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]

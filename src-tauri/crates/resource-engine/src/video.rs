@@ -1,7 +1,7 @@
 use crate::{
     artifacts,
     cache::{safe_path, write_json},
-    media::{Asset, MediaStore, VideoAsset},
+    media::{Asset, MediaStore, MovieTrack, VideoAsset},
     source::Source,
 };
 use anyhow::{ensure, Context, Result};
@@ -200,8 +200,12 @@ impl Decoder {
             .get(bundle)
             .context("Movie bundle missing")?;
         let native_mp4 = bundle.ends_with(".mp4");
+        let separate_audio = cfg!(target_os = "emscripten") && !native_mp4;
+        let extension = if separate_audio { "webm" } else { "mp4" };
         let encoding = if native_mp4 {
             "original-mp4-1"
+        } else if separate_audio {
+            "vp9-webm-pcm-track-1"
         } else {
             "vp9-flac-1"
         };
@@ -228,9 +232,27 @@ impl Decoder {
                     size: asset.size,
                     sha256: asset.sha256.clone(),
                 };
+                let mut tracks = vec![(path, expected)];
+                if let Some(audio) = &asset.audio {
+                    let name = audio
+                        .url
+                        .strip_prefix("/media/")
+                        .context("Invalid cached soundtrack URL")?;
+                    tracks.push((
+                        safe_path(&store.directory, name)?,
+                        artifacts::Receipt {
+                            size: audio.size,
+                            sha256: audio.sha256.clone(),
+                        },
+                    ));
+                }
                 let cancel = source.cancellation();
-                if crate::runtime::blocking(move || artifacts::valid(&path, &expected, &cancel))
-                    .await?
+                if crate::runtime::blocking(move || {
+                    tracks
+                        .iter()
+                        .all(|(path, expected)| artifacts::valid(path, expected, &cancel))
+                })
+                .await?
                 {
                     return Ok(Asset::Video(asset));
                 }
@@ -240,7 +262,9 @@ impl Decoder {
         let staging = tempfile::Builder::new()
             .prefix(".movie-")
             .tempdir_in(&store.directory)?;
-        let output = staging.path().join("movie.mp4");
+        let output = staging.path().join(format!("movie.{extension}"));
+        #[cfg(target_os = "emscripten")]
+        let soundtrack = staging.path().join("soundtrack.wav");
         let cancel = source.cancellation();
         if native_mp4 {
             let target = output.clone();
@@ -268,7 +292,7 @@ impl Decoder {
             crate::runtime::blocking(move || demux(&original, &video_path, &audio_path, &token))
                 .await??;
             #[cfg(target_os = "emscripten")]
-            crate::web::remux(&video, &audio, &output, &cancel).await?;
+            crate::web::remux(&video, &audio, &output, &soundtrack, &cancel).await?;
             #[cfg(not(target_os = "emscripten"))]
             {
                 let log = staging.path().join("decoder.log");
@@ -332,20 +356,28 @@ impl Decoder {
             }
         }
         crate::error::checkpoint(&cancel)?;
-        let target = output.clone();
-        let token = cancel.clone();
-        let receipt =
-            crate::runtime::blocking(move || artifacts::receipt(&target, &token)).await??;
-        let name = format!("{}.mp4", receipt.sha256);
-        let destination = store.directory.join(&name);
-        if !destination.exists() {
-            fs::rename(&output, &destination)?;
-        }
+        let movie = publish_track(&output, extension, store, &cancel).await?;
+        #[cfg(target_os = "emscripten")]
+        let audio = if separate_audio {
+            Some(publish_track(&soundtrack, "wav", store, &cancel).await?)
+        } else {
+            None
+        };
+        #[cfg(not(target_os = "emscripten"))]
+        let audio = None;
         let asset = VideoAsset {
-            url: format!("/media/{name}"),
-            sha256: receipt.sha256,
-            size: receipt.size,
-            codecs: if native_mp4 { "h264,aac" } else { "vp9,flac" }.into(),
+            url: movie.url,
+            sha256: movie.sha256,
+            size: movie.size,
+            codecs: if native_mp4 {
+                "h264,aac"
+            } else if separate_audio {
+                "vp9"
+            } else {
+                "vp9,flac"
+            }
+            .into(),
+            audio,
             bundle: bundle.into(),
             md5: entry.md5.clone(),
             source: None,
@@ -354,4 +386,25 @@ impl Decoder {
         drop(staging);
         Ok(Asset::Video(asset))
     }
+}
+
+async fn publish_track(
+    file: &Path,
+    extension: &str,
+    store: &MediaStore,
+    cancel: &CancellationToken,
+) -> Result<MovieTrack> {
+    let target = file.to_path_buf();
+    let token = cancel.clone();
+    let receipt = crate::runtime::blocking(move || artifacts::receipt(&target, &token)).await??;
+    let name = format!("{}.{extension}", receipt.sha256);
+    let destination = store.directory.join(&name);
+    if !destination.exists() {
+        fs::rename(file, destination)?;
+    }
+    Ok(MovieTrack {
+        url: format!("/media/{name}"),
+        sha256: receipt.sha256,
+        size: receipt.size,
+    })
 }

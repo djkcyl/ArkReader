@@ -6,13 +6,13 @@
 #include <libswresample/swresample.h>
 
 typedef struct {
-    AVFormatContext *video, *audio, *output;
+    AVFormatContext *video, *audio, *output, *soundtrack;
     AVCodecContext *decoder, *encoder;
     SwrContext *resampler;
     AVAudioFifo *fifo;
     AVFrame *decoded, *converted, *frame;
     AVPacket *input, *picture, *sound;
-    int vi, ai, have_picture, have_sound, video_eof, input_eof, decoder_eof, encoder_flushed, audio_eof, done;
+    int vi, ai, frame_samples, have_picture, have_sound, video_eof, input_eof, decoder_eof, encoder_flushed, audio_eof, done;
     int64_t audio_pts;
 } ArkMovie;
 
@@ -34,12 +34,16 @@ void ark_media_close(ArkMovie *m) {
         avio_closep(&m->output->pb);
         avformat_free_context(m->output);
     }
+    if (m->soundtrack) {
+        avio_closep(&m->soundtrack->pb);
+        avformat_free_context(m->soundtrack);
+    }
     av_free(m);
 }
 
 #define CHECK(call) do { if ((error = (call)) < 0) goto failed; } while (0)
 
-ArkMovie *ark_media_open(const char *video, const char *audio, const char *output, int *failure) {
+ArkMovie *ark_media_open(const char *video, const char *audio, const char *output, const char *soundtrack, int *failure) {
     int error = AVERROR(ENOMEM);
     ArkMovie *m = av_mallocz(sizeof(*m));
     if (!m) { *failure = error; return NULL; }
@@ -53,7 +57,7 @@ ArkMovie *ark_media_open(const char *video, const char *audio, const char *outpu
     AVCodecParameters *ap = m->audio->streams[m->ai]->codecpar;
     if (vp->codec_id != AV_CODEC_ID_VP9 || ap->codec_id != AV_CODEC_ID_ADPCM_ADX) { error = AVERROR_INVALIDDATA; goto failed; }
     const AVCodec *decoder = avcodec_find_decoder(ap->codec_id);
-    const AVCodec *encoder = avcodec_find_encoder(AV_CODEC_ID_FLAC);
+    const AVCodec *encoder = avcodec_find_encoder(AV_CODEC_ID_PCM_S16LE);
     if (!decoder || !encoder) { error = AVERROR_DECODER_NOT_FOUND; goto failed; }
     m->decoder = avcodec_alloc_context3(decoder);
     m->encoder = avcodec_alloc_context3(encoder);
@@ -61,10 +65,10 @@ ArkMovie *ark_media_open(const char *video, const char *audio, const char *outpu
     CHECK(avcodec_parameters_to_context(m->decoder, ap));
     m->decoder->thread_count = 1;
     CHECK(avcodec_open2(m->decoder, decoder, NULL));
-    CHECK(avformat_alloc_output_context2(&m->output, NULL, "mp4", output));
-    m->output->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
+    CHECK(avformat_alloc_output_context2(&m->output, NULL, "webm", output));
+    CHECK(avformat_alloc_output_context2(&m->soundtrack, NULL, "wav", soundtrack));
     AVStream *v = avformat_new_stream(m->output, NULL);
-    AVStream *a = avformat_new_stream(m->output, NULL);
+    AVStream *a = avformat_new_stream(m->soundtrack, NULL);
     if (!v || !a) { error = AVERROR(ENOMEM); goto failed; }
     CHECK(avcodec_parameters_copy(v->codecpar, vp));
     v->codecpar->codec_tag = 0;
@@ -74,25 +78,27 @@ ArkMovie *ark_media_open(const char *video, const char *audio, const char *outpu
     m->encoder->sample_fmt = AV_SAMPLE_FMT_S16;
     m->encoder->time_base = (AVRational){1, m->encoder->sample_rate};
     m->encoder->thread_count = 1;
-    m->encoder->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
     CHECK(av_channel_layout_copy(&m->encoder->ch_layout, &m->decoder->ch_layout));
-    if (m->output->oformat->flags & AVFMT_GLOBALHEADER) m->encoder->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    m->encoder->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     CHECK(avcodec_open2(m->encoder, encoder, NULL));
+    m->frame_samples = m->encoder->frame_size > 0 ? m->encoder->frame_size : 4096;
     CHECK(avcodec_parameters_from_context(a->codecpar, m->encoder));
     a->time_base = m->encoder->time_base;
     CHECK(swr_alloc_set_opts2(&m->resampler, &m->encoder->ch_layout, m->encoder->sample_fmt, m->encoder->sample_rate,
                              &m->decoder->ch_layout, m->decoder->sample_fmt, m->decoder->sample_rate, 0, NULL));
     CHECK(swr_init(m->resampler));
-    m->fifo = av_audio_fifo_alloc(m->encoder->sample_fmt, m->encoder->ch_layout.nb_channels, m->encoder->frame_size * 2);
+    m->fifo = av_audio_fifo_alloc(m->encoder->sample_fmt, m->encoder->ch_layout.nb_channels, m->frame_samples * 2);
     m->decoded = av_frame_alloc(); m->converted = av_frame_alloc(); m->frame = av_frame_alloc();
     m->input = av_packet_alloc(); m->picture = av_packet_alloc(); m->sound = av_packet_alloc();
     if (!m->fifo || !m->decoded || !m->converted || !m->frame || !m->input || !m->picture || !m->sound) { error = AVERROR(ENOMEM); goto failed; }
     CHECK(avio_open(&m->output->pb, output, AVIO_FLAG_WRITE));
+    CHECK(avio_open(&m->soundtrack->pb, soundtrack, AVIO_FLAG_WRITE));
     AVDictionary *options = NULL;
-    av_dict_set(&options, "movflags", "+faststart", 0);
+    av_dict_set(&options, "cues_to_front", "1", 0);
     error = avformat_write_header(m->output, &options);
     av_dict_free(&options);
     if (error < 0) goto failed;
+    CHECK(avformat_write_header(m->soundtrack, NULL));
     *failure = 0;
     return m;
 failed:
@@ -125,8 +131,8 @@ static int next_audio(ArkMovie *m) {
         if (error == AVERROR_EOF) return 0;
         if (error != AVERROR(EAGAIN)) return error;
         int count = av_audio_fifo_size(m->fifo);
-        if (count >= m->encoder->frame_size || (m->decoder_eof && count > 0)) {
-            count = FFMIN(count, m->encoder->frame_size);
+        if (count >= m->frame_samples || (m->decoder_eof && count > 0)) {
+            count = FFMIN(count, m->frame_samples);
             av_frame_unref(m->frame);
             m->frame->format = m->encoder->sample_fmt;
             m->frame->sample_rate = m->encoder->sample_rate;
@@ -185,15 +191,22 @@ int ark_media_step(ArkMovie *m, int budget) {
         }
         if (!m->have_picture && !m->have_sound) {
             error = av_write_trailer(m->output);
+            int audio_error = av_write_trailer(m->soundtrack);
             m->done = 1;
-            return error < 0 ? error : 0;
+            return error < 0 ? error : audio_error;
         }
         int picture = m->have_picture && (!m->have_sound || av_compare_ts(m->picture->pts, m->video->streams[m->vi]->time_base, m->sound->pts, m->encoder->time_base) <= 0);
         AVPacket *packet = picture ? m->picture : m->sound;
-        AVStream *stream = m->output->streams[picture ? 0 : 1];
+        AVFormatContext *output = picture ? m->output : m->soundtrack;
+        AVStream *stream = output->streams[0];
+        if (picture && packet->duration <= 0) {
+            AVRational rate = m->video->streams[m->vi]->avg_frame_rate;
+            if (rate.num > 0 && rate.den > 0)
+                packet->duration = av_rescale_q(1, av_inv_q(rate), m->video->streams[m->vi]->time_base);
+        }
         av_packet_rescale_ts(packet, picture ? m->video->streams[m->vi]->time_base : m->encoder->time_base, stream->time_base);
         packet->stream_index = stream->index;
-        error = av_interleaved_write_frame(m->output, packet);
+        error = av_interleaved_write_frame(output, packet);
         if (error < 0) return error;
         if (picture) m->have_picture = 0; else m->have_sound = 0;
     }

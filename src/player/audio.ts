@@ -32,18 +32,22 @@ export class StoryAudio implements AudioPort {
     progress?: (done: number, total: number, resource: string) => void,
   ): Promise<void> {
     let done = 0;
-    const total = Object.values(pack.assets).filter((a) => a.kind === 'audio').length;
+    const assets = Object.entries(pack.assets).flatMap(([key, asset]) => {
+      if (asset.kind === 'audio') return [{ key, url: asset.url, label: key }];
+      if (asset.kind === 'video' && asset.audio)
+        return [{ key: asset.audio.url, url: asset.audio.url, label: '影片音轨 · ' + key }];
+      return [];
+    });
+    const total = assets.length;
     await Promise.all(
-      Object.entries(pack.assets)
-        .filter(([, a]) => a.kind === 'audio')
-        .map(async ([key, a]) => {
-          progress?.(done, total, '读取音频 · ' + key);
-          const response = await fetch(a.url, { signal });
-          if (!response.ok) throw new Error(`音频加载失败：${key}`);
-          const decoded = await this.context.decodeAudioData(await response.arrayBuffer());
-          if (!this.closing && !signal?.aborted) this.buffers.set(key, decoded);
-          if (!signal?.aborted) progress?.(++done, total, '已解码音频 · ' + key);
-        }),
+      assets.map(async ({ key, url, label }) => {
+        progress?.(done, total, '读取音频 · ' + label);
+        const response = await fetch(url, { signal });
+        if (!response.ok) throw new Error(`音频加载失败：${label}`);
+        const decoded = await this.context.decodeAudioData(await response.arrayBuffer());
+        if (!this.closing && !signal?.aborted) this.buffers.set(key, decoded);
+        if (!signal?.aborted) progress?.(++done, total, '已解码音频 · ' + label);
+      }),
     );
   }
   async unlock(): Promise<void> {

@@ -645,7 +645,9 @@ async function start(target?: PlaybackTarget, automatic = false): Promise<void> 
     let audioDone = 0,
       rendererDone = 0,
       decodeResource = '';
-    const audioTotal = Object.values(pack.assets).filter((a) => a.kind === 'audio').length;
+    const audioTotal = Object.values(pack.assets).filter(
+      (a) => a.kind === 'audio' || (a.kind === 'video' && a.audio),
+    ).length;
     const decodeProgress = () =>
       loadingView.update({
         phase: 'decode',
@@ -687,11 +689,23 @@ async function start(target?: PlaybackTarget, automatic = false): Promise<void> 
       /* Storage is optional. */
     }
     newHost = new StandaloneStoryHost();
+    const soundtracks = new Map<string, AudioBuffer>();
+    for (const asset of Object.values(pack.assets)) {
+      if (asset.kind !== 'video' || !asset.audio) continue;
+      const sound = newAudio.buffers.get(asset.audio.url);
+      if (!sound) throw new Error('影片音轨未能准备完成');
+      soundtracks.set(asset.url, sound);
+    }
     const restoringAudio = new RestoringAudio(newAudio, () => newPlayer?.time ?? player?.time ?? 0),
       restoringVideo = new RestoringVideo(
-        new StoryVideo(newAudio.context, newAudio.master, () => {
-          (newPlayer ?? player)?.setPaused(true);
-        }),
+        new StoryVideo(
+          newAudio.context,
+          newAudio.master,
+          () => {
+            (newPlayer ?? player)?.setPaused(true);
+          },
+          (url) => soundtracks.get(url),
+        ),
         () => newPlayer?.scheduler.index !== target?.commandIndex,
       );
     newPlayer = new StoryPlayer(pack, restoringAudio, savedSpeed, {
