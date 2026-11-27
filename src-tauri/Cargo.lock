@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "arkreader-desktop"
-version = "1.2.3"
+version = "1.2.4"
 dependencies = [
  "arkreader-resource-engine",
  "axum",
@@ -96,7 +96,7 @@ dependencies = [
 
 [[package]]
 name = "arkreader-resource-engine"
-version = "1.2.3"
+version = "1.2.4"
 dependencies = [
  "anyhow",
  "axum",

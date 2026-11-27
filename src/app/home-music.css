@@ -128,36 +128,37 @@
   scrollbar-width: thin;
 }
 @media (pointer: coarse) and (min-width: 601px) and (min-height: 501px) {
-  body.web-app.mobile-app #home-music-panel {
+  body.desktop-app.mobile-app #home-music-panel {
     width: min(520px, calc(100vw - 48px));
   }
 }
 @media (max-width: 600px) and (orientation: portrait) {
-  body.web-app.mobile-app #home-music-panel {
+  body.desktop-app.mobile-app #home-music-panel {
     inset: 0;
     width: 100vw;
-    height: 100dvh;
+    max-width: none;
+    height: var(--mobile-height, 100dvh);
     max-height: none;
     margin: 0;
     border: 0;
     border-radius: 0;
     box-shadow: none;
-    padding: calc(16px + env(safe-area-inset-top, 0px)) calc(18px + env(safe-area-inset-right, 0px))
-      calc(18px + env(safe-area-inset-bottom, 0px)) calc(18px + env(safe-area-inset-left, 0px));
+    padding: calc(16px + var(--safe-top, 0px)) calc(18px + var(--safe-right, 0px))
+      calc(18px + var(--safe-bottom, 0px)) calc(18px + var(--safe-left, 0px));
   }
-  body.web-app.mobile-app #home-music-panel #home-music-close {
+  body.desktop-app.mobile-app #home-music-panel #home-music-close {
     width: 44px;
     height: 44px;
     min-width: 44px;
     min-height: 44px;
   }
-  body.web-app.mobile-app #home-music-panel header {
-    margin: calc(-16px - env(safe-area-inset-top, 0px))
-      calc(-18px - env(safe-area-inset-right, 0px)) 0 calc(-18px - env(safe-area-inset-left, 0px));
-    padding: calc(12px + env(safe-area-inset-top, 0px)) calc(18px + env(safe-area-inset-right, 0px))
-      12px calc(18px + env(safe-area-inset-left, 0px));
+  body.desktop-app.mobile-app #home-music-panel header {
+    margin: calc(-16px - var(--safe-top, 0px)) calc(-18px - var(--safe-right, 0px)) 0
+      calc(-18px - var(--safe-left, 0px));
+    padding: calc(12px + var(--safe-top, 0px)) calc(18px + var(--safe-right, 0px)) 12px
+      calc(18px + var(--safe-left, 0px));
   }
-  body.web-app.mobile-app #home-music-tracks {
+  body.desktop-app.mobile-app #home-music-tracks {
     flex: 1;
     min-height: 0;
   }
@@ -211,14 +212,15 @@
   }
 }
 @media (orientation: landscape) and (max-height: 500px) {
-  body.web-app.mobile-app #home-music-panel[data-open='true'] {
+  body.desktop-app.mobile-app #home-music-panel[data-open='true'] {
     inset: 0;
     width: 100vw;
-    height: 100dvh;
+    max-width: none;
+    height: var(--mobile-height, 100dvh);
     max-height: none;
     margin: 0;
-    padding: 12px max(20px, env(safe-area-inset-right, 0px)) 12px
-      max(20px, env(safe-area-inset-left, 0px));
+    padding: calc(12px + var(--safe-top, 0px)) max(20px, var(--safe-right, 0px))
+      calc(12px + var(--safe-bottom, 0px)) max(20px, var(--safe-left, 0px));
     border: 0;
     border-radius: 0;
     display: grid;
@@ -226,35 +228,37 @@
     grid-template-rows: 60px 44px 100px minmax(0, 1fr) auto auto;
     gap: 8px 24px;
   }
-  body.web-app.mobile-app #home-music-panel header {
+  body.desktop-app.mobile-app #home-music-panel header {
     grid-area: 1 / 1 / 2 / 3;
-    margin: -12px -20px 0;
-    padding: 8px 20px;
+    margin: calc(-12px - var(--safe-top, 0px)) calc(-1 * max(20px, var(--safe-right, 0px))) 0
+      calc(-1 * max(20px, var(--safe-left, 0px)));
+    padding: calc(8px + var(--safe-top, 0px)) max(20px, var(--safe-right, 0px)) 8px
+      max(20px, var(--safe-left, 0px));
   }
-  body.web-app.mobile-app #home-music-panel #home-music-close {
+  body.desktop-app.mobile-app #home-music-panel #home-music-close {
     width: 44px;
     height: 44px;
     min-width: 44px;
     min-height: 44px;
   }
-  body.web-app.mobile-app #home-music-panel .home-music-switch {
+  body.desktop-app.mobile-app #home-music-panel .home-music-switch {
     grid-area: 2 / 1;
   }
-  body.web-app.mobile-app #home-music-panel .home-music-volume {
+  body.desktop-app.mobile-app #home-music-panel .home-music-volume {
     grid-area: 3 / 1;
   }
-  body.web-app.mobile-app #home-music-panel #home-music-status {
+  body.desktop-app.mobile-app #home-music-panel #home-music-status {
     grid-area: 4 / 1;
     min-height: 0;
     overflow: auto;
   }
-  body.web-app.mobile-app #home-music-panel #home-music-progress {
+  body.desktop-app.mobile-app #home-music-panel #home-music-progress {
     grid-area: 5 / 1;
   }
-  body.web-app.mobile-app #home-music-panel #home-music-retry {
+  body.desktop-app.mobile-app #home-music-panel #home-music-retry {
     grid-area: 6 / 1;
   }
-  body.web-app.mobile-app #home-music-panel #home-music-tracks {
+  body.desktop-app.mobile-app #home-music-panel #home-music-tracks {
     grid-area: 2 / 2 / 7 / 3;
     min-height: 0;
   }

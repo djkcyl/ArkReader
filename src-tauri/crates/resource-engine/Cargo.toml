@@ -1,6 +1,6 @@
 [package]
 name = "arkreader-resource-engine"
-version = "1.2.3"
+version = "1.2.4"
 edition = "2021"
 description = "Native, cross-platform resource engine for ArkReader"
 publish = false
