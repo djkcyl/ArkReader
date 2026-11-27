@@ -92,7 +92,7 @@ body.mobile-app #desktop-downloads .desktop-page-heading > div:first-child {
   display: grid;
   gap: 10px;
 }
-.download-actions a {
+.downloads .download-actions :is(a, button) {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -105,20 +105,24 @@ body.mobile-app #desktop-downloads .desktop-page-heading > div:first-child {
   box-shadow: 0 4px 7px #0002;
   text-decoration: none;
   font-size: 14px;
+  font-family: inherit;
   line-height: 1.4;
+  width: 100%;
+  text-align: left;
+  border-radius: 0;
 }
-.current-platform .download-actions a:first-child {
+.downloads .current-platform .download-actions :is(a, button):first-child {
   background: #008bb5;
   border-color: #b9efff;
 }
-.download-actions a:hover {
+.downloads .download-actions :is(a, button):hover {
   filter: brightness(1.12);
 }
-.download-actions a span {
+.downloads .download-actions :is(a, button) span {
   font-size: 11px;
   opacity: 0.8;
 }
-.downloads a:focus-visible {
+.downloads :is(a, button):focus-visible {
   outline: 2px solid #00abe1;
   outline-offset: 4px;
 }
@@ -151,7 +155,7 @@ body.mobile-app #desktop-downloads .desktop-page-heading > div:first-child {
 .downloads [hidden] {
   display: none !important;
 }
-.download-actions a[aria-disabled='true'] {
+.downloads .download-actions button:disabled {
   opacity: 0.55;
 }
 .client-download-transfer {

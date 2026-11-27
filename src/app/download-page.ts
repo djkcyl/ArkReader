@@ -59,9 +59,12 @@ export class DownloadPage {
     for (const link of this.root.querySelectorAll<HTMLAnchorElement>('.download-actions a')) {
       const name = new URL(link.href).pathname.split('/').at(-1)!;
       const id = name.slice(`ArkReader-${__APP_VERSION__}-`.length);
-      link.dataset.package = id;
-      link.onclick = (event) => {
-        event.preventDefault();
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.package = id;
+      button.append(...link.childNodes);
+      link.replaceWith(button);
+      button.onclick = () => {
         if (!clientDownloads.busy) void clientDownloads.start(id);
         transfer.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       };
@@ -105,11 +108,9 @@ export class DownloadPage {
         this.root.querySelector('.download-version')!.textContent = 'v' + state.version;
         this.root.querySelector<HTMLAnchorElement>('.download-links a')!.href =
           `https://github.com/djkcyl/ArkReader/releases/tag/v${state.version}`;
-        for (const link of this.root.querySelectorAll<HTMLAnchorElement>('[data-package]'))
-          link.href = `https://github.com/djkcyl/ArkReader/releases/download/v${state.version}/ArkReader-${state.version}-${link.dataset.package}`;
       }
-      for (const link of this.root.querySelectorAll<HTMLElement>('[data-package]'))
-        link.setAttribute('aria-disabled', String(clientDownloads.busy));
+      for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-package]'))
+        button.disabled = clientDownloads.busy;
     };
     this.unsubscribe = clientDownloads.subscribe(update);
     this.root.querySelector<HTMLAnchorElement>('#ios-notice a')!.onclick = (event) => {

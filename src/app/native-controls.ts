@@ -557,7 +557,7 @@ export async function mountApplicationControls(): Promise<void> {
       if (
         button.closest('.ark-select') ||
         button.matches(
-          '.archive-card,.story-track,#catalog-nav button,.shelf-story,.shelf-restart,.filter-unlimited,[data-unlimited],#operator-filter-reset',
+          '.archive-card,.story-track,#catalog-nav button,.shelf-story,.shelf-restart,.filter-unlimited,[data-unlimited],#operator-filter-reset,.download-actions button',
         )
       )
         continue;
