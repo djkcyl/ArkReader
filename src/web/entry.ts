@@ -1,6 +1,5 @@
 import { installWebBridge, prepareWebApplication } from './bridge';
 import { EntryShell } from './entry-shell';
-import { hasCachedLibrary } from './resource-db';
 
 document.body.classList.add('web-app');
 document.getElementById('quit')!.hidden = true;
@@ -8,12 +7,11 @@ async function boot() {
   let shell: EntryShell | undefined;
   let softwareReady = false;
   const downloads = new URLSearchParams(location.search).get('page') === 'downloads';
-  const warm = downloads ? false : await hasCachedLibrary().catch(() => false);
-  if (downloads || warm) shell = new EntryShell(downloads ? 'downloads' : 'library', warm);
+  if (downloads) shell = new EntryShell();
   const entry = document.querySelector<HTMLAnchorElement>('.startup-download')!;
   entry.onclick = (event) => {
     event.preventDefault();
-    shell ??= new EntryShell('downloads', false);
+    shell ??= new EntryShell();
     if (softwareReady) shell.ready();
     shell.show('downloads');
   };

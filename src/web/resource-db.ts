@@ -9,15 +9,3 @@ export function openResourceDatabase(): Promise<IDBDatabase> {
   opening.onupgradeneeded = () => opening.result.createObjectStore('files', { keyPath: 'path' });
   return idbResult(opening);
 }
-export async function hasCachedLibrary(): Promise<boolean> {
-  const database = await openResourceDatabase();
-  try {
-    return (
-      (await idbResult(
-        database.transaction('files').objectStore('files').getKey('/library/index.json'),
-      )) !== undefined
-    );
-  } finally {
-    database.close();
-  }
-}

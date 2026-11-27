@@ -28,10 +28,8 @@ export class EntryShell {
   readonly resourcesRequested = new Promise<void>((resolve) => {
     this.requestResources = resolve;
   });
-  constructor(page: ApplicationPage, warm: boolean) {
+  constructor() {
     mountMobilePlatform();
-    document.body.classList.add('desktop-app', 'app-native-ui', 'web-entry-shell');
-    document.body.classList.toggle('web-restoring', warm);
     this.root.id = 'app';
     this.root.innerHTML = applicationHeader;
     const header = this.root.querySelector<HTMLElement>('.brand')!;
@@ -47,7 +45,7 @@ export class EntryShell {
     this.retry.hidden = true;
     this.retry.onclick = () => location.reload();
     header.append(this.status, this.retry);
-    this.root.append(this.startup, this.downloads.root);
+    this.root.append(this.downloads.root);
     document.body.prepend(this.rail, this.root);
     for (const button of this.rail.querySelectorAll<HTMLButtonElement>('button[data-page]'))
       button.onclick = () => this.show(button.dataset.page as ApplicationPage);
@@ -59,18 +57,23 @@ export class EntryShell {
       () => {
         this.events.abort();
         this.rail.remove();
-        document.body.classList.remove('web-entry-shell', 'web-restoring');
+        this.root.hidden = false;
+        document.body.classList.remove('web-entry-shell');
       },
       { once: true },
     );
     delete document.documentElement.dataset.downloadEntry;
-    this.show(page);
+    this.show('downloads');
     mountScrollbars();
   }
   show(page: ApplicationPage): void {
     document.body.dataset.desktopPage = page;
     markApplicationPage(this.rail, page);
     const downloading = page === 'downloads';
+    for (const name of ['desktop-app', 'app-native-ui', 'web-entry-shell'])
+      document.body.classList.toggle(name, downloading);
+    this.root.hidden = !downloading;
+    this.rail.hidden = !downloading;
     this.downloads.root.hidden = !downloading;
     this.startup.hidden = downloading;
     const url = new URL(location.href);

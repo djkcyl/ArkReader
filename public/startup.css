@@ -286,6 +286,7 @@ body.startup-page .startup-actions button:disabled {
 }
 body.startup-page #startup-root > footer {
   position: fixed;
+  margin: 0;
   bottom: 20px;
   left: 6vw;
   right: 6vw;

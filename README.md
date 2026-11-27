@@ -13,16 +13,16 @@
 
 ## 下载
 
-当前正式版 **1.2.7**。更新说明见 [Releases](https://github.com/djkcyl/ArkReader/releases/latest)。
+当前正式版 **1.2.8**。更新说明见 [Releases](https://github.com/djkcyl/ArkReader/releases/latest)。
 
 | 平台            | 架构          | 安装版                                                                                                           | 免安装版                                                                                                          |
 | --------------- | ------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Windows 10 / 11 | x64           | [EXE 安装器](https://github.com/djkcyl/ArkReader/releases/download/v1.2.7/ArkReader-1.2.7-windows-x64-setup.exe) | [便携 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.7/ArkReader-1.2.7-windows-x64-portable.zip) |
-| macOS 12+       | Apple Silicon | [DMG](https://github.com/djkcyl/ArkReader/releases/download/v1.2.7/ArkReader-1.2.7-macos-arm64.dmg)              | [应用 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.7/ArkReader-1.2.7-macos-arm64-app.zip)      |
-| Linux           | x64           | [DEB](https://github.com/djkcyl/ArkReader/releases/download/v1.2.7/ArkReader-1.2.7-linux-x64.deb)                | [AppImage](https://github.com/djkcyl/ArkReader/releases/download/v1.2.7/ArkReader-1.2.7-linux-x64.AppImage)       |
-| Android 7+      | ARM64         | [APK](https://github.com/djkcyl/ArkReader/releases/download/v1.2.7/ArkReader-1.2.7-android-arm64.apk)            | —                                                                                                                 |
+| Windows 10 / 11 | x64           | [EXE 安装器](https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-windows-x64-setup.exe) | [便携 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-windows-x64-portable.zip) |
+| macOS 12+       | Apple Silicon | [DMG](https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-macos-arm64.dmg)              | [应用 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-macos-arm64-app.zip)      |
+| Linux           | x64           | [DEB](https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-linux-x64.deb)                | [AppImage](https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-linux-x64.AppImage)       |
+| Android 7+      | ARM64         | [APK](https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-android-arm64.apk)            | —                                                                                                                 |
 
-[Web 静态 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.7/ArkReader-1.2.7-web.zip) · [SHA-256 校验清单](https://github.com/djkcyl/ArkReader/releases/download/v1.2.7/SHA256SUMS.txt) · [历史版本](https://github.com/djkcyl/ArkReader/releases)
+[Web 静态 ZIP](https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/ArkReader-1.2.8-web.zip) · [SHA-256 校验清单](https://github.com/djkcyl/ArkReader/releases/download/v1.2.8/SHA256SUMS.txt) · [历史版本](https://github.com/djkcyl/ArkReader/releases)
 
 Windows 使用系统 WebView2；macOS 应用尚未公证，首次打开可能需要在系统设置中允许运行。Linux DEB 使用 WebKitGTK 4.1。暂不提供 Intel Mac 和 iOS 版本。
 
