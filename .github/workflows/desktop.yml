@@ -93,6 +93,9 @@ jobs:
         env:
           WEBKIT_DISABLE_DMABUF_RENDERER: '1'
           GST_DEBUG: '2'
+          # Keep headless playback clocked without PulseAudio's virtual-device stalls.
+          # The verifier still checks decoded audio samples, picture and seeking.
+          GST_PLUGIN_FEATURE_RANK: 'fakeaudiosink:512'
         run: |
           pulseaudio --start --exit-idle-time=-1
           pactl load-module module-null-sink sink_name=arkreader_verify
